@@ -1,11 +1,73 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/src/rust/api/auth.dart';
 import 'package:skydrivex/src/rust/frb_generated.dart';
 
 Future<void> main() async {
   await RustLib.init();
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
+}
+
+final authControllerProvider =
+    NotifierProvider.autoDispose<AuthController, AuthState>(AuthController.new);
+
+class AuthState {
+  const AuthState({this.tokens, this.error, this.isAuthenticating = false});
+
+  final AuthTokens? tokens;
+  final String? error;
+  final bool isAuthenticating;
+
+  AuthState copyWith({
+    bool? isAuthenticating,
+    AuthTokens? tokens,
+    String? error,
+    bool clearTokens = false,
+    bool clearError = false,
+  }) {
+    return AuthState(
+      tokens: clearTokens ? null : (tokens ?? this.tokens),
+      error: clearError ? null : (error ?? this.error),
+      isAuthenticating: isAuthenticating ?? this.isAuthenticating,
+    );
+  }
+}
+
+class AuthController extends Notifier<AuthState> {
+  @override
+  AuthState build() => const AuthState();
+
+  void setValidationError(String message) {
+    state = state.copyWith(
+      error: message,
+      clearTokens: true,
+      isAuthenticating: false,
+    );
+  }
+
+  Future<void> authenticate({
+    required String clientId,
+    required List<String> scopes,
+  }) async {
+    state = state.copyWith(
+      isAuthenticating: true,
+      clearError: true,
+      clearTokens: true,
+    );
+
+    try {
+      final tokens = await authenticateViaBrowser(
+        clientId: clientId,
+        scopes: scopes,
+      );
+      state = state.copyWith(tokens: tokens, clearError: true);
+    } catch (err) {
+      state = state.copyWith(error: err.toString(), clearTokens: true);
+    } finally {
+      state = state.copyWith(isAuthenticating: false);
+    }
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -25,22 +87,18 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthPrototypePage extends StatefulWidget {
+class AuthPrototypePage extends ConsumerStatefulWidget {
   const AuthPrototypePage({super.key});
 
   @override
-  State<AuthPrototypePage> createState() => _AuthPrototypePageState();
+  ConsumerState<AuthPrototypePage> createState() => _AuthPrototypePageState();
 }
 
-class _AuthPrototypePageState extends State<AuthPrototypePage> {
+class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
   final TextEditingController _clientIdController = TextEditingController();
   final TextEditingController _scopeController = TextEditingController(
     text: 'User.Read offline_access openid',
   );
-
-  AuthTokens? _tokens;
-  String? _error;
-  bool _isAuthenticating = false;
 
   @override
   void dispose() {
@@ -51,11 +109,9 @@ class _AuthPrototypePageState extends State<AuthPrototypePage> {
 
   Future<void> _startAuthentication() async {
     final clientId = _clientIdController.text.trim();
+    final controller = ref.read(authControllerProvider.notifier);
     if (clientId.isEmpty) {
-      setState(() {
-        _error = 'Client ID is required.';
-        _tokens = null;
-      });
+      controller.setValidationError('Client ID is required.');
       return;
     }
 
@@ -64,37 +120,16 @@ class _AuthPrototypePageState extends State<AuthPrototypePage> {
         ? const <String>[]
         : scopeLine.split(RegExp(r'\s+')).where((s) => s.isNotEmpty).toList();
 
-    setState(() {
-      _isAuthenticating = true;
-      _error = null;
-      _tokens = null;
-    });
-
-    try {
-      final tokens = await authenticateViaBrowser(
-        clientId: clientId,
-        scopes: scopes,
-      );
-      if (!mounted) return;
-      setState(() {
-        _tokens = tokens;
-      });
-    } catch (err) {
-      if (!mounted) return;
-      setState(() {
-        _error = err.toString();
-      });
-    } finally {
-      if (!mounted) return;
-      setState(() {
-        _isAuthenticating = false;
-      });
-    }
+    await controller.authenticate(clientId: clientId, scopes: scopes);
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final authState = ref.watch(authControllerProvider);
+    final tokens = authState.tokens;
+    final error = authState.error;
+    final isAuthenticating = authState.isAuthenticating;
 
     return Scaffold(
       body: Container(
@@ -166,7 +201,7 @@ class _AuthPrototypePageState extends State<AuthPrototypePage> {
                           ),
                         ],
                       ),
-                      if (_isAuthenticating) ...[
+                      if (isAuthenticating) ...[
                         const SizedBox(height: 24),
                         const LinearProgressIndicator(minHeight: 3),
                       ],
@@ -196,7 +231,7 @@ class _AuthPrototypePageState extends State<AuthPrototypePage> {
                       ),
                       const SizedBox(height: 28),
                       ElevatedButton.icon(
-                        onPressed: _isAuthenticating
+                        onPressed: isAuthenticating
                             ? null
                             : _startAuthentication,
                         style: ElevatedButton.styleFrom(
@@ -205,10 +240,10 @@ class _AuthPrototypePageState extends State<AuthPrototypePage> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        icon: _isAuthenticating
+                        icon: isAuthenticating
                             ? const SizedBox.shrink()
                             : const Icon(Icons.login_rounded),
-                        label: _isAuthenticating
+                        label: isAuthenticating
                             ? const SizedBox(
                                 height: 24,
                                 width: 24,
@@ -222,7 +257,7 @@ class _AuthPrototypePageState extends State<AuthPrototypePage> {
                               ),
                       ),
                       const SizedBox(height: 20),
-                      if (_error != null)
+                      if (error != null)
                         Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
@@ -239,14 +274,14 @@ class _AuthPrototypePageState extends State<AuthPrototypePage> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  _error!,
+                                  error!,
                                   style: TextStyle(color: colorScheme.error),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      if (_tokens != null) ...[
+                      if (tokens != null) ...[
                         const SizedBox(height: 24),
                         Divider(color: colorScheme.outlineVariant),
                         const SizedBox(height: 16),
@@ -259,33 +294,33 @@ class _AuthPrototypePageState extends State<AuthPrototypePage> {
                         _buildTokenTile(
                           context,
                           label: '访问令牌 (Access Token)',
-                          value: _tokens!.accessToken,
+                          value: tokens.accessToken,
                         ),
-                        if (_tokens!.refreshToken != null)
+                        if (tokens.refreshToken != null)
                           _buildTokenTile(
                             context,
                             label: '刷新令牌 (Refresh Token)',
-                            value: _tokens!.refreshToken!,
+                            value: tokens.refreshToken!,
                           ),
-                        if (_tokens!.expiresIn != null)
+                        if (tokens.expiresIn != null)
                           _buildTokenTile(
                             context,
                             label: '有效期 (秒)',
-                            value: _tokens!.expiresIn!.toString(),
+                            value: tokens.expiresIn!.toString(),
                             isMonospace: false,
                           ),
-                        if (_tokens!.scope != null)
+                        if (tokens.scope != null)
                           _buildTokenTile(
                             context,
                             label: '授权范围',
-                            value: _tokens!.scope!,
+                            value: tokens.scope!,
                             isMonospace: false,
                           ),
-                        if (_tokens!.idToken != null)
+                        if (tokens.idToken != null)
                           _buildTokenTile(
                             context,
                             label: 'ID Token',
-                            value: _tokens!.idToken!,
+                            value: tokens.idToken!,
                           ),
                         const SizedBox(height: 8),
                         Text(
