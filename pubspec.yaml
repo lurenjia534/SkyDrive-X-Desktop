@@ -37,6 +37,8 @@ dependencies:
   rust_lib_skydrivex:
     path: rust_builder
   flutter_rust_bridge: 2.11.1
+  riverpod: ^3.0.3
+  flutter_riverpod: ^3.0.3
 
 dev_dependencies:
   flutter_test:
