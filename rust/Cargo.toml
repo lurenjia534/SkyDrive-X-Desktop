@@ -1,0 +1,20 @@
+[package]
+name = "rust_lib_skydrivex"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+flutter_rust_bridge = "=2.11.1"
+rand = "0.8"
+sha2 = "0.10"
+base64 = { version = "0.22", default-features = false, features = ["std"] }
+url = "2"
+serde = { version = "1", features = ["derive"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+webbrowser = "0.8"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
