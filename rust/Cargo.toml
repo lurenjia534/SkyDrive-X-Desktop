@@ -15,6 +15,7 @@ url = "2"
 serde = { version = "1", features = ["derive"] }
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 webbrowser = "0.8"
+rusqlite = { version = "0.37.0", features = ["bundled"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
