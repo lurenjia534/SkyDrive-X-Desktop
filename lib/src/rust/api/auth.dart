@@ -6,9 +6,9 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `build_authorize_url`, `build_code_challenge`, `build_code_verifier`, `exchange_code_for_tokens`, `normalize_scopes`, `random_string`, `send_browser_response`, `wait_for_code`
+// These functions are ignored because they are not marked as `pub`: `build_authorize_url`, `build_code_challenge`, `build_code_verifier`, `convert_expires_in`, `exchange_code_for_tokens`, `normalize_scopes`, `persist_tokens`, `random_string`, `record_from_tokens`, `send_browser_response`, `wait_for_code`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `TokenResponse`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`, `fmt`, `from`
 
 Future<AuthTokens> authenticateViaBrowser({
   required String clientId,
@@ -17,6 +17,20 @@ Future<AuthTokens> authenticateViaBrowser({
   clientId: clientId,
   scopes: scopes,
 );
+
+Future<void> persistAuthState({
+  required String clientId,
+  required AuthTokens tokens,
+}) => RustLib.instance.api.crateApiAuthPersistAuthState(
+  clientId: clientId,
+  tokens: tokens,
+);
+
+Future<StoredAuthState?> loadPersistedAuthState() =>
+    RustLib.instance.api.crateApiAuthLoadPersistedAuthState();
+
+Future<void> clearPersistedAuthState() =>
+    RustLib.instance.api.crateApiAuthClearPersistedAuthState();
 
 class AuthTokens {
   final String accessToken;
@@ -55,4 +69,29 @@ class AuthTokens {
           idToken == other.idToken &&
           scope == other.scope &&
           tokenType == other.tokenType;
+}
+
+class StoredAuthState {
+  final String clientId;
+  final AuthTokens tokens;
+  final PlatformInt64 updatedAtMillis;
+
+  const StoredAuthState({
+    required this.clientId,
+    required this.tokens,
+    required this.updatedAtMillis,
+  });
+
+  @override
+  int get hashCode =>
+      clientId.hashCode ^ tokens.hashCode ^ updatedAtMillis.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is StoredAuthState &&
+          runtimeType == other.runtimeType &&
+          clientId == other.clientId &&
+          tokens == other.tokens &&
+          updatedAtMillis == other.updatedAtMillis;
 }
