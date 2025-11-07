@@ -1,3 +1,4 @@
+use crate::db::{self, AuthTokenRecord};
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::time::Duration;
@@ -25,6 +26,31 @@ pub struct AuthTokens {
     pub token_type: Option<String>,
 }
 
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug)]
+pub struct StoredAuthState {
+    pub client_id: String,
+    pub tokens: AuthTokens,
+    pub updated_at_millis: i64,
+}
+
+impl From<AuthTokenRecord> for StoredAuthState {
+    fn from(record: AuthTokenRecord) -> Self {
+        StoredAuthState {
+            client_id: record.client_id,
+            tokens: AuthTokens {
+                access_token: record.access_token,
+                refresh_token: record.refresh_token,
+                expires_in: convert_expires_in(record.expires_in_seconds),
+                id_token: record.id_token,
+                scope: record.scope,
+                token_type: record.token_type,
+            },
+            updated_at_millis: record.updated_at_millis,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct TokenResponse {
     access_token: Option<String>,
@@ -38,14 +64,18 @@ struct TokenResponse {
 }
 
 #[flutter_rust_bridge::frb]
-pub fn authenticate_via_browser(client_id: String, scopes: Vec<String>) -> Result<AuthTokens, String> {
+pub fn authenticate_via_browser(
+    client_id: String,
+    scopes: Vec<String>,
+) -> Result<AuthTokens, String> {
     let scopes = normalize_scopes(scopes);
     let scope_param = scopes.join(" ");
     let code_verifier = build_code_verifier();
     let code_challenge = build_code_challenge(&code_verifier)?;
     let state = random_string(32);
 
-    let listener = TcpListener::bind(("127.0.0.1", 0)).map_err(|e| format!("failed to bind redirect listener: {e}"))?;
+    let listener = TcpListener::bind(("127.0.0.1", 0))
+        .map_err(|e| format!("failed to bind redirect listener: {e}"))?;
     listener
         .set_nonblocking(false)
         .map_err(|e| format!("failed to configure listener: {e}"))?;
@@ -144,7 +174,10 @@ fn exchange_code_for_tokens(
         .map_err(|e| format!("token exchange failed: {e}"))?;
 
     if !response.status().is_success() {
-        return Err(format!("token endpoint returned HTTP {}", response.status()));
+        return Err(format!(
+            "token endpoint returned HTTP {}",
+            response.status()
+        ));
     }
 
     let payload: TokenResponse = response
@@ -160,14 +193,35 @@ fn exchange_code_for_tokens(
         .access_token
         .ok_or_else(|| "missing access_token in response".to_string())?;
 
-    Ok(AuthTokens {
+    let tokens = AuthTokens {
         access_token,
         refresh_token: payload.refresh_token,
         expires_in: payload.expires_in,
         id_token: payload.id_token,
         scope: payload.scope,
         token_type: payload.token_type,
-    })
+    };
+
+    if let Err(err) = persist_tokens(&client_id, &tokens) {
+        eprintln!("failed to persist auth tokens: {err}");
+    }
+
+    Ok(tokens)
+}
+
+#[flutter_rust_bridge::frb]
+pub fn persist_auth_state(client_id: String, tokens: AuthTokens) -> Result<(), String> {
+    persist_tokens(&client_id, &tokens)
+}
+
+#[flutter_rust_bridge::frb]
+pub fn load_persisted_auth_state() -> Result<Option<StoredAuthState>, String> {
+    db::load_auth_record().map(|record| record.map(StoredAuthState::from))
+}
+
+#[flutter_rust_bridge::frb]
+pub fn clear_persisted_auth_state() -> Result<(), String> {
+    db::clear_auth_record()
 }
 
 fn wait_for_code(listener: TcpListener) -> Result<(String, Option<String>), String> {
@@ -218,7 +272,11 @@ fn wait_for_code(listener: TcpListener) -> Result<(String, Option<String>), Stri
     Ok((code, state))
 }
 
-fn send_browser_response(stream: &mut std::net::TcpStream, title: &str, message: &str) -> Result<(), String> {
+fn send_browser_response(
+    stream: &mut std::net::TcpStream,
+    title: &str,
+    message: &str,
+) -> Result<(), String> {
     let body = format!(
         "<html><head><meta charset=\"utf-8\"><title>{title}</title></head>\
          <body><h1>{title}</h1><p>{message}</p></body></html>"
@@ -252,4 +310,25 @@ fn random_string(len: usize) -> String {
         .take(len)
         .map(char::from)
         .collect()
+}
+
+fn persist_tokens(client_id: &str, tokens: &AuthTokens) -> Result<(), String> {
+    let record = record_from_tokens(client_id, tokens);
+    db::upsert_auth_record(&record)
+}
+
+fn record_from_tokens(client_id: &str, tokens: &AuthTokens) -> AuthTokenRecord {
+    db::build_record(
+        client_id.to_string(),
+        tokens.access_token.clone(),
+        tokens.refresh_token.clone(),
+        tokens.expires_in,
+        tokens.id_token.clone(),
+        tokens.scope.clone(),
+        tokens.token_type.clone(),
+    )
+}
+
+fn convert_expires_in(value: Option<i64>) -> Option<u64> {
+    value.and_then(|v| if v < 0 { None } else { Some(v as u64) })
 }

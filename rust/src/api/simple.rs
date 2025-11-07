@@ -7,4 +7,7 @@ pub fn greet(name: String) -> String {
 pub fn init_app() {
     // Default utilities - feel free to customize
     flutter_rust_bridge::setup_default_user_utils();
+    if let Err(err) = crate::db::init_storage() {
+        eprintln!("failed to initialize local storage: {err}");
+    }
 }
