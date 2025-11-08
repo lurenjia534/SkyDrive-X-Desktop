@@ -11,9 +11,9 @@ use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use url::Url;
 
-const AUTHORITY: &str = "https://login.microsoftonline.com/common/oauth2/v2.0";
+pub(super) const AUTHORITY: &str = "https://login.microsoftonline.com/common/oauth2/v2.0";
 const AUTHORIZE_PATH: &str = "authorize";
-const TOKEN_PATH: &str = "token";
+pub(super) const TOKEN_PATH: &str = "token";
 
 #[flutter_rust_bridge::frb]
 #[derive(Clone, Debug)]
@@ -52,15 +52,15 @@ impl From<AuthTokenRecord> for StoredAuthState {
 }
 
 #[derive(Debug, Deserialize)]
-struct TokenResponse {
-    access_token: Option<String>,
-    refresh_token: Option<String>,
-    expires_in: Option<u64>,
-    id_token: Option<String>,
-    scope: Option<String>,
-    token_type: Option<String>,
-    error: Option<String>,
-    error_description: Option<String>,
+pub(super) struct TokenResponse {
+    pub(super) access_token: Option<String>,
+    pub(super) refresh_token: Option<String>,
+    pub(super) expires_in: Option<u64>,
+    pub(super) id_token: Option<String>,
+    pub(super) scope: Option<String>,
+    pub(super) token_type: Option<String>,
+    pub(super) error: Option<String>,
+    pub(super) error_description: Option<String>,
 }
 
 #[flutter_rust_bridge::frb]
@@ -211,7 +211,7 @@ fn exchange_code_for_tokens(
 
 #[flutter_rust_bridge::frb]
 pub fn persist_auth_state(client_id: String, tokens: AuthTokens) -> Result<(), String> {
-    persist_tokens(&client_id, &tokens)
+    persist_tokens(&client_id, &tokens).map(|_| ())
 }
 
 #[flutter_rust_bridge::frb]
@@ -312,12 +312,16 @@ fn random_string(len: usize) -> String {
         .collect()
 }
 
-fn persist_tokens(client_id: &str, tokens: &AuthTokens) -> Result<(), String> {
+pub(super) fn persist_tokens(
+    client_id: &str,
+    tokens: &AuthTokens,
+) -> Result<StoredAuthState, String> {
     let record = record_from_tokens(client_id, tokens);
-    db::upsert_auth_record(&record)
+    db::upsert_auth_record(&record)?;
+    Ok(StoredAuthState::from(record))
 }
 
-fn record_from_tokens(client_id: &str, tokens: &AuthTokens) -> AuthTokenRecord {
+pub(super) fn record_from_tokens(client_id: &str, tokens: &AuthTokens) -> AuthTokenRecord {
     db::build_record(
         client_id.to_string(),
         tokens.access_token.clone(),

@@ -4,6 +4,7 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api/auth/auth.dart';
+import 'api/auth/refresh.dart';
 import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -67,7 +68,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -1444071507;
+  int get rustContentHash => 60632663;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -95,6 +96,8 @@ abstract class RustLibApi extends BaseApi {
     required String clientId,
     required AuthTokens tokens,
   });
+
+  Future<StoredAuthState> crateApiAuthRefreshRefreshTokens();
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -281,6 +284,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         debugName: "persist_auth_state",
         argNames: ["clientId", "tokens"],
       );
+
+  @override
+  Future<StoredAuthState> crateApiAuthRefreshRefreshTokens() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_stored_auth_state,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAuthRefreshRefreshTokensConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAuthRefreshRefreshTokensConstMeta =>
+      const TaskConstMeta(debugName: "refresh_tokens", argNames: []);
 
   @protected
   String dco_decode_String(dynamic raw) {

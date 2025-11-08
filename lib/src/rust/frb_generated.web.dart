@@ -7,6 +7,7 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api/auth/auth.dart';
+import 'api/auth/refresh.dart';
 import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';
