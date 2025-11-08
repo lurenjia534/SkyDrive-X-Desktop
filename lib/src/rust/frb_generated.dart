@@ -3,7 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
-import 'api/auth.dart';
+import 'api/auth/auth.dart';
 import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -67,7 +67,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 1410451116;
+  int get rustContentHash => -1444071507;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -78,20 +78,20 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
-  Future<AuthTokens> crateApiAuthAuthenticateViaBrowser({
+  Future<AuthTokens> crateApiAuthAuthAuthenticateViaBrowser({
     required String clientId,
     required List<String> scopes,
   });
 
-  Future<void> crateApiAuthClearPersistedAuthState();
+  Future<void> crateApiAuthAuthClearPersistedAuthState();
 
   String crateApiSimpleGreet({required String name});
 
   Future<void> crateApiSimpleInitApp();
 
-  Future<StoredAuthState?> crateApiAuthLoadPersistedAuthState();
+  Future<StoredAuthState?> crateApiAuthAuthLoadPersistedAuthState();
 
-  Future<void> crateApiAuthPersistAuthState({
+  Future<void> crateApiAuthAuthPersistAuthState({
     required String clientId,
     required AuthTokens tokens,
   });
@@ -106,7 +106,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
-  Future<AuthTokens> crateApiAuthAuthenticateViaBrowser({
+  Future<AuthTokens> crateApiAuthAuthAuthenticateViaBrowser({
     required String clientId,
     required List<String> scopes,
   }) {
@@ -127,21 +127,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeSuccessData: sse_decode_auth_tokens,
           decodeErrorData: sse_decode_String,
         ),
-        constMeta: kCrateApiAuthAuthenticateViaBrowserConstMeta,
+        constMeta: kCrateApiAuthAuthAuthenticateViaBrowserConstMeta,
         argValues: [clientId, scopes],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiAuthAuthenticateViaBrowserConstMeta =>
+  TaskConstMeta get kCrateApiAuthAuthAuthenticateViaBrowserConstMeta =>
       const TaskConstMeta(
         debugName: "authenticate_via_browser",
         argNames: ["clientId", "scopes"],
       );
 
   @override
-  Future<void> crateApiAuthClearPersistedAuthState() {
+  Future<void> crateApiAuthAuthClearPersistedAuthState() {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -157,14 +157,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_String,
         ),
-        constMeta: kCrateApiAuthClearPersistedAuthStateConstMeta,
+        constMeta: kCrateApiAuthAuthClearPersistedAuthStateConstMeta,
         argValues: [],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiAuthClearPersistedAuthStateConstMeta =>
+  TaskConstMeta get kCrateApiAuthAuthClearPersistedAuthStateConstMeta =>
       const TaskConstMeta(
         debugName: "clear_persisted_auth_state",
         argNames: [],
@@ -221,7 +221,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "init_app", argNames: []);
 
   @override
-  Future<StoredAuthState?> crateApiAuthLoadPersistedAuthState() {
+  Future<StoredAuthState?> crateApiAuthAuthLoadPersistedAuthState() {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -237,18 +237,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeSuccessData: sse_decode_opt_box_autoadd_stored_auth_state,
           decodeErrorData: sse_decode_String,
         ),
-        constMeta: kCrateApiAuthLoadPersistedAuthStateConstMeta,
+        constMeta: kCrateApiAuthAuthLoadPersistedAuthStateConstMeta,
         argValues: [],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiAuthLoadPersistedAuthStateConstMeta =>
+  TaskConstMeta get kCrateApiAuthAuthLoadPersistedAuthStateConstMeta =>
       const TaskConstMeta(debugName: "load_persisted_auth_state", argNames: []);
 
   @override
-  Future<void> crateApiAuthPersistAuthState({
+  Future<void> crateApiAuthAuthPersistAuthState({
     required String clientId,
     required AuthTokens tokens,
   }) {
@@ -269,14 +269,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_String,
         ),
-        constMeta: kCrateApiAuthPersistAuthStateConstMeta,
+        constMeta: kCrateApiAuthAuthPersistAuthStateConstMeta,
         argValues: [clientId, tokens],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiAuthPersistAuthStateConstMeta =>
+  TaskConstMeta get kCrateApiAuthAuthPersistAuthStateConstMeta =>
       const TaskConstMeta(
         debugName: "persist_auth_state",
         argNames: ["clientId", "tokens"],

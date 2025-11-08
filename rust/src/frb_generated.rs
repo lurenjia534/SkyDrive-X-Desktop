@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1410451116;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1444071507;
 
 // Section: executor
 
@@ -45,7 +45,7 @@ flutter_rust_bridge::frb_generated_default_handler!();
 
 // Section: wire_funcs
 
-fn wire__crate__api__auth__authenticate_via_browser_impl(
+fn wire__crate__api__auth__auth__authenticate_via_browser_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -72,15 +72,17 @@ fn wire__crate__api__auth__authenticate_via_browser_impl(
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, String>((move || {
-                    let output_ok =
-                        crate::api::auth::authenticate_via_browser(api_client_id, api_scopes)?;
+                    let output_ok = crate::api::auth::auth::authenticate_via_browser(
+                        api_client_id,
+                        api_scopes,
+                    )?;
                     Ok(output_ok)
                 })())
             }
         },
     )
 }
-fn wire__crate__api__auth__clear_persisted_auth_state_impl(
+fn wire__crate__api__auth__auth__clear_persisted_auth_state_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -105,7 +107,7 @@ fn wire__crate__api__auth__clear_persisted_auth_state_impl(
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, String>((move || {
-                    let output_ok = crate::api::auth::clear_persisted_auth_state()?;
+                    let output_ok = crate::api::auth::auth::clear_persisted_auth_state()?;
                     Ok(output_ok)
                 })())
             }
@@ -176,7 +178,7 @@ fn wire__crate__api__simple__init_app_impl(
         },
     )
 }
-fn wire__crate__api__auth__load_persisted_auth_state_impl(
+fn wire__crate__api__auth__auth__load_persisted_auth_state_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -201,14 +203,14 @@ fn wire__crate__api__auth__load_persisted_auth_state_impl(
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, String>((move || {
-                    let output_ok = crate::api::auth::load_persisted_auth_state()?;
+                    let output_ok = crate::api::auth::auth::load_persisted_auth_state()?;
                     Ok(output_ok)
                 })())
             }
         },
     )
 }
-fn wire__crate__api__auth__persist_auth_state_impl(
+fn wire__crate__api__auth__auth__persist_auth_state_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -231,12 +233,12 @@ fn wire__crate__api__auth__persist_auth_state_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_client_id = <String>::sse_decode(&mut deserializer);
-            let api_tokens = <crate::api::auth::AuthTokens>::sse_decode(&mut deserializer);
+            let api_tokens = <crate::api::auth::auth::AuthTokens>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, String>((move || {
                     let output_ok =
-                        crate::api::auth::persist_auth_state(api_client_id, api_tokens)?;
+                        crate::api::auth::auth::persist_auth_state(api_client_id, api_tokens)?;
                     Ok(output_ok)
                 })())
             }
@@ -254,7 +256,7 @@ impl SseDecode for String {
     }
 }
 
-impl SseDecode for crate::api::auth::AuthTokens {
+impl SseDecode for crate::api::auth::auth::AuthTokens {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_accessToken = <String>::sse_decode(deserializer);
@@ -263,7 +265,7 @@ impl SseDecode for crate::api::auth::AuthTokens {
         let mut var_idToken = <Option<String>>::sse_decode(deserializer);
         let mut var_scope = <Option<String>>::sse_decode(deserializer);
         let mut var_tokenType = <Option<String>>::sse_decode(deserializer);
-        return crate::api::auth::AuthTokens {
+        return crate::api::auth::auth::AuthTokens {
             access_token: var_accessToken,
             refresh_token: var_refreshToken,
             expires_in: var_expiresIn,
@@ -316,11 +318,11 @@ impl SseDecode for Option<String> {
     }
 }
 
-impl SseDecode for Option<crate::api::auth::StoredAuthState> {
+impl SseDecode for Option<crate::api::auth::auth::StoredAuthState> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
-            return Some(<crate::api::auth::StoredAuthState>::sse_decode(
+            return Some(<crate::api::auth::auth::StoredAuthState>::sse_decode(
                 deserializer,
             ));
         } else {
@@ -340,13 +342,13 @@ impl SseDecode for Option<u64> {
     }
 }
 
-impl SseDecode for crate::api::auth::StoredAuthState {
+impl SseDecode for crate::api::auth::auth::StoredAuthState {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_clientId = <String>::sse_decode(deserializer);
-        let mut var_tokens = <crate::api::auth::AuthTokens>::sse_decode(deserializer);
+        let mut var_tokens = <crate::api::auth::auth::AuthTokens>::sse_decode(deserializer);
         let mut var_updatedAtMillis = <i64>::sse_decode(deserializer);
-        return crate::api::auth::StoredAuthState {
+        return crate::api::auth::auth::StoredAuthState {
             client_id: var_clientId,
             tokens: var_tokens,
             updated_at_millis: var_updatedAtMillis,
@@ -396,23 +398,28 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        1 => {
-            wire__crate__api__auth__authenticate_via_browser_impl(port, ptr, rust_vec_len, data_len)
-        }
-        2 => wire__crate__api__auth__clear_persisted_auth_state_impl(
+        1 => wire__crate__api__auth__auth__authenticate_via_browser_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        2 => wire__crate__api__auth__auth__clear_persisted_auth_state_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
         4 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        5 => wire__crate__api__auth__load_persisted_auth_state_impl(
+        5 => wire__crate__api__auth__auth__load_persisted_auth_state_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        6 => wire__crate__api__auth__persist_auth_state_impl(port, ptr, rust_vec_len, data_len),
+        6 => {
+            wire__crate__api__auth__auth__persist_auth_state_impl(port, ptr, rust_vec_len, data_len)
+        }
         _ => unreachable!(),
     }
 }
@@ -433,7 +440,7 @@ fn pde_ffi_dispatcher_sync_impl(
 // Section: rust2dart
 
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::api::auth::AuthTokens {
+impl flutter_rust_bridge::IntoDart for crate::api::auth::auth::AuthTokens {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.access_token.into_into_dart().into_dart(),
@@ -446,16 +453,19 @@ impl flutter_rust_bridge::IntoDart for crate::api::auth::AuthTokens {
         .into_dart()
     }
 }
-impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::auth::AuthTokens {}
-impl flutter_rust_bridge::IntoIntoDart<crate::api::auth::AuthTokens>
-    for crate::api::auth::AuthTokens
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::auth::auth::AuthTokens
 {
-    fn into_into_dart(self) -> crate::api::auth::AuthTokens {
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::auth::auth::AuthTokens>
+    for crate::api::auth::auth::AuthTokens
+{
+    fn into_into_dart(self) -> crate::api::auth::auth::AuthTokens {
         self
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::api::auth::StoredAuthState {
+impl flutter_rust_bridge::IntoDart for crate::api::auth::auth::StoredAuthState {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.client_id.into_into_dart().into_dart(),
@@ -466,13 +476,13 @@ impl flutter_rust_bridge::IntoDart for crate::api::auth::StoredAuthState {
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::api::auth::StoredAuthState
+    for crate::api::auth::auth::StoredAuthState
 {
 }
-impl flutter_rust_bridge::IntoIntoDart<crate::api::auth::StoredAuthState>
-    for crate::api::auth::StoredAuthState
+impl flutter_rust_bridge::IntoIntoDart<crate::api::auth::auth::StoredAuthState>
+    for crate::api::auth::auth::StoredAuthState
 {
-    fn into_into_dart(self) -> crate::api::auth::StoredAuthState {
+    fn into_into_dart(self) -> crate::api::auth::auth::StoredAuthState {
         self
     }
 }
@@ -484,7 +494,7 @@ impl SseEncode for String {
     }
 }
 
-impl SseEncode for crate::api::auth::AuthTokens {
+impl SseEncode for crate::api::auth::auth::AuthTokens {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.access_token, serializer);
@@ -533,12 +543,12 @@ impl SseEncode for Option<String> {
     }
 }
 
-impl SseEncode for Option<crate::api::auth::StoredAuthState> {
+impl SseEncode for Option<crate::api::auth::auth::StoredAuthState> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
-            <crate::api::auth::StoredAuthState>::sse_encode(value, serializer);
+            <crate::api::auth::auth::StoredAuthState>::sse_encode(value, serializer);
         }
     }
 }
@@ -553,11 +563,11 @@ impl SseEncode for Option<u64> {
     }
 }
 
-impl SseEncode for crate::api::auth::StoredAuthState {
+impl SseEncode for crate::api::auth::auth::StoredAuthState {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.client_id, serializer);
-        <crate::api::auth::AuthTokens>::sse_encode(self.tokens, serializer);
+        <crate::api::auth::auth::AuthTokens>::sse_encode(self.tokens, serializer);
         <i64>::sse_encode(self.updated_at_millis, serializer);
     }
 }
