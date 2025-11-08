@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:skydrivex/src/rust/api/auth.dart';
+import 'package:skydrivex/src/rust/api/auth/auth.dart' as auth_api;
+import 'package:skydrivex/src/rust/api/auth/refresh.dart' as auth_refresh;
 import 'package:skydrivex/src/rust/frb_generated.dart';
+
+typedef AuthTokens = auth_api.AuthTokens;
 
 Future<void> main() async {
   await RustLib.init();
@@ -57,7 +62,7 @@ class AuthController extends Notifier<AuthState> {
     );
 
     try {
-      final tokens = await authenticateViaBrowser(
+      final tokens = await auth_api.authenticateViaBrowser(
         clientId: clientId,
         scopes: scopes,
       );
@@ -66,6 +71,37 @@ class AuthController extends Notifier<AuthState> {
       state = state.copyWith(error: err.toString(), clearTokens: true);
     } finally {
       state = state.copyWith(isAuthenticating: false);
+    }
+  }
+
+  Future<void> restoreSession() async {
+    try {
+      final persisted = await auth_api.loadPersistedAuthState();
+      if (persisted == null) return;
+    } catch (err) {
+      state = state.copyWith(error: err.toString(), clearTokens: true);
+      return;
+    }
+    await _refreshTokens(showLoading: true);
+  }
+
+  Future<bool> refreshSilently() => _refreshTokens(showLoading: false);
+
+  Future<bool> _refreshTokens({required bool showLoading}) async {
+    if (showLoading) {
+      state = state.copyWith(isAuthenticating: true, clearError: true);
+    }
+    try {
+      final updatedState = await auth_refresh.refreshTokens();
+      state = state.copyWith(tokens: updatedState.tokens, clearError: true);
+      return true;
+    } catch (err) {
+      state = state.copyWith(error: err.toString(), clearTokens: true);
+      return false;
+    } finally {
+      if (showLoading) {
+        state = state.copyWith(isAuthenticating: false);
+      }
     }
   }
 }
@@ -95,16 +131,46 @@ class AuthPrototypePage extends ConsumerStatefulWidget {
 }
 
 class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
+  static const _refreshInterval = Duration(minutes: 50);
   final TextEditingController _clientIdController = TextEditingController();
   final TextEditingController _scopeController = TextEditingController(
     text: 'User.Read offline_access openid',
   );
+  Timer? _refreshTimer;
+  ProviderSubscription<AuthState>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSubscription = ref.listenManual<AuthState>(authControllerProvider, (
+      previous,
+      next,
+    ) {
+      final hadTokens = previous?.tokens != null;
+      final hasTokens = next.tokens != null;
+      if (!hadTokens && hasTokens) {
+        _startRefreshTimer();
+      } else if (hadTokens && !hasTokens) {
+        _stopRefreshTimer();
+      }
+    }, fireImmediately: true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _attemptRestoreSession();
+    });
+  }
 
   @override
   void dispose() {
+    _stopRefreshTimer();
+    _authSubscription?.close();
     _clientIdController.dispose();
     _scopeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _attemptRestoreSession() async {
+    final controller = ref.read(authControllerProvider.notifier);
+    await controller.restoreSession();
   }
 
   Future<void> _startAuthentication() async {
@@ -121,6 +187,18 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
         : scopeLine.split(RegExp(r'\s+')).where((s) => s.isNotEmpty).toList();
 
     await controller.authenticate(clientId: clientId, scopes: scopes);
+  }
+
+  void _startRefreshTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(_refreshInterval, (_) {
+      ref.read(authControllerProvider.notifier).refreshSilently();
+    });
+  }
+
+  void _stopRefreshTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
   }
 
   @override
@@ -274,7 +352,7 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  error!,
+                                  error,
                                   style: TextStyle(color: colorScheme.error),
                                 ),
                               ),
