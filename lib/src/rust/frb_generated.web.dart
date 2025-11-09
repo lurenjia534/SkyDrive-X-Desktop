@@ -8,6 +8,7 @@
 
 import 'api/auth/auth.dart';
 import 'api/auth/refresh.dart';
+import 'api/drive.dart';
 import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -29,7 +30,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AuthTokens dco_decode_auth_tokens(dynamic raw);
 
   @protected
+  bool dco_decode_bool(dynamic raw);
+
+  @protected
   AuthTokens dco_decode_box_autoadd_auth_tokens(dynamic raw);
+
+  @protected
+  PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw);
 
   @protected
   StoredAuthState dco_decode_box_autoadd_stored_auth_state(dynamic raw);
@@ -38,16 +45,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   BigInt dco_decode_box_autoadd_u_64(dynamic raw);
 
   @protected
+  DriveItemSummary dco_decode_drive_item_summary(dynamic raw);
+
+  @protected
+  DrivePage dco_decode_drive_page(dynamic raw);
+
+  @protected
   PlatformInt64 dco_decode_i_64(dynamic raw);
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
+  List<DriveItemSummary> dco_decode_list_drive_item_summary(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
 
   @protected
   StoredAuthState? dco_decode_opt_box_autoadd_stored_auth_state(dynamic raw);
@@ -74,7 +93,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AuthTokens sse_decode_auth_tokens(SseDeserializer deserializer);
 
   @protected
+  bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
   AuthTokens sse_decode_box_autoadd_auth_tokens(SseDeserializer deserializer);
+
+  @protected
+  PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
   StoredAuthState sse_decode_box_autoadd_stored_auth_state(
@@ -85,16 +110,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer);
 
   @protected
+  DriveItemSummary sse_decode_drive_item_summary(SseDeserializer deserializer);
+
+  @protected
+  DrivePage sse_decode_drive_page(SseDeserializer deserializer);
+
+  @protected
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
+  List<DriveItemSummary> sse_decode_list_drive_item_summary(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
   StoredAuthState? sse_decode_opt_box_autoadd_stored_auth_state(
@@ -120,17 +159,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
-  bool sse_decode_bool(SseDeserializer deserializer);
-
-  @protected
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
   void sse_encode_auth_tokens(AuthTokens self, SseSerializer serializer);
 
   @protected
+  void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_auth_tokens(
     AuthTokens self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_i_64(
+    PlatformInt64 self,
     SseSerializer serializer,
   );
 
@@ -144,10 +189,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer);
 
   @protected
+  void sse_encode_drive_item_summary(
+    DriveItemSummary self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_drive_page(DrivePage self, SseSerializer serializer);
+
+  @protected
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_drive_item_summary(
+    List<DriveItemSummary> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_prim_u_8_strict(
@@ -157,6 +217,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_64(
+    PlatformInt64? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_stored_auth_state(
@@ -184,9 +250,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_i_32(int self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_bool(bool self, SseSerializer serializer);
 }
 
 // Section: wire_class
