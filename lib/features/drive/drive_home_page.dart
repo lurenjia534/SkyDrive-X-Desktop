@@ -17,6 +17,26 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
   String? _error;
   bool _isLoading = true;
   bool _isLoadingMore = false;
+  int _selectedRailIndex = 0;
+  bool _isRailExtended = false;
+
+  static const double _railBreakpoint = 720;
+  static const Duration _railAnimationDuration = Duration(milliseconds: 320);
+
+  static const List<_DriveRailDestination> _railDestinations = [
+    _DriveRailDestination(label: 'Inbox', icon: Icons.inbox_rounded),
+    _DriveRailDestination(
+      label: 'Outbox',
+      icon: Icons.outbox_rounded,
+      badgeCount: 3,
+    ),
+    _DriveRailDestination(
+      label: 'Favorites',
+      icon: Icons.favorite_border_rounded,
+      showDot: true,
+    ),
+    _DriveRailDestination(label: 'Trash', icon: Icons.delete_outline_rounded),
+  ];
 
   @override
   void initState() {
@@ -110,6 +130,13 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
     }
   }
 
+  void _handleQuickActionTap() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('快速操作暂未实现，敬请期待。')));
+  }
+
   String _buildSubtitle(drive_api.DriveItemSummary item) {
     final pieces = <String>[];
     if (item.isFolder) {
@@ -147,19 +174,178 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
         : '${size.toStringAsFixed(1)} ${units[unitIndex]}';
   }
 
+  Widget _buildNavigationRail(ThemeData theme) {
+    final colorScheme = theme.colorScheme;
+    final isLight = theme.brightness == Brightness.light;
+    final borderRadius = BorderRadius.circular(30);
+    final navBackground = isLight
+        ? const Color(0xFFF2E7FE)
+        : colorScheme.surfaceContainerHighest;
+    final indicatorColor = isLight
+        ? const Color(0xFFD0BCFF)
+        : colorScheme.primaryContainer.withOpacity(0.9);
+    final navShadowColor = Colors.black.withOpacity(isLight ? 0.08 : 0.35);
+    final quickActionBackground = isLight
+        ? const Color(0xFFCAB8FF)
+        : colorScheme.primaryContainer.withOpacity(0.95);
+    final quickActionForeground = isLight
+        ? const Color(0xFF2E194F)
+        : colorScheme.onPrimaryContainer;
+    final quickActionShadows = [
+      BoxShadow(
+        color: Colors.black.withOpacity(isLight ? 0.15 : 0.45),
+        blurRadius: 26,
+        offset: const Offset(0, 14),
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 2),
+      child: AnimatedContainer(
+        duration: _railAnimationDuration,
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          color: navBackground,
+          borderRadius: borderRadius,
+          boxShadow: [
+            BoxShadow(
+              color: navShadowColor,
+              blurRadius: 30,
+              offset: const Offset(0, 18),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: borderRadius,
+          child: NavigationRail(
+            backgroundColor: Colors.transparent,
+            extended: _isRailExtended,
+            minWidth: 72,
+            minExtendedWidth: 236,
+            groupAlignment: -0.8,
+            labelType: _isRailExtended
+                ? NavigationRailLabelType.none
+                : NavigationRailLabelType.all,
+            selectedIndex: _selectedRailIndex,
+            useIndicator: true,
+            indicatorColor: indicatorColor,
+            indicatorShape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            unselectedLabelTextStyle: TextStyle(
+              color: colorScheme.onSurfaceVariant.withOpacity(0.9),
+              fontSize: 12,
+              height: 1.1,
+            ),
+            selectedLabelTextStyle: TextStyle(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              height: 1.1,
+            ),
+            onDestinationSelected: (index) {
+              setState(() {
+                _selectedRailIndex = index;
+              });
+            },
+            leading: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 16, 12, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      tooltip: _isRailExtended ? '收起导航' : '展开导航',
+                      icon: Icon(
+                        _isRailExtended
+                            ? Icons.menu_open_rounded
+                            : Icons.menu_rounded,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isRailExtended = !_isRailExtended;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _DriveRailQuickAction(
+                    extended: _isRailExtended,
+                    onPressed: _handleQuickActionTap,
+                    backgroundColor: quickActionBackground,
+                    foregroundColor: quickActionForeground,
+                    shadows: quickActionShadows,
+                  ),
+                ],
+              ),
+            ),
+            destinations: _railDestinations
+                .map(
+                  (destination) => NavigationRailDestination(
+                    icon: _buildDestinationIcon(
+                      destination,
+                      colorScheme,
+                      false,
+                    ),
+                    selectedIcon: _buildDestinationIcon(
+                      destination,
+                      colorScheme,
+                      true,
+                    ),
+                    label: Text(destination.label),
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDestinationIcon(
+    _DriveRailDestination destination,
+    ColorScheme colorScheme,
+    bool selected,
+  ) {
+    final iconColor = selected
+        ? colorScheme.primary
+        : colorScheme.onSurfaceVariant;
+    final icon = Icon(destination.icon, color: iconColor);
+    if (destination.badgeCount == null && !destination.showDot) {
+      return icon;
+    }
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        icon,
+        Positioned(
+          right: -8,
+          top: -4,
+          child: _DriveRailBadge(
+            label: destination.badgeCount?.toString(),
+            color: colorScheme.error,
+            isDot: destination.badgeCount == null,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-    Widget body;
+    Widget driveContent;
     if (_isLoading) {
-      body = const Center(child: CircularProgressIndicator());
+      driveContent = const Center(child: CircularProgressIndicator());
     } else if (_error != null) {
-      body = _DriveErrorView(message: _error!, onRetry: _loadInitial);
+      driveContent = _DriveErrorView(message: _error!, onRetry: _loadInitial);
     } else if (_items.isEmpty) {
-      body = const _DriveEmptyView();
+      driveContent = const _DriveEmptyView();
     } else {
-      body = RefreshIndicator(
+      driveContent = RefreshIndicator(
         onRefresh: _loadInitial,
         child: ListView.separated(
           padding: const EdgeInsets.only(bottom: 24),
@@ -198,6 +384,11 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
       );
     }
 
+    final animatedDriveContent = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      child: driveContent,
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('OneDrive 文件'),
@@ -214,9 +405,21 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
           ),
         ],
       ),
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        child: body,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final showRail = constraints.maxWidth >= _railBreakpoint;
+          if (!showRail) {
+            return animatedDriveContent;
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildNavigationRail(theme),
+              const SizedBox(width: 32),
+              Expanded(child: animatedDriveContent),
+            ],
+          );
+        },
       ),
     );
   }
@@ -290,6 +493,119 @@ class _DriveLoadMoreTile extends StatelessWidget {
               )
             : const Icon(Icons.expand_more),
         label: Text(isLoading ? '加载中…' : '加载更多'),
+      ),
+    );
+  }
+}
+
+class _DriveRailDestination {
+  const _DriveRailDestination({
+    required this.label,
+    required this.icon,
+    this.badgeCount,
+    this.showDot = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final int? badgeCount;
+  final bool showDot;
+}
+
+class _DriveRailQuickAction extends StatelessWidget {
+  const _DriveRailQuickAction({
+    required this.extended,
+    required this.onPressed,
+    required this.backgroundColor,
+    required this.foregroundColor,
+    required this.shadows,
+  });
+
+  final bool extended;
+  final VoidCallback onPressed;
+  final Color backgroundColor;
+  final Color foregroundColor;
+  final List<BoxShadow> shadows;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 320),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      child: AnimatedContainer(
+        key: ValueKey<bool>(extended),
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeInOut,
+        width: extended ? 196 : 64,
+        height: 64,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: shadows,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(22),
+            onTap: onPressed,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: extended ? 20 : 0),
+              child: Row(
+                mainAxisAlignment: extended
+                    ? MainAxisAlignment.start
+                    : MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.edit_rounded, color: foregroundColor, size: 22),
+                  if (extended) ...[
+                    const SizedBox(width: 12),
+                    Text(
+                      'Label',
+                      style: TextStyle(
+                        color: foregroundColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DriveRailBadge extends StatelessWidget {
+  const _DriveRailBadge({this.label, required this.color, required this.isDot});
+
+  final String? label;
+  final Color color;
+  final bool isDot;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isDot) {
+      return Container(
+        width: 10,
+        height: 10,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label ?? '',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
