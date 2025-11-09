@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/src/rust/api/auth/auth.dart' as auth_api;
 import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
 import 'package:skydrivex/main.dart';
+import 'drive_navigation_rail.dart';
 
 class DriveHomePage extends ConsumerStatefulWidget {
   const DriveHomePage({super.key});
@@ -17,26 +18,9 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
   String? _error;
   bool _isLoading = true;
   bool _isLoadingMore = false;
-  int _selectedRailIndex = 0;
-  bool _isRailExtended = false;
+  int _selectedSectionIndex = 0;
 
   static const double _railBreakpoint = 720;
-  static const Duration _railAnimationDuration = Duration(milliseconds: 320);
-
-  static const List<_DriveRailDestination> _railDestinations = [
-    _DriveRailDestination(label: 'Inbox', icon: Icons.inbox_rounded),
-    _DriveRailDestination(
-      label: 'Outbox',
-      icon: Icons.outbox_rounded,
-      badgeCount: 3,
-    ),
-    _DriveRailDestination(
-      label: 'Favorites',
-      icon: Icons.favorite_border_rounded,
-      showDot: true,
-    ),
-    _DriveRailDestination(label: 'Trash', icon: Icons.delete_outline_rounded),
-  ];
 
   @override
   void initState() {
@@ -137,6 +121,13 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
     ).showSnackBar(const SnackBar(content: Text('快速操作暂未实现，敬请期待。')));
   }
 
+  void _handleNavigationSelection(int index) {
+    if (_selectedSectionIndex == index) return;
+    setState(() {
+      _selectedSectionIndex = index;
+    });
+  }
+
   String _buildSubtitle(drive_api.DriveItemSummary item) {
     final pieces = <String>[];
     if (item.isFolder) {
@@ -174,169 +165,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
         : '${size.toStringAsFixed(1)} ${units[unitIndex]}';
   }
 
-  Widget _buildNavigationRail(ThemeData theme) {
-    final colorScheme = theme.colorScheme;
-    final isLight = theme.brightness == Brightness.light;
-    final borderRadius = BorderRadius.circular(30);
-    final navBackground = isLight
-        ? const Color(0xFFF2E7FE)
-        : colorScheme.surfaceContainerHighest;
-    final indicatorColor = isLight
-        ? const Color(0xFFD0BCFF)
-        : colorScheme.primaryContainer.withOpacity(0.9);
-    final navShadowColor = Colors.black.withOpacity(isLight ? 0.08 : 0.35);
-    final quickActionBackground = isLight
-        ? const Color(0xFFCAB8FF)
-        : colorScheme.primaryContainer.withOpacity(0.95);
-    final quickActionForeground = isLight
-        ? const Color(0xFF2E194F)
-        : colorScheme.onPrimaryContainer;
-    final quickActionShadows = [
-      BoxShadow(
-        color: Colors.black.withOpacity(isLight ? 0.15 : 0.45),
-        blurRadius: 26,
-        offset: const Offset(0, 14),
-      ),
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 2),
-      child: AnimatedContainer(
-        duration: _railAnimationDuration,
-        curve: Curves.easeOutCubic,
-        decoration: BoxDecoration(
-          color: navBackground,
-          borderRadius: borderRadius,
-          boxShadow: [
-            BoxShadow(
-              color: navShadowColor,
-              blurRadius: 30,
-              offset: const Offset(0, 18),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: borderRadius,
-          child: NavigationRail(
-            backgroundColor: Colors.transparent,
-            extended: _isRailExtended,
-            minWidth: 72,
-            minExtendedWidth: 236,
-            groupAlignment: -0.8,
-            labelType: _isRailExtended
-                ? NavigationRailLabelType.none
-                : NavigationRailLabelType.all,
-            selectedIndex: _selectedRailIndex,
-            useIndicator: true,
-            indicatorColor: indicatorColor,
-            indicatorShape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-            ),
-            unselectedLabelTextStyle: TextStyle(
-              color: colorScheme.onSurfaceVariant.withOpacity(0.9),
-              fontSize: 12,
-              height: 1.1,
-            ),
-            selectedLabelTextStyle: TextStyle(
-              color: colorScheme.onSurface,
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-              height: 1.1,
-            ),
-            onDestinationSelected: (index) {
-              setState(() {
-                _selectedRailIndex = index;
-              });
-            },
-            leading: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 16, 12, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      tooltip: _isRailExtended ? '收起导航' : '展开导航',
-                      icon: Icon(
-                        _isRailExtended
-                            ? Icons.menu_open_rounded
-                            : Icons.menu_rounded,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _isRailExtended = !_isRailExtended;
-                        });
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  _DriveRailQuickAction(
-                    extended: _isRailExtended,
-                    onPressed: _handleQuickActionTap,
-                    backgroundColor: quickActionBackground,
-                    foregroundColor: quickActionForeground,
-                    shadows: quickActionShadows,
-                  ),
-                ],
-              ),
-            ),
-            destinations: _railDestinations
-                .map(
-                  (destination) => NavigationRailDestination(
-                    icon: _buildDestinationIcon(
-                      destination,
-                      colorScheme,
-                      false,
-                    ),
-                    selectedIcon: _buildDestinationIcon(
-                      destination,
-                      colorScheme,
-                      true,
-                    ),
-                    label: Text(destination.label),
-                  ),
-                )
-                .toList(),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDestinationIcon(
-    _DriveRailDestination destination,
-    ColorScheme colorScheme,
-    bool selected,
-  ) {
-    final iconColor = selected
-        ? colorScheme.primary
-        : colorScheme.onSurfaceVariant;
-    final icon = Icon(destination.icon, color: iconColor);
-    if (destination.badgeCount == null && !destination.showDot) {
-      return icon;
-    }
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        icon,
-        Positioned(
-          right: -8,
-          top: -4,
-          child: _DriveRailBadge(
-            label: destination.badgeCount?.toString(),
-            color: colorScheme.error,
-            isDot: destination.badgeCount == null,
-          ),
-        ),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
+  Widget _buildDriveSection(ColorScheme colorScheme) {
     Widget driveContent;
     if (_isLoading) {
       driveContent = const Center(child: CircularProgressIndicator());
@@ -384,10 +213,40 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
       );
     }
 
-    final animatedDriveContent = AnimatedSwitcher(
-      duration: const Duration(milliseconds: 200),
-      child: driveContent,
-    );
+    return driveContent;
+  }
+
+  Widget _buildSectionContent(ColorScheme colorScheme) {
+    switch (_selectedSectionIndex) {
+      case 0:
+        return _buildDriveSection(colorScheme);
+      case 1:
+        return const _DriveSectionPlaceholder(
+          icon: Icons.outbox_rounded,
+          title: 'Outbox',
+          message: 'Outbox 功能正在开发中，敬请期待。',
+        );
+      case 2:
+        return const _DriveSectionPlaceholder(
+          icon: Icons.favorite_border_rounded,
+          title: 'Favorites',
+          message: '你保存的收藏内容会在这里显示。',
+        );
+      case 3:
+        return const _DriveSectionPlaceholder(
+          icon: Icons.delete_outline_rounded,
+          title: 'Trash',
+          message: '回收站功能正在实现，暂无法浏览已删除内容。',
+        );
+      default:
+        return const SizedBox();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final sectionContent = _buildSectionContent(colorScheme);
 
     return Scaffold(
       appBar: AppBar(
@@ -409,14 +268,18 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
         builder: (context, constraints) {
           final showRail = constraints.maxWidth >= _railBreakpoint;
           if (!showRail) {
-            return animatedDriveContent;
+            return sectionContent;
           }
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildNavigationRail(theme),
+              DriveNavigationRail(
+                selectedIndex: _selectedSectionIndex,
+                onQuickAction: _handleQuickActionTap,
+                onDestinationSelected: _handleNavigationSelection,
+              ),
               const SizedBox(width: 32),
-              Expanded(child: animatedDriveContent),
+              Expanded(child: sectionContent),
             ],
           );
         },
@@ -498,114 +361,39 @@ class _DriveLoadMoreTile extends StatelessWidget {
   }
 }
 
-class _DriveRailDestination {
-  const _DriveRailDestination({
-    required this.label,
+class _DriveSectionPlaceholder extends StatelessWidget {
+  const _DriveSectionPlaceholder({
     required this.icon,
-    this.badgeCount,
-    this.showDot = false,
+    required this.title,
+    required this.message,
   });
 
-  final String label;
   final IconData icon;
-  final int? badgeCount;
-  final bool showDot;
-}
-
-class _DriveRailQuickAction extends StatelessWidget {
-  const _DriveRailQuickAction({
-    required this.extended,
-    required this.onPressed,
-    required this.backgroundColor,
-    required this.foregroundColor,
-    required this.shadows,
-  });
-
-  final bool extended;
-  final VoidCallback onPressed;
-  final Color backgroundColor;
-  final Color foregroundColor;
-  final List<BoxShadow> shadows;
+  final String title;
+  final String message;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 320),
-      switchInCurve: Curves.easeOut,
-      switchOutCurve: Curves.easeIn,
-      child: AnimatedContainer(
-        key: ValueKey<bool>(extended),
-        duration: const Duration(milliseconds: 320),
-        curve: Curves.easeInOut,
-        width: extended ? 196 : 64,
-        height: 64,
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: shadows,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(22),
-            onTap: onPressed,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: extended ? 20 : 0),
-              child: Row(
-                mainAxisAlignment: extended
-                    ? MainAxisAlignment.start
-                    : MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.edit_rounded, color: foregroundColor, size: 22),
-                  if (extended) ...[
-                    const SizedBox(width: 12),
-                    Text(
-                      'Label',
-                      style: TextStyle(
-                        color: foregroundColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ],
+    final colorScheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 64, color: colorScheme.onSurfaceVariant),
+          const SizedBox(height: 16),
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DriveRailBadge extends StatelessWidget {
-  const _DriveRailBadge({this.label, required this.color, required this.isDot});
-
-  final String? label;
-  final Color color;
-  final bool isDot;
-
-  @override
-  Widget build(BuildContext context) {
-    if (isDot) {
-      return Container(
-        width: 10,
-        height: 10,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      );
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        label ?? '',
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
+        ],
       ),
     );
   }
