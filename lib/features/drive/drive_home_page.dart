@@ -1,12 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:skydrivex/src/rust/api/auth/auth.dart' as auth_api;
 import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
-import 'package:skydrivex/main.dart';
-import 'drive_navigation_rail.dart';
+
+class DriveHomePageController {
+  _DriveHomePageState? _state;
+
+  Future<void> refresh() async {
+    final state = _state;
+    if (state != null) {
+      await state._loadInitial();
+    }
+  }
+
+  bool get isLoading => _state?._isLoading ?? true;
+
+  void _attach(_DriveHomePageState state) {
+    _state = state;
+  }
+
+  void _detach(_DriveHomePageState state) {
+    if (_state == state) {
+      _state = null;
+    }
+  }
+}
 
 class DriveHomePage extends ConsumerStatefulWidget {
-  const DriveHomePage({super.key});
+  const DriveHomePage({super.key, this.controller});
+
+  final DriveHomePageController? controller;
 
   @override
   ConsumerState<DriveHomePage> createState() => _DriveHomePageState();
@@ -18,17 +40,31 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
   String? _error;
   bool _isLoading = true;
   bool _isLoadingMore = false;
-  int _selectedSectionIndex = 0;
-
-  static const double _railBreakpoint = 720;
 
   @override
   void initState() {
     super.initState();
+    widget.controller?._attach(this);
     _loadInitial();
   }
 
+  @override
+  void didUpdateWidget(covariant DriveHomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?._detach(this);
+      widget.controller?._attach(this);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller?._detach(this);
+    super.dispose();
+  }
+
   Future<void> _loadInitial() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _error = null;
@@ -38,6 +74,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
         folderPath: null,
         nextLink: null,
       );
+      if (!mounted) return;
       setState(() {
         _items
           ..clear()
@@ -45,6 +82,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
         _nextLink = page.nextLink;
       });
     } catch (err) {
+      if (!mounted) return;
       setState(() {
         _error = err.toString();
       });
@@ -87,47 +125,6 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
     }
   }
 
-  Future<void> _clearCredentials() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-      _items.clear();
-      _nextLink = null;
-    });
-    try {
-      await auth_api.clearPersistedAuthState();
-      if (!mounted) return;
-      ref.invalidate(authControllerProvider);
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const AuthPrototypePage()),
-        (_) => false,
-      );
-    } catch (err) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('清除凭据失败：$err')));
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  void _handleQuickActionTap() {
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('快速操作暂未实现，敬请期待。')));
-  }
-
-  void _handleNavigationSelection(int index) {
-    if (_selectedSectionIndex == index) return;
-    setState(() {
-      _selectedSectionIndex = index;
-    });
-  }
-
   String _buildSubtitle(drive_api.DriveItemSummary item) {
     final pieces = <String>[];
     if (item.isFolder) {
@@ -165,122 +162,53 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
         : '${size.toStringAsFixed(1)} ${units[unitIndex]}';
   }
 
-  Widget _buildDriveSection(ColorScheme colorScheme) {
-    Widget driveContent;
-    if (_isLoading) {
-      driveContent = const Center(child: CircularProgressIndicator());
-    } else if (_error != null) {
-      driveContent = _DriveErrorView(message: _error!, onRetry: _loadInitial);
-    } else if (_items.isEmpty) {
-      driveContent = const _DriveEmptyView();
-    } else {
-      driveContent = RefreshIndicator(
-        onRefresh: _loadInitial,
-        child: ListView.separated(
-          padding: const EdgeInsets.only(bottom: 24),
-          itemCount: _items.length + (_nextLink != null ? 1 : 0),
-          separatorBuilder: (_, __) => const Divider(height: 1),
-          itemBuilder: (context, index) {
-            if (index >= _items.length) {
-              return _DriveLoadMoreTile(
-                isLoading: _isLoadingMore,
-                onLoadMore: _loadMore,
-              );
-            }
-            final item = _items[index];
-            final icon = item.isFolder
-                ? Icons.folder_rounded
-                : Icons.insert_drive_file_rounded;
-            return ListTile(
-              leading: Icon(
-                icon,
-                color: item.isFolder
-                    ? colorScheme.primary
-                    : colorScheme.onSurfaceVariant,
-              ),
-              title: Text(item.name),
-              subtitle: Text(_buildSubtitle(item)),
-              onTap: () {
-                if (item.isFolder && mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('暂不支持子文件夹浏览，敬请期待。')),
-                  );
-                }
-              },
-            );
-          },
-        ),
-      );
-    }
-
-    return driveContent;
-  }
-
-  Widget _buildSectionContent(ColorScheme colorScheme) {
-    switch (_selectedSectionIndex) {
-      case 0:
-        return _buildDriveSection(colorScheme);
-      case 1:
-        return const _DriveSectionPlaceholder(
-          icon: Icons.outbox_rounded,
-          title: 'Outbox',
-          message: 'Outbox 功能正在开发中，敬请期待。',
-        );
-      case 2:
-        return const _DriveSectionPlaceholder(
-          icon: Icons.favorite_border_rounded,
-          title: 'Favorites',
-          message: '你保存的收藏内容会在这里显示。',
-        );
-      case 3:
-        return const _DriveSectionPlaceholder(
-          icon: Icons.delete_outline_rounded,
-          title: 'Trash',
-          message: '回收站功能正在实现，暂无法浏览已删除内容。',
-        );
-      default:
-        return const SizedBox();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final sectionContent = _buildSectionContent(colorScheme);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('OneDrive 文件'),
-        actions: [
-          IconButton(
-            tooltip: '注销',
-            icon: const Icon(Icons.logout),
-            onPressed: _clearCredentials,
-          ),
-          IconButton(
-            tooltip: '刷新',
-            icon: const Icon(Icons.refresh),
-            onPressed: _isLoading ? null : () => _loadInitial(),
-          ),
-        ],
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final showRail = constraints.maxWidth >= _railBreakpoint;
-          if (!showRail) {
-            return sectionContent;
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return _DriveErrorView(message: _error!, onRetry: _loadInitial);
+    }
+    if (_items.isEmpty) {
+      return const _DriveEmptyView();
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadInitial,
+      child: ListView.separated(
+        padding: const EdgeInsets.only(bottom: 24),
+        itemCount: _items.length + (_nextLink != null ? 1 : 0),
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (context, index) {
+          if (index >= _items.length) {
+            return _DriveLoadMoreTile(
+              isLoading: _isLoadingMore,
+              onLoadMore: _loadMore,
+            );
           }
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              DriveNavigationRail(
-                selectedIndex: _selectedSectionIndex,
-                onQuickAction: _handleQuickActionTap,
-                onDestinationSelected: _handleNavigationSelection,
-              ),
-              const SizedBox(width: 32),
-              Expanded(child: sectionContent),
-            ],
+          final item = _items[index];
+          final icon = item.isFolder
+              ? Icons.folder_rounded
+              : Icons.insert_drive_file_rounded;
+          return ListTile(
+            leading: Icon(
+              icon,
+              color: item.isFolder
+                  ? colorScheme.primary
+                  : colorScheme.onSurfaceVariant,
+            ),
+            title: Text(item.name),
+            subtitle: Text(_buildSubtitle(item)),
+            onTap: () {
+              if (item.isFolder && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('暂不支持子文件夹浏览，敬请期待。')),
+                );
+              }
+            },
           );
         },
       ),
@@ -356,44 +284,6 @@ class _DriveLoadMoreTile extends StatelessWidget {
               )
             : const Icon(Icons.expand_more),
         label: Text(isLoading ? '加载中…' : '加载更多'),
-      ),
-    );
-  }
-}
-
-class _DriveSectionPlaceholder extends StatelessWidget {
-  const _DriveSectionPlaceholder({
-    required this.icon,
-    required this.title,
-    required this.message,
-  });
-
-  final IconData icon;
-  final String title;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 64, color: colorScheme.onSurfaceVariant),
-          const SizedBox(height: 16),
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              message,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

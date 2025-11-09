@@ -34,7 +34,7 @@ class _DriveNavigationRailState extends State<DriveNavigationRail> {
       icon: Icons.favorite_border_rounded,
       showDot: true,
     ),
-    _DriveRailDestination(label: 'Trash', icon: Icons.delete_outline_rounded),
+    _DriveRailDestination(label: 'Settings', icon: Icons.settings_outlined),
   ];
 
   late bool _isExtended = widget.initialExtended;
@@ -67,24 +67,21 @@ class _DriveNavigationRailState extends State<DriveNavigationRail> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isLight = theme.brightness == Brightness.light;
     final borderRadius = BorderRadius.circular(30);
-    final navBackground = isLight
-        ? const Color(0xFFF2E7FE)
-        : colorScheme.surfaceContainerHighest;
-    final indicatorColor = isLight
-        ? const Color(0xFFD0BCFF)
-        : colorScheme.primaryContainer.withOpacity(0.9);
-    final navShadowColor = Colors.black.withOpacity(isLight ? 0.08 : 0.35);
-    final quickActionBackground = isLight
-        ? const Color(0xFFCAB8FF)
-        : colorScheme.primaryContainer.withOpacity(0.95);
-    final quickActionForeground = isLight
-        ? const Color(0xFF2E194F)
-        : colorScheme.onPrimaryContainer;
+    final navBackground = _tonalSurface(colorScheme);
+    final indicatorColor = colorScheme.primaryContainer.withOpacity(0.95);
+    final navShadowColor = colorScheme.shadow.withOpacity(
+      theme.brightness == Brightness.light ? 0.12 : 0.4,
+    );
+    final quickActionBackground = colorScheme.primaryContainer.withOpacity(
+      theme.colorSchemeBrightnessBlend(),
+    );
+    final quickActionForeground = colorScheme.onPrimaryContainer;
     final quickActionShadows = [
       BoxShadow(
-        color: Colors.black.withOpacity(isLight ? 0.15 : 0.45),
+        color: colorScheme.shadow.withOpacity(
+          theme.brightness == Brightness.light ? 0.18 : 0.5,
+        ),
         blurRadius: 26,
         offset: const Offset(0, 14),
       ),
@@ -213,6 +210,18 @@ class _DriveNavigationRailState extends State<DriveNavigationRail> {
         ),
       ],
     );
+  }
+}
+
+Color _tonalSurface(ColorScheme colorScheme) {
+  final surface = colorScheme.surface;
+  final tint = colorScheme.primary.withOpacity(0.08);
+  return Color.alphaBlend(tint, surface);
+}
+
+extension on ThemeData {
+  double colorSchemeBrightnessBlend() {
+    return brightness == Brightness.light ? 0.95 : 0.85;
   }
 }
 
