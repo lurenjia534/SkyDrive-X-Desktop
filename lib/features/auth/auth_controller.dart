@@ -4,6 +4,13 @@ import 'package:skydrivex/src/rust/api/auth/refresh.dart' as auth_refresh;
 
 typedef AuthTokens = auth_api.AuthTokens;
 
+const List<String> kRequiredAuthScopes = [
+  'Files.ReadWrite',
+  'User.Read',
+  'offline_access',
+  'openid',
+];
+
 final authControllerProvider =
     NotifierProvider.autoDispose<AuthController, AuthState>(AuthController.new);
 

@@ -16,9 +16,6 @@ class AuthPrototypePage extends ConsumerStatefulWidget {
 class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
   static const _refreshInterval = Duration(minutes: 50);
   final TextEditingController _clientIdController = TextEditingController();
-  final TextEditingController _scopeController = TextEditingController(
-    text: 'User.Read offline_access openid',
-  );
   Timer? _refreshTimer;
   ProviderSubscription<AuthState>? _authSubscription;
   bool _navigatedToDrive = false;
@@ -50,7 +47,6 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
     _stopRefreshTimer();
     _authSubscription?.close();
     _clientIdController.dispose();
-    _scopeController.dispose();
     super.dispose();
   }
 
@@ -67,12 +63,10 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
       return;
     }
 
-    final scopeLine = _scopeController.text.trim();
-    final scopes = scopeLine.isEmpty
-        ? const <String>[]
-        : scopeLine.split(RegExp(r'\s+')).where((s) => s.isNotEmpty).toList();
-
-    await controller.authenticate(clientId: clientId, scopes: scopes);
+    await controller.authenticate(
+      clientId: clientId,
+      scopes: kRequiredAuthScopes,
+    );
   }
 
   void _startRefreshTimer() {
@@ -195,17 +189,7 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
                         ),
                       ),
                       const SizedBox(height: 18),
-                      TextField(
-                        controller: _scopeController,
-                        decoration: InputDecoration(
-                          labelText: '请求的作用域 (空格分隔)',
-                          helperText: '默认包含 User.Read、offline_access、openid',
-                          prefixIcon: const Icon(Icons.lock_open_rounded),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                      ),
+                      const _ScopeInfoCard(),
                       const SizedBox(height: 28),
                       ElevatedButton.icon(
                         onPressed: isAuthenticating
@@ -264,6 +248,113 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ScopeInfoCard extends StatelessWidget {
+  const _ScopeInfoCard();
+
+  static const Map<String, String> _descriptions = {
+    'Files.ReadWrite': '访问并管理 OneDrive 中的所有文件。',
+    'User.Read': '读取基础个人资料并完成登录。',
+    'offline_access': '获取刷新令牌以保持会话有效。',
+    'openid': '遵循 OpenID Connect 协议所需的标识作用域。',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final gradient = LinearGradient(
+      colors: [
+        colorScheme.primaryContainer.withOpacity(0.4),
+        colorScheme.secondaryContainer.withOpacity(0.3),
+      ],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.4)),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.shadow.withOpacity(0.08),
+            blurRadius: 22,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary.withOpacity(0.18),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.lock_open_rounded,
+                    color: colorScheme.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '请求的作用域',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...kRequiredAuthScopes.map(
+              (scope) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.check_circle_rounded,
+                      size: 18,
+                      color: colorScheme.primary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            scope,
+                            style: Theme.of(context).textTheme.bodyLarge
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          Text(
+                            _descriptions[scope] ?? '',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                  height: 1.35,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
