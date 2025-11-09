@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:skydrivex/features/drive/drive_home_page.dart';
 import 'package:skydrivex/src/rust/api/auth/auth.dart' as auth_api;
 import 'package:skydrivex/src/rust/api/auth/refresh.dart' as auth_refresh;
 import 'package:skydrivex/src/rust/frb_generated.dart';
@@ -138,6 +138,7 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
   );
   Timer? _refreshTimer;
   ProviderSubscription<AuthState>? _authSubscription;
+  bool _navigatedToDrive = false;
 
   @override
   void initState() {
@@ -150,8 +151,10 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
       final hasTokens = next.tokens != null;
       if (!hadTokens && hasTokens) {
         _startRefreshTimer();
+        _navigateToDrive();
       } else if (hadTokens && !hasTokens) {
         _stopRefreshTimer();
+        _navigatedToDrive = false;
       }
     }, fireImmediately: true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -201,11 +204,20 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
     _refreshTimer = null;
   }
 
+  Future<void> _navigateToDrive() async {
+    if (_navigatedToDrive || !mounted) return;
+    final tokens = ref.read(authControllerProvider).tokens;
+    if (tokens == null) return;
+    _navigatedToDrive = true;
+    await Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const DriveHomePage()));
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final authState = ref.watch(authControllerProvider);
-    final tokens = authState.tokens;
     final error = authState.error;
     final isAuthenticating = authState.isAuthenticating;
 
@@ -359,54 +371,6 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
                             ],
                           ),
                         ),
-                      if (tokens != null) ...[
-                        const SizedBox(height: 24),
-                        Divider(color: colorScheme.outlineVariant),
-                        const SizedBox(height: 16),
-                        Text(
-                          '令牌返回结果',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildTokenTile(
-                          context,
-                          label: '访问令牌 (Access Token)',
-                          value: tokens.accessToken,
-                        ),
-                        if (tokens.refreshToken != null)
-                          _buildTokenTile(
-                            context,
-                            label: '刷新令牌 (Refresh Token)',
-                            value: tokens.refreshToken!,
-                          ),
-                        if (tokens.expiresIn != null)
-                          _buildTokenTile(
-                            context,
-                            label: '有效期 (秒)',
-                            value: tokens.expiresIn!.toString(),
-                            isMonospace: false,
-                          ),
-                        if (tokens.scope != null)
-                          _buildTokenTile(
-                            context,
-                            label: '授权范围',
-                            value: tokens.scope!,
-                            isMonospace: false,
-                          ),
-                        if (tokens.idToken != null)
-                          _buildTokenTile(
-                            context,
-                            label: 'ID Token',
-                            value: tokens.idToken!,
-                          ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '仅用于验证流程的原型，请妥善保管令牌。',
-                          style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(color: colorScheme.onSurfaceVariant),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -414,149 +378,6 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildTokenTile(
-    BuildContext context, {
-    required String label,
-    required String value,
-    bool isMonospace = true,
-  }) {
-    return _CollapsibleTokenTile(
-      label: label,
-      value: value,
-      isMonospace: isMonospace,
-    );
-  }
-}
-
-class _CollapsibleTokenTile extends StatefulWidget {
-  const _CollapsibleTokenTile({
-    required this.label,
-    required this.value,
-    this.isMonospace = true,
-  });
-
-  final String label;
-  final String value;
-  final bool isMonospace;
-
-  @override
-  State<_CollapsibleTokenTile> createState() => _CollapsibleTokenTileState();
-}
-
-class _CollapsibleTokenTileState extends State<_CollapsibleTokenTile> {
-  bool _expanded = false;
-
-  String get _preview {
-    const limit = 40;
-    if (widget.value.length <= limit) return widget.value;
-    return '${widget.value.substring(0, limit)}…';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: colorScheme.surfaceContainerHighest.withOpacity(0.45),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.18)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(20),
-            onTap: () => setState(() => _expanded = !_expanded),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.label,
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _preview,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontFamily: widget.isMonospace ? 'monospace' : null,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    tooltip: '复制到剪贴板',
-                    icon: const Icon(Icons.copy_rounded),
-                    onPressed: () async {
-                      await Clipboard.setData(
-                        ClipboardData(text: widget.value),
-                      );
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${widget.label} 已复制'),
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    _expanded
-                        ? Icons.expand_less_rounded
-                        : Icons.expand_more_rounded,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          AnimatedCrossFade(
-            crossFadeState: _expanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 200),
-            firstChild: const SizedBox.shrink(),
-            secondChild: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 200),
-                child: Scrollbar(
-                  thumbVisibility: true,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: SelectableText(
-                      widget.value,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontFamily: widget.isMonospace ? 'monospace' : null,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
