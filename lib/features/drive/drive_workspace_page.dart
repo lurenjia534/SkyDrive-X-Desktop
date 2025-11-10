@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/features/auth/auth_controller.dart';
+import 'package:skydrivex/features/drive/settings/drive_settings_page.dart';
 import 'package:skydrivex/src/rust/api/auth/auth.dart' as auth_api;
 
 import 'drive_home_page.dart';
@@ -81,11 +82,7 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
           message: '你保存的收藏内容会在这里显示。',
         );
       case 3:
-        return const _DriveSectionPlaceholder(
-          icon: Icons.settings_outlined,
-          title: 'Settings',
-          message: '设置页面正在规划中，先用默认配置继续探索吧。',
-        );
+        return const DriveSettingsPage();
       default:
         return const SizedBox();
     }
