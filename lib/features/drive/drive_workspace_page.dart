@@ -22,6 +22,26 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
   final DriveHomePageController _filesController = DriveHomePageController();
   int _selectedSectionIndex = 0;
   bool _isClearingCredentials = false;
+  late final List<Widget> _sections;
+
+  @override
+  void initState() {
+    super.initState();
+    _sections = [
+      DriveHomePage(controller: _filesController),
+      const _DriveSectionPlaceholder(
+        icon: Icons.outbox_rounded,
+        title: 'Outbox',
+        message: 'Outbox 功能正在开发中，敬请期待。',
+      ),
+      const _DriveSectionPlaceholder(
+        icon: Icons.favorite_border_rounded,
+        title: 'Favorites',
+        message: '你保存的收藏内容会在这里显示。',
+      ),
+      const DriveSettingsPage(),
+    ];
+  }
 
   void _handleQuickActionTap() {
     if (!mounted) return;
@@ -65,32 +85,8 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
     }
   }
 
-  Widget _buildSectionContent() {
-    switch (_selectedSectionIndex) {
-      case 0:
-        return DriveHomePage(controller: _filesController);
-      case 1:
-        return const _DriveSectionPlaceholder(
-          icon: Icons.outbox_rounded,
-          title: 'Outbox',
-          message: 'Outbox 功能正在开发中，敬请期待。',
-        );
-      case 2:
-        return const _DriveSectionPlaceholder(
-          icon: Icons.favorite_border_rounded,
-          title: 'Favorites',
-          message: '你保存的收藏内容会在这里显示。',
-        );
-      case 3:
-        return const DriveSettingsPage();
-      default:
-        return const SizedBox();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final sectionContent = _buildSectionContent();
     return Scaffold(
       appBar: AppBar(
         title: const Text('OneDrive 文件'),
@@ -118,8 +114,12 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final showRail = constraints.maxWidth >= _railBreakpoint;
+          final body = IndexedStack(
+            index: _selectedSectionIndex,
+            children: _sections,
+          );
           if (!showRail) {
-            return sectionContent;
+            return body;
           }
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,7 +130,7 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
                 onDestinationSelected: _handleNavigationSelection,
               ),
               const SizedBox(width: 32),
-              Expanded(child: sectionContent),
+              Expanded(child: body),
             ],
           );
         },
