@@ -36,7 +36,7 @@ pub fn list_drive_children(
     let request_url = if let Some(link) = next_link {
         link
     } else if let Some(id) = folder_id {
-        format!("{GRAPH_BASE}/me/drive/items/{id}/children")
+        format!("{GRAPH_BASE}/me/drive/items/{id}/children{THUMBNAIL_QUERY}")
     } else {
         build_children_url(folder_path.as_deref())
     };

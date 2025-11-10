@@ -486,11 +486,6 @@ class _DriveItemTile extends StatelessWidget {
                         child: Image.network(
                           item.thumbnailUrl!,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _DriveTileIcon(
-                            icon: iconData,
-                            background: iconBackground,
-                            iconColor: iconColor,
-                          ),
                         ),
                       )
                     : _DriveTileIcon(
