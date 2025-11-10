@@ -176,34 +176,31 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
       return const _DriveEmptyView();
     }
 
+    final listItemCount = _items.length + (_nextLink != null ? 1 : 0);
+
     return RefreshIndicator(
       onRefresh: _loadInitial,
-      child: ListView.separated(
-        padding: const EdgeInsets.only(bottom: 24),
-        itemCount: _items.length + (_nextLink != null ? 1 : 0),
-        separatorBuilder: (_, __) => const Divider(height: 1),
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        itemCount: listItemCount,
         itemBuilder: (context, index) {
           if (index >= _items.length) {
-            return _DriveLoadMoreTile(
-              isLoading: _isLoadingMore,
-              onLoadMore: _loadMore,
+            return Padding(
+              padding: EdgeInsets.zero,
+              child: _DriveLoadMoreTile(
+                isLoading: _isLoadingMore,
+                onLoadMore: _loadMore,
+              ),
             );
           }
           final item = _items[index];
-          final icon = item.isFolder
-              ? Icons.folder_rounded
-              : Icons.insert_drive_file_rounded;
-          return ListTile(
-            leading: Icon(
-              icon,
-              color: item.isFolder
-                  ? colorScheme.primary
-                  : colorScheme.onSurfaceVariant,
-            ),
-            title: Text(item.name),
-            subtitle: Text(_buildSubtitle(item)),
+          final subtitle = _buildSubtitle(item);
+          return _DriveItemTile(
+            item: item,
+            subtitle: subtitle,
+            colorScheme: colorScheme,
             onTap: () {
-              if (item.isFolder && mounted) {
+              if (item.isFolder) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('暂不支持子文件夹浏览，敬请期待。')),
                 );
@@ -284,6 +281,86 @@ class _DriveLoadMoreTile extends StatelessWidget {
               )
             : const Icon(Icons.expand_more),
         label: Text(isLoading ? '加载中…' : '加载更多'),
+      ),
+    );
+  }
+}
+
+class _DriveItemTile extends StatelessWidget {
+  const _DriveItemTile({
+    required this.item,
+    required this.subtitle,
+    required this.colorScheme,
+    required this.onTap,
+  });
+
+  final drive_api.DriveItemSummary item;
+  final String subtitle;
+  final ColorScheme colorScheme;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isFolder = item.isFolder;
+    final iconData = isFolder
+        ? Icons.folder_rounded
+        : Icons.insert_drive_file_rounded;
+    final iconBackground = isFolder
+        ? colorScheme.primaryContainer.withOpacity(0.6)
+        : colorScheme.surfaceVariant.withOpacity(0.6);
+    final iconColor = isFolder
+        ? colorScheme.onPrimaryContainer
+        : colorScheme.primary;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        hoverColor: colorScheme.primary.withOpacity(0.05),
+        splashColor: colorScheme.primary.withOpacity(0.1),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: iconBackground,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(iconData, color: iconColor),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      item.name,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
