@@ -412,8 +412,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   DriveItemSummary dco_decode_drive_item_summary(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 7)
-      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return DriveItemSummary(
       id: dco_decode_String(arr[0]),
       name: dco_decode_String(arr[1]),
@@ -422,6 +422,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       childCount: dco_decode_opt_box_autoadd_i_64(arr[4]),
       mimeType: dco_decode_opt_String(arr[5]),
       lastModified: dco_decode_opt_String(arr[6]),
+      thumbnailUrl: dco_decode_opt_String(arr[7]),
     );
   }
 
@@ -584,6 +585,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_childCount = sse_decode_opt_box_autoadd_i_64(deserializer);
     var var_mimeType = sse_decode_opt_String(deserializer);
     var var_lastModified = sse_decode_opt_String(deserializer);
+    var var_thumbnailUrl = sse_decode_opt_String(deserializer);
     return DriveItemSummary(
       id: var_id,
       name: var_name,
@@ -592,6 +594,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       childCount: var_childCount,
       mimeType: var_mimeType,
       lastModified: var_lastModified,
+      thumbnailUrl: var_thumbnailUrl,
     );
   }
 
@@ -793,6 +796,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_box_autoadd_i_64(self.childCount, serializer);
     sse_encode_opt_String(self.mimeType, serializer);
     sse_encode_opt_String(self.lastModified, serializer);
+    sse_encode_opt_String(self.thumbnailUrl, serializer);
   }
 
   @protected

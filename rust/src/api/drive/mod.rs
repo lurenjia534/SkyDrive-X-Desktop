@@ -16,6 +16,7 @@ pub struct DriveItemSummary {
     pub child_count: Option<i64>,
     pub mime_type: Option<String>,
     pub last_modified: Option<String>,
+    pub thumbnail_url: Option<String>,
 }
 
 #[flutter_rust_bridge::frb]
@@ -54,7 +55,7 @@ fn build_children_url(path: Option<&str>) -> String {
         Some(raw) if !raw.trim().is_empty() => {
             let normalized = raw.trim_matches('/');
             if normalized.is_empty() {
-                format!("{GRAPH_BASE}/me/drive/root/children")
+                format!("{GRAPH_BASE}/me/drive/root/children{THUMBNAIL_QUERY}")
             } else {
                 let encoded = normalized
                     .split('/')
@@ -62,12 +63,15 @@ fn build_children_url(path: Option<&str>) -> String {
                     .map(|segment| utf8_percent_encode(segment, NON_ALPHANUMERIC).to_string())
                     .collect::<Vec<_>>()
                     .join("/");
-                format!("{GRAPH_BASE}/me/drive/root:/{encoded}:/children")
+                format!("{GRAPH_BASE}/me/drive/root:/{encoded}:/children{THUMBNAIL_QUERY}")
             }
         }
-        _ => format!("{GRAPH_BASE}/me/drive/root/children"),
+        _ => format!("{GRAPH_BASE}/me/drive/root/children{THUMBNAIL_QUERY}"),
     }
 }
+
+const THUMBNAIL_QUERY: &str =
+    "?$select=id,name,size,lastModifiedDateTime,folder,file&$expand=thumbnails($select=small,medium)";
 
 fn fetch_drive_children(url: &str, access_token: &str) -> Result<DrivePage, String> {
     let client = Client::builder()
@@ -116,6 +120,9 @@ impl From<DriveItemDto> for DriveItemSummary {
             child_count: value.folder.and_then(|f| f.child_count),
             mime_type: value.file.and_then(|f| f.mime_type),
             last_modified: value.last_modified_date_time,
+            thumbnail_url: value
+                .thumbnails
+                .and_then(|sets| sets.into_iter().find_map(|set| set.best_url())),
         }
     }
 }
@@ -137,6 +144,7 @@ struct DriveItemDto {
     last_modified_date_time: Option<String>,
     folder: Option<DriveFolderFacet>,
     file: Option<DriveFileFacet>,
+    thumbnails: Option<Vec<ThumbnailSetDto>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -149,4 +157,25 @@ struct DriveFolderFacet {
 struct DriveFileFacet {
     #[serde(rename = "mimeType")]
     mime_type: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ThumbnailSetDto {
+    small: Option<ThumbnailDto>,
+    medium: Option<ThumbnailDto>,
+    large: Option<ThumbnailDto>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ThumbnailDto {
+    url: Option<String>,
+}
+
+impl ThumbnailSetDto {
+    fn best_url(self) -> Option<String> {
+        self.small
+            .and_then(|t| t.url)
+            .or_else(|| self.medium.and_then(|t| t.url))
+            .or_else(|| self.large.and_then(|t| t.url))
+    }
 }

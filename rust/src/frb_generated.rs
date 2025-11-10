@@ -364,6 +364,7 @@ impl SseDecode for crate::api::drive::DriveItemSummary {
         let mut var_childCount = <Option<i64>>::sse_decode(deserializer);
         let mut var_mimeType = <Option<String>>::sse_decode(deserializer);
         let mut var_lastModified = <Option<String>>::sse_decode(deserializer);
+        let mut var_thumbnailUrl = <Option<String>>::sse_decode(deserializer);
         return crate::api::drive::DriveItemSummary {
             id: var_id,
             name: var_name,
@@ -372,6 +373,7 @@ impl SseDecode for crate::api::drive::DriveItemSummary {
             child_count: var_childCount,
             mime_type: var_mimeType,
             last_modified: var_lastModified,
+            thumbnail_url: var_thumbnailUrl,
         };
     }
 }
@@ -609,6 +611,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::drive::DriveItemSummary {
             self.child_count.into_into_dart().into_dart(),
             self.mime_type.into_into_dart().into_dart(),
             self.last_modified.into_into_dart().into_dart(),
+            self.thumbnail_url.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -701,6 +704,7 @@ impl SseEncode for crate::api::drive::DriveItemSummary {
         <Option<i64>>::sse_encode(self.child_count, serializer);
         <Option<String>>::sse_encode(self.mime_type, serializer);
         <Option<String>>::sse_encode(self.last_modified, serializer);
+        <Option<String>>::sse_encode(self.thumbnail_url, serializer);
     }
 }
 

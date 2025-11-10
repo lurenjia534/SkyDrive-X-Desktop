@@ -440,6 +440,7 @@ class _DriveItemTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isFolder = item.isFolder;
+    final hasThumbnail = item.thumbnailUrl != null && !isFolder;
     final iconData = isFolder
         ? Icons.folder_rounded
         : Icons.insert_drive_file_rounded;
@@ -461,14 +462,27 @@ class _DriveItemTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
           child: Row(
             children: [
-              Container(
+              SizedBox(
                 width: 44,
                 height: 44,
-                decoration: BoxDecoration(
-                  color: iconBackground,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(iconData, color: iconColor),
+                child: hasThumbnail
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          item.thumbnailUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _DriveTileIcon(
+                            icon: iconData,
+                            background: iconBackground,
+                            iconColor: iconColor,
+                          ),
+                        ),
+                      )
+                    : _DriveTileIcon(
+                        icon: iconData,
+                        background: iconBackground,
+                        iconColor: iconColor,
+                      ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -500,6 +514,29 @@ class _DriveItemTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DriveTileIcon extends StatelessWidget {
+  const _DriveTileIcon({
+    required this.icon,
+    required this.background,
+    required this.iconColor,
+  });
+
+  final IconData icon;
+  final Color background;
+  final Color iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Icon(icon, color: iconColor),
     );
   }
 }

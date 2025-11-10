@@ -6,9 +6,9 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `build_children_url`, `current_access_token`, `fetch_drive_children`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DriveChildrenResponse`, `DriveFileFacet`, `DriveFolderFacet`, `DriveItemDto`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
+// These functions are ignored because they are not marked as `pub`: `best_url`, `build_children_url`, `current_access_token`, `fetch_drive_children`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DriveChildrenResponse`, `DriveFileFacet`, `DriveFolderFacet`, `DriveItemDto`, `ThumbnailDto`, `ThumbnailSetDto`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
 
 Future<DrivePage> listDriveChildren({
   String? folderId,
@@ -28,6 +28,7 @@ class DriveItemSummary {
   final PlatformInt64? childCount;
   final String? mimeType;
   final String? lastModified;
+  final String? thumbnailUrl;
 
   const DriveItemSummary({
     required this.id,
@@ -37,6 +38,7 @@ class DriveItemSummary {
     this.childCount,
     this.mimeType,
     this.lastModified,
+    this.thumbnailUrl,
   });
 
   @override
@@ -47,7 +49,8 @@ class DriveItemSummary {
       isFolder.hashCode ^
       childCount.hashCode ^
       mimeType.hashCode ^
-      lastModified.hashCode;
+      lastModified.hashCode ^
+      thumbnailUrl.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -60,7 +63,8 @@ class DriveItemSummary {
           isFolder == other.isFolder &&
           childCount == other.childCount &&
           mimeType == other.mimeType &&
-          lastModified == other.lastModified;
+          lastModified == other.lastModified &&
+          thumbnailUrl == other.thumbnailUrl;
 }
 
 class DrivePage {
