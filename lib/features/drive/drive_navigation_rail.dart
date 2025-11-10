@@ -31,10 +31,10 @@ class _DriveNavigationRailState extends State<DriveNavigationRail> {
     ),
     _DriveRailDestination(
       label: 'Favorites',
-      icon: Icons.favorite_border_rounded,
+      icon: Icons.favorite_rounded,
       showDot: true,
     ),
-    _DriveRailDestination(label: 'Settings', icon: Icons.settings_outlined),
+    _DriveRailDestination(label: 'Settings', icon: Icons.settings_rounded),
   ];
 
   late bool _isExtended = widget.initialExtended;
