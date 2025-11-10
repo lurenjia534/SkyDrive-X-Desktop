@@ -5,7 +5,6 @@ class DriveSettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       children: const [

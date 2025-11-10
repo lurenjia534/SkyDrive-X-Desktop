@@ -8,7 +8,7 @@ class DriveHomePageController {
   Future<void> refresh() async {
     final state = _state;
     if (state != null) {
-      await state._loadInitial();
+      await state._loadCurrentFolder();
     }
   }
 
@@ -40,12 +40,16 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
   String? _error;
   bool _isLoading = true;
   bool _isLoadingMore = false;
+  final List<_FolderNode> _folderStack = [];
+
+  String? get _currentFolderId =>
+      _folderStack.isEmpty ? null : _folderStack.last.id;
 
   @override
   void initState() {
     super.initState();
     widget.controller?._attach(this);
-    _loadInitial();
+    _loadCurrentFolder();
   }
 
   @override
@@ -63,7 +67,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
     super.dispose();
   }
 
-  Future<void> _loadInitial() async {
+  Future<void> _loadCurrentFolder() async {
     if (!mounted) return;
     setState(() {
       _isLoading = true;
@@ -71,6 +75,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
     });
     try {
       final page = await drive_api.listDriveChildren(
+        folderId: _currentFolderId,
         folderPath: null,
         nextLink: null,
       );
@@ -103,6 +108,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
     });
     try {
       final page = await drive_api.listDriveChildren(
+        folderId: null,
         folderPath: null,
         nextLink: link,
       );
@@ -123,6 +129,43 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
         });
       }
     }
+  }
+
+  void _handleItemTap(drive_api.DriveItemSummary item) {
+    if (item.isFolder) {
+      setState(() {
+        _folderStack.add(_FolderNode(id: item.id, name: item.name));
+      });
+      _loadCurrentFolder();
+      return;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('暂不支持文件操作，敬请期待。')));
+  }
+
+  void _handleBreadcrumbTap(int? index) {
+    if (index == null) {
+      if (_folderStack.isEmpty) {
+        _loadCurrentFolder();
+        return;
+      }
+      setState(() {
+        _folderStack.clear();
+      });
+      _loadCurrentFolder();
+      return;
+    }
+    if (index < 0 || index >= _folderStack.length) return;
+    if (index == _folderStack.length - 1) {
+      _loadCurrentFolder();
+      return;
+    }
+    setState(() {
+      _folderStack.removeRange(index + 1, _folderStack.length);
+    });
+    _loadCurrentFolder();
   }
 
   String _buildSubtitle(drive_api.DriveItemSummary item) {
@@ -170,42 +213,55 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_error != null) {
-      return _DriveErrorView(message: _error!, onRetry: _loadInitial);
+      return _DriveErrorView(message: _error!, onRetry: _loadCurrentFolder);
     }
-    if (_items.isEmpty) {
-      return const _DriveEmptyView();
-    }
-
-    final listItemCount = _items.length + (_nextLink != null ? 1 : 0);
+    final showEmptyState = _items.isEmpty;
+    final listItemCount =
+        _items.length + (_nextLink != null ? 1 : 0) + (showEmptyState ? 1 : 0);
+    const headerCount = 1;
+    final totalCount = listItemCount + headerCount;
 
     return RefreshIndicator(
-      onRefresh: _loadInitial,
+      onRefresh: _loadCurrentFolder,
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        itemCount: listItemCount,
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: totalCount,
         itemBuilder: (context, index) {
-          if (index >= _items.length) {
+          if (index == 0) {
             return Padding(
-              padding: EdgeInsets.zero,
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _DriveBreadcrumbBar(
+                segments: _folderStack,
+                onRootTap: () => _handleBreadcrumbTap(null),
+                onSegmentTap: (segmentIndex) =>
+                    _handleBreadcrumbTap(segmentIndex),
+              ),
+            );
+          }
+          final dataIndex = index - headerCount;
+          if (showEmptyState && dataIndex == 0) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 48),
+              child: _DriveEmptyView(),
+            );
+          }
+          if (dataIndex >= _items.length) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
               child: _DriveLoadMoreTile(
                 isLoading: _isLoadingMore,
                 onLoadMore: _loadMore,
               ),
             );
           }
-          final item = _items[index];
+          final item = _items[dataIndex];
           final subtitle = _buildSubtitle(item);
           return _DriveItemTile(
             item: item,
             subtitle: subtitle,
             colorScheme: colorScheme,
-            onTap: () {
-              if (item.isFolder) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('暂不支持子文件夹浏览，敬请期待。')),
-                );
-              }
-            },
+            onTap: () => _handleItemTap(item),
           );
         },
       ),
@@ -284,6 +340,88 @@ class _DriveLoadMoreTile extends StatelessWidget {
       ),
     );
   }
+}
+
+class _DriveBreadcrumbBar extends StatelessWidget {
+  const _DriveBreadcrumbBar({
+    required this.segments,
+    required this.onRootTap,
+    required this.onSegmentTap,
+  });
+
+  final List<_FolderNode> segments;
+  final VoidCallback onRootTap;
+  final ValueChanged<int> onSegmentTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final widgets = <Widget>[
+      _BreadcrumbChip(
+        label: '所有文件',
+        isActive: segments.isEmpty,
+        onTap: onRootTap,
+      ),
+    ];
+    for (var i = 0; i < segments.length; i++) {
+      widgets.add(const Icon(Icons.chevron_right_rounded, size: 18));
+      widgets.add(
+        _BreadcrumbChip(
+          label: segments[i].name,
+          isActive: i == segments.length - 1,
+          onTap: () => onSegmentTap(i),
+        ),
+      );
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: widgets,
+    );
+  }
+}
+
+class _BreadcrumbChip extends StatelessWidget {
+  const _BreadcrumbChip({
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return TextButton(
+      onPressed: isActive ? null : onTap,
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        backgroundColor: isActive
+            ? colorScheme.primary.withOpacity(0.12)
+            : null,
+        foregroundColor: isActive
+            ? colorScheme.primary
+            : colorScheme.onSurfaceVariant,
+        shape: const StadiumBorder(),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+        ),
+      ),
+    );
+  }
+}
+
+class _FolderNode {
+  const _FolderNode({required this.id, required this.name});
+
+  final String id;
+  final String name;
 }
 
 class _DriveItemTile extends StatelessWidget {

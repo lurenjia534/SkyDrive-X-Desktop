@@ -92,6 +92,7 @@ abstract class RustLibApi extends BaseApi {
   Future<void> crateApiSimpleInitApp();
 
   Future<DrivePage> crateApiDriveListDriveChildren({
+    String? folderId,
     String? folderPath,
     String? nextLink,
   });
@@ -231,6 +232,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @override
   Future<DrivePage> crateApiDriveListDriveChildren({
+    String? folderId,
     String? folderPath,
     String? nextLink,
   }) {
@@ -238,6 +240,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_opt_String(folderId, serializer);
           sse_encode_opt_String(folderPath, serializer);
           sse_encode_opt_String(nextLink, serializer);
           pdeCallFfi(
@@ -252,7 +255,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_String,
         ),
         constMeta: kCrateApiDriveListDriveChildrenConstMeta,
-        argValues: [folderPath, nextLink],
+        argValues: [folderId, folderPath, nextLink],
         apiImpl: this,
       ),
     );
@@ -261,7 +264,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiDriveListDriveChildrenConstMeta =>
       const TaskConstMeta(
         debugName: "list_drive_children",
-        argNames: ["folderPath", "nextLink"],
+        argNames: ["folderId", "folderPath", "nextLink"],
       );
 
   @override

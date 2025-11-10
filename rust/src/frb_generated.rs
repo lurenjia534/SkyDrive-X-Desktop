@@ -200,13 +200,17 @@ fn wire__crate__api__drive__list_drive_children_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_folder_id = <Option<String>>::sse_decode(&mut deserializer);
             let api_folder_path = <Option<String>>::sse_decode(&mut deserializer);
             let api_next_link = <Option<String>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, String>((move || {
-                    let output_ok =
-                        crate::api::drive::list_drive_children(api_folder_path, api_next_link)?;
+                    let output_ok = crate::api::drive::list_drive_children(
+                        api_folder_id,
+                        api_folder_path,
+                        api_next_link,
+                    )?;
                     Ok(output_ok)
                 })())
             }

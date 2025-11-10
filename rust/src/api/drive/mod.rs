@@ -27,12 +27,15 @@ pub struct DrivePage {
 
 #[flutter_rust_bridge::frb]
 pub fn list_drive_children(
+    folder_id: Option<String>,
     folder_path: Option<String>,
     next_link: Option<String>,
 ) -> Result<DrivePage, String> {
     let access_token = current_access_token()?;
     let request_url = if let Some(link) = next_link {
         link
+    } else if let Some(id) = folder_id {
+        format!("{GRAPH_BASE}/me/drive/items/{id}/children")
     } else {
         build_children_url(folder_path.as_deref())
     };
