@@ -4,6 +4,7 @@ import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
 
 class DriveHomePageController {
   _DriveHomePageState? _state;
+  List<_FolderNode> _cachedStack = [];
 
   Future<void> refresh() async {
     final state = _state;
@@ -13,6 +14,12 @@ class DriveHomePageController {
   }
 
   bool get isLoading => _state?._isLoading ?? true;
+
+  List<_FolderNode> get cachedStack => List.unmodifiable(_cachedStack);
+
+  void _cacheStack(List<_FolderNode> stack) {
+    _cachedStack = List<_FolderNode>.from(stack);
+  }
 
   void _attach(_DriveHomePageState state) {
     _state = state;
@@ -49,6 +56,10 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
   void initState() {
     super.initState();
     widget.controller?._attach(this);
+    final cached = widget.controller?.cachedStack ?? const [];
+    if (cached.isNotEmpty) {
+      _folderStack.addAll(cached);
+    }
     _loadCurrentFolder();
   }
 
@@ -86,6 +97,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
           ..addAll(page.items);
         _nextLink = page.nextLink;
       });
+      widget.controller?._cacheStack(_folderStack);
     } catch (err) {
       if (!mounted) return;
       setState(() {
@@ -136,6 +148,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
       setState(() {
         _folderStack.add(_FolderNode(id: item.id, name: item.name));
       });
+      widget.controller?._cacheStack(_folderStack);
       _loadCurrentFolder();
       return;
     }
@@ -154,6 +167,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
       setState(() {
         _folderStack.clear();
       });
+      widget.controller?._cacheStack(_folderStack);
       _loadCurrentFolder();
       return;
     }
@@ -165,6 +179,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
     setState(() {
       _folderStack.removeRange(index + 1, _folderStack.length);
     });
+    widget.controller?._cacheStack(_folderStack);
     _loadCurrentFolder();
   }
 
