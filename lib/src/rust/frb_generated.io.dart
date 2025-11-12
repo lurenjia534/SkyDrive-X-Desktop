@@ -5,7 +5,9 @@
 
 import 'api/auth/auth.dart';
 import 'api/auth/refresh.dart';
-import 'api/drive.dart';
+import 'api/drive/download.dart';
+import 'api/drive/list.dart';
+import 'api/drive/models.dart';
 import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';

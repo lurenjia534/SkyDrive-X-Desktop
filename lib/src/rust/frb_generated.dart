@@ -5,7 +5,9 @@
 
 import 'api/auth/auth.dart';
 import 'api/auth/refresh.dart';
-import 'api/drive.dart';
+import 'api/drive/download.dart';
+import 'api/drive/list.dart';
+import 'api/drive/models.dart';
 import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -69,7 +71,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 88705668;
+  int get rustContentHash => -1424810087;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -87,7 +89,7 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiAuthAuthClearPersistedAuthState();
 
-  Future<DriveDownloadResult> crateApiDriveDownloadDriveItem({
+  Future<DriveDownloadResult> crateApiDriveDownloadDownloadDriveItem({
     required String itemId,
     required String targetDir,
     required bool overwrite,
@@ -97,7 +99,7 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiSimpleInitApp();
 
-  Future<DrivePage> crateApiDriveListDriveChildren({
+  Future<DrivePage> crateApiDriveListListDriveChildren({
     String? folderId,
     String? folderPath,
     String? nextLink,
@@ -187,7 +189,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<DriveDownloadResult> crateApiDriveDownloadDriveItem({
+  Future<DriveDownloadResult> crateApiDriveDownloadDownloadDriveItem({
     required String itemId,
     required String targetDir,
     required bool overwrite,
@@ -210,14 +212,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeSuccessData: sse_decode_drive_download_result,
           decodeErrorData: sse_decode_String,
         ),
-        constMeta: kCrateApiDriveDownloadDriveItemConstMeta,
+        constMeta: kCrateApiDriveDownloadDownloadDriveItemConstMeta,
         argValues: [itemId, targetDir, overwrite],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiDriveDownloadDriveItemConstMeta =>
+  TaskConstMeta get kCrateApiDriveDownloadDownloadDriveItemConstMeta =>
       const TaskConstMeta(
         debugName: "download_drive_item",
         argNames: ["itemId", "targetDir", "overwrite"],
@@ -274,7 +276,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "init_app", argNames: []);
 
   @override
-  Future<DrivePage> crateApiDriveListDriveChildren({
+  Future<DrivePage> crateApiDriveListListDriveChildren({
     String? folderId,
     String? folderPath,
     String? nextLink,
@@ -297,14 +299,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeSuccessData: sse_decode_drive_page,
           decodeErrorData: sse_decode_String,
         ),
-        constMeta: kCrateApiDriveListDriveChildrenConstMeta,
+        constMeta: kCrateApiDriveListListDriveChildrenConstMeta,
         argValues: [folderId, folderPath, nextLink],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiDriveListDriveChildrenConstMeta =>
+  TaskConstMeta get kCrateApiDriveListListDriveChildrenConstMeta =>
       const TaskConstMeta(
         debugName: "list_drive_children",
         argNames: ["folderId", "folderPath", "nextLink"],

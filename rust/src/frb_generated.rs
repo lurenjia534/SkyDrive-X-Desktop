@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 88705668;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1424810087;
 
 // Section: executor
 
@@ -114,7 +114,7 @@ fn wire__crate__api__auth__auth__clear_persisted_auth_state_impl(
         },
     )
 }
-fn wire__crate__api__drive__download_drive_item_impl(
+fn wire__crate__api__drive__download__download_drive_item_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -142,7 +142,7 @@ fn wire__crate__api__drive__download_drive_item_impl(
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, String>((move || {
-                    let output_ok = crate::api::drive::download_drive_item(
+                    let output_ok = crate::api::drive::download::download_drive_item(
                         api_item_id,
                         api_target_dir,
                         api_overwrite,
@@ -217,7 +217,7 @@ fn wire__crate__api__simple__init_app_impl(
         },
     )
 }
-fn wire__crate__api__drive__list_drive_children_impl(
+fn wire__crate__api__drive__list__list_drive_children_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -245,7 +245,7 @@ fn wire__crate__api__drive__list_drive_children_impl(
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, String>((move || {
-                    let output_ok = crate::api::drive::list_drive_children(
+                    let output_ok = crate::api::drive::list::list_drive_children(
                         api_folder_id,
                         api_folder_path,
                         api_next_link,
@@ -393,14 +393,14 @@ impl SseDecode for bool {
     }
 }
 
-impl SseDecode for crate::api::drive::DriveDownloadResult {
+impl SseDecode for crate::api::drive::models::DriveDownloadResult {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_fileName = <String>::sse_decode(deserializer);
         let mut var_savedPath = <String>::sse_decode(deserializer);
         let mut var_bytesDownloaded = <u64>::sse_decode(deserializer);
         let mut var_expectedSize = <Option<u64>>::sse_decode(deserializer);
-        return crate::api::drive::DriveDownloadResult {
+        return crate::api::drive::models::DriveDownloadResult {
             file_name: var_fileName,
             saved_path: var_savedPath,
             bytes_downloaded: var_bytesDownloaded,
@@ -409,7 +409,7 @@ impl SseDecode for crate::api::drive::DriveDownloadResult {
     }
 }
 
-impl SseDecode for crate::api::drive::DriveItemSummary {
+impl SseDecode for crate::api::drive::models::DriveItemSummary {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_id = <String>::sse_decode(deserializer);
@@ -420,7 +420,7 @@ impl SseDecode for crate::api::drive::DriveItemSummary {
         let mut var_mimeType = <Option<String>>::sse_decode(deserializer);
         let mut var_lastModified = <Option<String>>::sse_decode(deserializer);
         let mut var_thumbnailUrl = <Option<String>>::sse_decode(deserializer);
-        return crate::api::drive::DriveItemSummary {
+        return crate::api::drive::models::DriveItemSummary {
             id: var_id,
             name: var_name,
             size: var_size,
@@ -433,12 +433,13 @@ impl SseDecode for crate::api::drive::DriveItemSummary {
     }
 }
 
-impl SseDecode for crate::api::drive::DrivePage {
+impl SseDecode for crate::api::drive::models::DrivePage {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_items = <Vec<crate::api::drive::DriveItemSummary>>::sse_decode(deserializer);
+        let mut var_items =
+            <Vec<crate::api::drive::models::DriveItemSummary>>::sse_decode(deserializer);
         let mut var_nextLink = <Option<String>>::sse_decode(deserializer);
-        return crate::api::drive::DrivePage {
+        return crate::api::drive::models::DrivePage {
             items: var_items,
             next_link: var_nextLink,
         };
@@ -464,13 +465,13 @@ impl SseDecode for Vec<String> {
     }
 }
 
-impl SseDecode for Vec<crate::api::drive::DriveItemSummary> {
+impl SseDecode for Vec<crate::api::drive::models::DriveItemSummary> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut len_ = <i32>::sse_decode(deserializer);
         let mut ans_ = vec![];
         for idx_ in 0..len_ {
-            ans_.push(<crate::api::drive::DriveItemSummary>::sse_decode(
+            ans_.push(<crate::api::drive::models::DriveItemSummary>::sse_decode(
                 deserializer,
             ));
         }
@@ -597,9 +598,19 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        3 => wire__crate__api__drive__download_drive_item_impl(port, ptr, rust_vec_len, data_len),
+        3 => wire__crate__api__drive__download__download_drive_item_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
         5 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        6 => wire__crate__api__drive__list_drive_children_impl(port, ptr, rust_vec_len, data_len),
+        6 => wire__crate__api__drive__list__list_drive_children_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
         7 => wire__crate__api__auth__auth__load_persisted_auth_state_impl(
             port,
             ptr,
@@ -657,7 +668,7 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::auth::auth::AuthTokens>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::api::drive::DriveDownloadResult {
+impl flutter_rust_bridge::IntoDart for crate::api::drive::models::DriveDownloadResult {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.file_name.into_into_dart().into_dart(),
@@ -669,18 +680,18 @@ impl flutter_rust_bridge::IntoDart for crate::api::drive::DriveDownloadResult {
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::api::drive::DriveDownloadResult
+    for crate::api::drive::models::DriveDownloadResult
 {
 }
-impl flutter_rust_bridge::IntoIntoDart<crate::api::drive::DriveDownloadResult>
-    for crate::api::drive::DriveDownloadResult
+impl flutter_rust_bridge::IntoIntoDart<crate::api::drive::models::DriveDownloadResult>
+    for crate::api::drive::models::DriveDownloadResult
 {
-    fn into_into_dart(self) -> crate::api::drive::DriveDownloadResult {
+    fn into_into_dart(self) -> crate::api::drive::models::DriveDownloadResult {
         self
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::api::drive::DriveItemSummary {
+impl flutter_rust_bridge::IntoDart for crate::api::drive::models::DriveItemSummary {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.id.into_into_dart().into_dart(),
@@ -696,18 +707,18 @@ impl flutter_rust_bridge::IntoDart for crate::api::drive::DriveItemSummary {
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::api::drive::DriveItemSummary
+    for crate::api::drive::models::DriveItemSummary
 {
 }
-impl flutter_rust_bridge::IntoIntoDart<crate::api::drive::DriveItemSummary>
-    for crate::api::drive::DriveItemSummary
+impl flutter_rust_bridge::IntoIntoDart<crate::api::drive::models::DriveItemSummary>
+    for crate::api::drive::models::DriveItemSummary
 {
-    fn into_into_dart(self) -> crate::api::drive::DriveItemSummary {
+    fn into_into_dart(self) -> crate::api::drive::models::DriveItemSummary {
         self
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::api::drive::DrivePage {
+impl flutter_rust_bridge::IntoDart for crate::api::drive::models::DrivePage {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.items.into_into_dart().into_dart(),
@@ -716,11 +727,14 @@ impl flutter_rust_bridge::IntoDart for crate::api::drive::DrivePage {
         .into_dart()
     }
 }
-impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::drive::DrivePage {}
-impl flutter_rust_bridge::IntoIntoDart<crate::api::drive::DrivePage>
-    for crate::api::drive::DrivePage
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::drive::models::DrivePage
 {
-    fn into_into_dart(self) -> crate::api::drive::DrivePage {
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::drive::models::DrivePage>
+    for crate::api::drive::models::DrivePage
+{
+    fn into_into_dart(self) -> crate::api::drive::models::DrivePage {
         self
     }
 }
@@ -773,7 +787,7 @@ impl SseEncode for bool {
     }
 }
 
-impl SseEncode for crate::api::drive::DriveDownloadResult {
+impl SseEncode for crate::api::drive::models::DriveDownloadResult {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.file_name, serializer);
@@ -783,7 +797,7 @@ impl SseEncode for crate::api::drive::DriveDownloadResult {
     }
 }
 
-impl SseEncode for crate::api::drive::DriveItemSummary {
+impl SseEncode for crate::api::drive::models::DriveItemSummary {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.id, serializer);
@@ -797,10 +811,10 @@ impl SseEncode for crate::api::drive::DriveItemSummary {
     }
 }
 
-impl SseEncode for crate::api::drive::DrivePage {
+impl SseEncode for crate::api::drive::models::DrivePage {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <Vec<crate::api::drive::DriveItemSummary>>::sse_encode(self.items, serializer);
+        <Vec<crate::api::drive::models::DriveItemSummary>>::sse_encode(self.items, serializer);
         <Option<String>>::sse_encode(self.next_link, serializer);
     }
 }
@@ -822,12 +836,12 @@ impl SseEncode for Vec<String> {
     }
 }
 
-impl SseEncode for Vec<crate::api::drive::DriveItemSummary> {
+impl SseEncode for Vec<crate::api::drive::models::DriveItemSummary> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
-            <crate::api::drive::DriveItemSummary>::sse_encode(item, serializer);
+            <crate::api::drive::models::DriveItemSummary>::sse_encode(item, serializer);
         }
     }
 }
