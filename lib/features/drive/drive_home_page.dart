@@ -7,10 +7,10 @@ class DriveHomePageController {
   _DriveHomePageState? _state;
   List<_FolderNode> _cachedStack = [];
 
-  Future<void> refresh() async {
+  Future<void> refresh({bool showSkeleton = false}) async {
     final state = _state;
     if (state != null) {
-      await state._loadCurrentFolder();
+      await state._loadCurrentFolder(showSkeleton: showSkeleton);
     }
   }
 
@@ -61,7 +61,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
     if (cached.isNotEmpty) {
       _folderStack.addAll(cached);
     }
-    _loadCurrentFolder();
+    _loadCurrentFolder(showSkeleton: true);
   }
 
   @override
@@ -79,9 +79,13 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
     super.dispose();
   }
 
-  Future<void> _loadCurrentFolder() async {
+  Future<void> _loadCurrentFolder({bool showSkeleton = false}) async {
     if (!mounted) return;
     setState(() {
+      if (showSkeleton) {
+        _items.clear();
+        _nextLink = null;
+      }
       _isLoading = true;
       _error = null;
     });
@@ -150,7 +154,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
         _folderStack.add(_FolderNode(id: item.id, name: item.name));
       });
       widget.controller?._cacheStack(_folderStack);
-      _loadCurrentFolder();
+      _loadCurrentFolder(showSkeleton: true);
       return;
     }
     if (!mounted) return;
@@ -169,7 +173,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
         _folderStack.clear();
       });
       widget.controller?._cacheStack(_folderStack);
-      _loadCurrentFolder();
+      _loadCurrentFolder(showSkeleton: true);
       return;
     }
     if (index < 0 || index >= _folderStack.length) return;
@@ -181,7 +185,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
       _folderStack.removeRange(index + 1, _folderStack.length);
     });
     widget.controller?._cacheStack(_folderStack);
-    _loadCurrentFolder();
+    _loadCurrentFolder(showSkeleton: true);
   }
 
   String _buildSubtitle(drive_api.DriveItemSummary item) {
@@ -276,7 +280,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
       return _DriveErrorView(
         key: const ValueKey('drive-error'),
         message: _error!,
-        onRetry: _loadCurrentFolder,
+        onRetry: () => _loadCurrentFolder(showSkeleton: true),
       );
     }
     final showEmptyState = _items.isEmpty;
@@ -285,7 +289,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
 
     return RefreshIndicator(
       key: const ValueKey('drive-content'),
-      onRefresh: _loadCurrentFolder,
+      onRefresh: () => _loadCurrentFolder(),
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         physics: const AlwaysScrollableScrollPhysics(),
