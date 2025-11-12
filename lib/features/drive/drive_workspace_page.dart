@@ -114,9 +114,18 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final showRail = constraints.maxWidth >= _railBreakpoint;
-          final body = IndexedStack(
+          final stack = IndexedStack(
             index: _selectedSectionIndex,
             children: _sections,
+          );
+          final body = AnimatedSwitcher(
+            duration: const Duration(milliseconds: 320),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            child: KeyedSubtree(
+              key: ValueKey(_selectedSectionIndex),
+              child: stack,
+            ),
           );
           if (!showRail) {
             return body;
