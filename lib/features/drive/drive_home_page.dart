@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:skydrivex/features/drive/dialogs/drive_download_dialog.dart';
+import 'package:skydrivex/features/drive/providers/drive_download_manager.dart';
 import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
-import 'package:skydrivex/features/drive/services/drive_download_service.dart';
 import 'package:skydrivex/features/drive/utils/drive_item_formatters.dart';
 import 'package:skydrivex/features/drive/widgets/drive_breadcrumb_bar.dart';
 import 'package:skydrivex/features/drive/widgets/drive_download_indicator.dart';
@@ -55,6 +54,7 @@ class _DriveHomeView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(driveHomeControllerProvider.notifier);
+    final downloadQueue = ref.watch(driveDownloadManagerProvider);
     final showInlineLoadingBar =
         (isRefreshing || state.isRefreshing) && state.items.isNotEmpty;
     final showEmptyState = state.items.isEmpty;
@@ -109,9 +109,7 @@ class _DriveHomeView extends ConsumerWidget {
                     final trailing = item.isFolder
                         ? null
                         : DriveDownloadIndicator(
-                            isDownloading: state.activeDownloads.contains(
-                              item.id,
-                            ),
+                            isDownloading: downloadQueue.isActive(item.id),
                             colorScheme: Theme.of(context).colorScheme,
                           );
                     return DriveItemTile(
@@ -157,52 +155,15 @@ Future<void> _handleDownload(
   WidgetRef ref,
   drive_api.DriveItemSummary item,
 ) async {
-  final controller = ref.read(driveHomeControllerProvider.notifier);
-  if (controller.isDownloading(item.id)) {
+  final manager = ref.read(driveDownloadManagerProvider.notifier);
+  final queue = ref.read(driveDownloadManagerProvider);
+  if (queue.isActive(item.id)) {
+    _showSnack(context, '下载中：${item.name}');
     return;
   }
-
-  bool dialogShown = false;
-  try {
-    dialogShown = true;
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => DriveDownloadDialog(fileName: item.name),
-    );
-    final result = await controller.downloadFile(item);
-    if (!context.mounted) return;
-    final downloadedBytes =
-        _bigIntToSafeInt(result.expectedSize) ??
-        _bigIntToSafeInt(result.bytesDownloaded);
-    final sizeLabel = downloadedBytes != null
-        ? '（${formatFileSize(downloadedBytes)}）'
-        : '';
-    _showSnack(
-      context,
-      '已下载 ${result.fileName}$sizeLabel\n${result.savedPath}',
-    );
-  } on DownloadDirectoryUnavailable catch (err) {
-    if (!context.mounted) return;
-    _showSnack(context, '无法确定下载目录：${err.message}');
-  } catch (err) {
-    if (!context.mounted) return;
-    _showSnack(context, '下载失败：$err');
-  } finally {
-    if (dialogShown && context.mounted) {
-      Navigator.of(context, rootNavigator: true).maybePop();
-    }
-  }
-}
-
-int? _bigIntToSafeInt(BigInt? value) {
-  if (value == null) return null;
-  const maxSafeInt = 0x7fffffffffffffff;
-  final max = BigInt.from(maxSafeInt);
-  if (value > max) {
-    return null;
-  }
-  return value.toInt();
+  await manager.enqueue(item);
+  if (!context.mounted) return;
+  _showSnack(context, '已加入下载队列：${item.name}');
 }
 
 void _showSnack(BuildContext context, String message) {

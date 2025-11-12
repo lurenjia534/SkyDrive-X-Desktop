@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/features/drive/models/drive_breadcrumb.dart';
-import 'package:skydrivex/features/drive/services/drive_download_service.dart';
 import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
 
 final driveHomeControllerProvider =
@@ -13,7 +12,6 @@ final driveHomeControllerProvider =
 class DriveHomeController extends AsyncNotifier<DriveHomeState> {
   DriveHomeState get _current =>
       state.asData?.value ?? const DriveHomeState.initial();
-  final DriveDownloadService _downloadService = const DriveDownloadService();
 
   @override
   Future<DriveHomeState> build() async {
@@ -34,12 +32,7 @@ class DriveHomeController extends AsyncNotifier<DriveHomeState> {
         folderId: folderId,
         breadcrumbs: breadcrumbs,
       );
-      state = AsyncData(
-        data.copyWith(
-          activeDownloads: current.activeDownloads,
-          isRefreshing: false,
-        ),
-      );
+      state = AsyncData(data);
     } catch (err, stack) {
       state = AsyncError(err, stack);
     }
@@ -91,25 +84,6 @@ class DriveHomeController extends AsyncNotifier<DriveHomeState> {
     }
   }
 
-  bool isDownloading(String itemId) {
-    return _current.activeDownloads.contains(itemId);
-  }
-
-  Future<drive_api.DriveDownloadResult> downloadFile(
-    drive_api.DriveItemSummary item,
-  ) async {
-    if (isDownloading(item.id)) {
-      throw StateError('Download already in progress');
-    }
-    _updateActiveDownloads(item.id, true);
-    try {
-      final result = await _downloadService.download(item: item);
-      return result;
-    } finally {
-      _updateActiveDownloads(item.id, false);
-    }
-  }
-
   Future<void> _loadFolder({
     required String? folderId,
     required List<DriveBreadcrumbSegment> breadcrumbs,
@@ -120,9 +94,7 @@ class DriveHomeController extends AsyncNotifier<DriveHomeState> {
         folderId: folderId,
         breadcrumbs: breadcrumbs,
       );
-      state = AsyncData(
-        data.copyWith(activeDownloads: _current.activeDownloads),
-      );
+      state = AsyncData(data);
     } catch (err, stack) {
       state = AsyncError(err, stack);
     }
@@ -142,21 +114,8 @@ class DriveHomeController extends AsyncNotifier<DriveHomeState> {
       nextLink: page.nextLink,
       breadcrumbs: breadcrumbs,
       isLoadingMore: false,
-      activeDownloads: _current.activeDownloads,
       isRefreshing: false,
     );
-  }
-
-  void _updateActiveDownloads(String itemId, bool isActive) {
-    state = state.whenData((data) {
-      final updated = {...data.activeDownloads};
-      if (isActive) {
-        updated.add(itemId);
-      } else {
-        updated.remove(itemId);
-      }
-      return data.copyWith(activeDownloads: updated);
-    });
   }
 }
 
@@ -166,7 +125,6 @@ class DriveHomeState {
     required this.nextLink,
     required this.breadcrumbs,
     required this.isLoadingMore,
-    required this.activeDownloads,
     required this.isRefreshing,
   });
 
@@ -175,14 +133,12 @@ class DriveHomeState {
       nextLink = null,
       breadcrumbs = const [],
       isLoadingMore = false,
-      activeDownloads = const {},
       isRefreshing = false;
 
   final List<drive_api.DriveItemSummary> items;
   final String? nextLink;
   final List<DriveBreadcrumbSegment> breadcrumbs;
   final bool isLoadingMore;
-  final Set<String> activeDownloads;
   final bool isRefreshing;
 
   DriveHomeState copyWith({
@@ -190,7 +146,6 @@ class DriveHomeState {
     String? nextLink,
     List<DriveBreadcrumbSegment>? breadcrumbs,
     bool? isLoadingMore,
-    Set<String>? activeDownloads,
     bool? isRefreshing,
   }) {
     return DriveHomeState(
@@ -198,7 +153,6 @@ class DriveHomeState {
       nextLink: nextLink ?? this.nextLink,
       breadcrumbs: breadcrumbs ?? this.breadcrumbs,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
-      activeDownloads: activeDownloads ?? this.activeDownloads,
       isRefreshing: isRefreshing ?? this.isRefreshing,
     );
   }
