@@ -8,6 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`
 
+/// 下载完成后的结果描述，便于前端提示保存路径与大小。
 class DriveDownloadResult {
   final String fileName;
   final String savedPath;
@@ -39,6 +40,8 @@ class DriveDownloadResult {
           expectedSize == other.expectedSize;
 }
 
+/// 与 Flutter 侧共享的 OneDrive 文件/文件夹摘要结构。
+/// 字段命名保持与 Graph API 对齐，避免额外映射。
 class DriveItemSummary {
   final String id;
   final String name;
@@ -86,6 +89,7 @@ class DriveItemSummary {
           thumbnailUrl == other.thumbnailUrl;
 }
 
+/// 列表接口的分页结果，包含子项与 nextLink。
 class DrivePage {
   final List<DriveItemSummary> items;
   final String? nextLink;

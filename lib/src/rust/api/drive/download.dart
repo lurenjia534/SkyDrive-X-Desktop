@@ -11,6 +11,9 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DriveFileFacet`, `DriveItemDownloadDto`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `fmt`, `fmt`
 
+/// 下载指定 drive item（仅文件），保存到 target_dir。
+/// - 优先使用 Graph 返回的 downloadUrl（免鉴权）。
+/// - 若 downloadUrl 缺失，回退到 `/content` 并携带 token。
 Future<DriveDownloadResult> downloadDriveItem({
   required String itemId,
   required String targetDir,
