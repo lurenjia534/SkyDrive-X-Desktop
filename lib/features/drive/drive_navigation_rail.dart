@@ -306,11 +306,11 @@ class _DriveRailQuickAction extends StatelessWidget {
                   ? MainAxisAlignment.start
                   : MainAxisAlignment.center,
               children: [
-                Icon(Icons.edit_rounded, color: foregroundColor, size: 22),
+                Icon(Icons.add_rounded, color: foregroundColor, size: 22),
                 if (extended) ...[
                   const SizedBox(width: 12),
                   Text(
-                    'Label',
+                    'Add',
                     style: TextStyle(
                       color: foregroundColor,
                       fontWeight: FontWeight.w600,
