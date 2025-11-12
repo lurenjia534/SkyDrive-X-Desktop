@@ -114,18 +114,9 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final showRail = constraints.maxWidth >= _railBreakpoint;
-          final stack = IndexedStack(
-            index: _selectedSectionIndex,
-            children: _sections,
-          );
-          final body = AnimatedSwitcher(
-            duration: const Duration(milliseconds: 320),
-            switchInCurve: Curves.easeOut,
-            switchOutCurve: Curves.easeIn,
-            child: KeyedSubtree(
-              key: ValueKey(_selectedSectionIndex),
-              child: stack,
-            ),
+          final body = _DriveSectionStack(
+            sections: _sections,
+            activeIndex: _selectedSectionIndex,
           );
           if (!showRail) {
             return body;
@@ -181,6 +172,54 @@ class _DriveSectionPlaceholder extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DriveSectionStack extends StatelessWidget {
+  const _DriveSectionStack({required this.sections, required this.activeIndex});
+
+  final List<Widget> sections;
+  final int activeIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    if (sections.isEmpty) return const SizedBox.shrink();
+    return Stack(
+      children: [
+        for (var i = 0; i < sections.length; i++)
+          _DriveSectionPanel(
+            key: ValueKey('drive-section-$i'),
+            child: sections[i],
+            visible: i == activeIndex,
+          ),
+      ],
+    );
+  }
+}
+
+class _DriveSectionPanel extends StatelessWidget {
+  const _DriveSectionPanel({
+    super.key,
+    required this.child,
+    required this.visible,
+  });
+
+  final Widget child;
+  final bool visible;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        ignoring: !visible,
+        child: AnimatedOpacity(
+          opacity: visible ? 1 : 0,
+          duration: const Duration(milliseconds: 320),
+          curve: Curves.easeOutQuad,
+          child: child,
+        ),
       ),
     );
   }
