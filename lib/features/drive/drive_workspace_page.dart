@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/features/auth/auth_controller.dart';
+import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
 import 'package:skydrivex/features/drive/settings/drive_settings_page.dart';
 import 'package:skydrivex/src/rust/api/auth/auth.dart' as auth_api;
 
@@ -19,7 +20,6 @@ class DriveWorkspacePage extends ConsumerStatefulWidget {
 class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
   static const double _railBreakpoint = 720;
 
-  final DriveHomePageController _filesController = DriveHomePageController();
   int _selectedSectionIndex = 0;
   bool _isClearingCredentials = false;
   late final List<Widget> _sections;
@@ -28,7 +28,7 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
   void initState() {
     super.initState();
     _sections = [
-      DriveHomePage(controller: _filesController),
+      const DriveHomePage(),
       const _DriveSectionPlaceholder(
         icon: Icons.outbox_rounded,
         title: 'Outbox',
@@ -95,7 +95,9 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
             tooltip: '刷新',
             icon: const Icon(Icons.refresh),
             onPressed: _selectedSectionIndex == 0
-                ? () => _filesController.refresh()
+                ? () => ref
+                      .read(driveHomeControllerProvider.notifier)
+                      .refresh(showSkeleton: true)
                 : null,
           ),
           IconButton(
