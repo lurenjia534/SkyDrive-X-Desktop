@@ -26,9 +26,9 @@ class _DriveNavigationRailState extends State<DriveNavigationRail> {
   static const List<_DriveRailDestination> _destinations = [
     _DriveRailDestination(label: 'Files', icon: Icons.folder_rounded),
     _DriveRailDestination(
-      label: 'Outbox',
-      icon: Icons.outbox_rounded,
-      badgeCount: 3,
+      label: 'Download',
+      icon: Icons.cloud_download_rounded,
+      badgeCount: 0,
     ),
     _DriveRailDestination(
       label: 'Favorites',

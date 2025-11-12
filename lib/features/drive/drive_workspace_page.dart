@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/features/auth/auth_controller.dart';
+import 'package:skydrivex/features/drive/downloads/drive_downloads_page.dart';
 import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
 import 'package:skydrivex/features/drive/settings/drive_settings_page.dart';
 import 'package:skydrivex/src/rust/api/auth/auth.dart' as auth_api;
@@ -29,11 +30,7 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
     super.initState();
     _sections = [
       const DriveHomePage(),
-      const _DriveSectionPlaceholder(
-        icon: Icons.outbox_rounded,
-        title: 'Outbox',
-        message: 'Outbox 功能正在开发中，敬请期待。',
-      ),
+      const DriveDownloadsPage(),
       const _DriveSectionPlaceholder(
         icon: Icons.favorite_border_rounded,
         title: 'Favorites',
