@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
 
@@ -222,46 +223,81 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isInitialLoading = _isLoading && _items.isEmpty && _error == null;
+    final showInlineLoadingBar = _isLoading && _items.isNotEmpty;
 
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          child: _DriveBreadcrumbBar(
+            segments: _folderStack,
+            onRootTap: () => _handleBreadcrumbTap(null),
+            onSegmentTap: (segmentIndex) => _handleBreadcrumbTap(segmentIndex),
+          ),
+        ),
+        Expanded(
+          child: Stack(
+            children: [
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 320),
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeIn,
+                child: _buildBody(colorScheme, isInitialLoading),
+              ),
+              Positioned(
+                top: 0,
+                left: 20,
+                right: 20,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 240),
+                  child: showInlineLoadingBar
+                      ? const _DriveInlineProgressIndicator(
+                          key: ValueKey('drive-inline-loading'),
+                        )
+                      : const SizedBox(key: ValueKey('drive-inline-idle')),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBody(ColorScheme colorScheme, bool isInitialLoading) {
+    if (isInitialLoading) {
+      return const _DriveLoadingList(key: ValueKey('drive-loading'));
     }
     if (_error != null) {
-      return _DriveErrorView(message: _error!, onRetry: _loadCurrentFolder);
+      return _DriveErrorView(
+        key: const ValueKey('drive-error'),
+        message: _error!,
+        onRetry: _loadCurrentFolder,
+      );
     }
     final showEmptyState = _items.isEmpty;
     final listItemCount =
         _items.length + (_nextLink != null ? 1 : 0) + (showEmptyState ? 1 : 0);
-    const headerCount = 1;
-    final totalCount = listItemCount + headerCount;
 
     return RefreshIndicator(
+      key: const ValueKey('drive-content'),
       onRefresh: _loadCurrentFolder,
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: totalCount,
+        itemCount: listItemCount,
         itemBuilder: (context, index) {
-          if (index == 0) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _DriveBreadcrumbBar(
-                segments: _folderStack,
-                onRootTap: () => _handleBreadcrumbTap(null),
-                onSegmentTap: (segmentIndex) =>
-                    _handleBreadcrumbTap(segmentIndex),
-              ),
-            );
-          }
-          final dataIndex = index - headerCount;
-          if (showEmptyState && dataIndex == 0) {
+          if (showEmptyState && index == 0) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 48),
               child: _DriveEmptyView(),
             );
           }
-          if (dataIndex >= _items.length) {
+          if (index >= _items.length) {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: _DriveLoadMoreTile(
@@ -270,7 +306,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
               ),
             );
           }
-          final item = _items[dataIndex];
+          final item = _items[index];
           final subtitle = _buildSubtitle(item);
           return _DriveItemTile(
             item: item,
@@ -285,7 +321,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
 }
 
 class _DriveEmptyView extends StatelessWidget {
-  const _DriveEmptyView();
+  const _DriveEmptyView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -303,7 +339,11 @@ class _DriveEmptyView extends StatelessWidget {
 }
 
 class _DriveErrorView extends StatelessWidget {
-  const _DriveErrorView({required this.message, required this.onRetry});
+  const _DriveErrorView({
+    super.key,
+    required this.message,
+    required this.onRetry,
+  });
 
   final String message;
   final Future<void> Function() onRetry;
@@ -353,6 +393,108 @@ class _DriveLoadMoreTile extends StatelessWidget {
             : const Icon(Icons.expand_more),
         label: Text(isLoading ? '加载中…' : '加载更多'),
       ),
+    );
+  }
+}
+
+class _DriveLoadingList extends StatelessWidget {
+  const _DriveLoadingList({super.key});
+
+  static const _itemCount = 8;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount: _itemCount,
+      itemBuilder: (context, index) => _DriveSkeletonTile(index: index),
+    );
+  }
+}
+
+class _DriveSkeletonTile extends StatelessWidget {
+  const _DriveSkeletonTile({required this.index});
+
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final baseColor = colorScheme.surfaceVariant.withOpacity(0.35);
+    final highlightColor = colorScheme.onSurface.withOpacity(0.08);
+
+    final row = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const _DriveSkeletonBlock(width: 44, height: 44, radius: 14),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                _DriveSkeletonBlock(width: double.infinity, height: 16),
+                SizedBox(height: 8),
+                _DriveSkeletonBlock(width: 180, height: 12),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return row
+        .animate(delay: Duration(milliseconds: 60 * index))
+        .fadeIn(duration: 260.ms, curve: Curves.easeOutCubic)
+        .shimmer(duration: 1200.ms, color: highlightColor)
+        .tint(color: baseColor.withOpacity(0.15));
+  }
+}
+
+class _DriveSkeletonBlock extends StatelessWidget {
+  const _DriveSkeletonBlock({
+    this.width,
+    required this.height,
+    this.radius = 12,
+  });
+
+  final double? width;
+  final double height;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceVariant.withOpacity(0.35),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    );
+  }
+}
+
+class _DriveInlineProgressIndicator extends StatelessWidget {
+  const _DriveInlineProgressIndicator({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final widget = ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: LinearProgressIndicator(
+        minHeight: 3,
+        color: colorScheme.primary,
+        backgroundColor: colorScheme.primary.withOpacity(0.2),
+      ),
+    );
+    return widget.animate().fadeIn(
+      duration: 200.ms,
+      curve: Curves.easeOutCubic,
     );
   }
 }
