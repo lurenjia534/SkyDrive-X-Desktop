@@ -6,6 +6,10 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+import 'drive/models.dart';
+
+export 'drive/models.dart';
+
 // These functions are ignored because they are not marked as `pub`: `best_url`, `build_blocking_client`, `build_children_url`, `current_access_token`, `fetch_download_metadata`, `fetch_drive_children`, `prepare_destination`, `sanitize_file_name`, `stream_download`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DriveChildrenResponse`, `DriveFileFacet`, `DriveFolderFacet`, `DriveItemDownloadDto`, `DriveItemDto`, `ThumbnailDto`, `ThumbnailSetDto`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
@@ -14,7 +18,7 @@ Future<DrivePage> listDriveChildren({
   String? folderId,
   String? folderPath,
   String? nextLink,
-}) => RustLib.instance.api.crateApiDriveListDriveChildren(
+}) => RustLib.instance.api.crateApiDriveListListDriveChildren(
   folderId: folderId,
   folderPath: folderPath,
   nextLink: nextLink,
@@ -24,104 +28,8 @@ Future<DriveDownloadResult> downloadDriveItem({
   required String itemId,
   required String targetDir,
   required bool overwrite,
-}) => RustLib.instance.api.crateApiDriveDownloadDriveItem(
+}) => RustLib.instance.api.crateApiDriveDownloadDownloadDriveItem(
   itemId: itemId,
   targetDir: targetDir,
   overwrite: overwrite,
 );
-
-class DriveDownloadResult {
-  final String fileName;
-  final String savedPath;
-  final BigInt bytesDownloaded;
-  final BigInt? expectedSize;
-
-  const DriveDownloadResult({
-    required this.fileName,
-    required this.savedPath,
-    required this.bytesDownloaded,
-    this.expectedSize,
-  });
-
-  @override
-  int get hashCode =>
-      fileName.hashCode ^
-      savedPath.hashCode ^
-      bytesDownloaded.hashCode ^
-      expectedSize.hashCode;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is DriveDownloadResult &&
-          runtimeType == other.runtimeType &&
-          fileName == other.fileName &&
-          savedPath == other.savedPath &&
-          bytesDownloaded == other.bytesDownloaded &&
-          expectedSize == other.expectedSize;
-}
-
-class DriveItemSummary {
-  final String id;
-  final String name;
-  final BigInt? size;
-  final bool isFolder;
-  final PlatformInt64? childCount;
-  final String? mimeType;
-  final String? lastModified;
-  final String? thumbnailUrl;
-
-  const DriveItemSummary({
-    required this.id,
-    required this.name,
-    this.size,
-    required this.isFolder,
-    this.childCount,
-    this.mimeType,
-    this.lastModified,
-    this.thumbnailUrl,
-  });
-
-  @override
-  int get hashCode =>
-      id.hashCode ^
-      name.hashCode ^
-      size.hashCode ^
-      isFolder.hashCode ^
-      childCount.hashCode ^
-      mimeType.hashCode ^
-      lastModified.hashCode ^
-      thumbnailUrl.hashCode;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is DriveItemSummary &&
-          runtimeType == other.runtimeType &&
-          id == other.id &&
-          name == other.name &&
-          size == other.size &&
-          isFolder == other.isFolder &&
-          childCount == other.childCount &&
-          mimeType == other.mimeType &&
-          lastModified == other.lastModified &&
-          thumbnailUrl == other.thumbnailUrl;
-}
-
-class DrivePage {
-  final List<DriveItemSummary> items;
-  final String? nextLink;
-
-  const DrivePage({required this.items, this.nextLink});
-
-  @override
-  int get hashCode => items.hashCode ^ nextLink.hashCode;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is DrivePage &&
-          runtimeType == other.runtimeType &&
-          items == other.items &&
-          nextLink == other.nextLink;
-}
