@@ -7,9 +7,12 @@ use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde::Deserialize;
 use std::time::Duration;
 
+/// 统一的 child 查询参数：只获取必须字段并附带缩略图信息，减少网络传输。
 const THUMBNAIL_QUERY: &str =
     "?$select=id,name,size,lastModifiedDateTime,folder,file&$expand=thumbnails($select=small,medium)";
 
+/// 负责拉取 OneDrive 指定目录下的子项列表。
+/// 该函数会根据 folder_id / folder_path / next_link 看情况构造 Graph 请求。
 #[flutter_rust_bridge::frb]
 pub fn list_drive_children(
     folder_id: Option<String>,
@@ -17,6 +20,7 @@ pub fn list_drive_children(
     next_link: Option<String>,
 ) -> Result<DrivePage, String> {
     let access_token = current_access_token()?;
+    // 1. next_link > 2. folder_id > 3. 路径（含 root）——与 Graph API 约定一致。
     let request_url = if let Some(link) = next_link {
         link
     } else if let Some(id) = folder_id {
@@ -28,6 +32,7 @@ pub fn list_drive_children(
     fetch_drive_children(&request_url, &access_token)
 }
 
+/// 根据路径构造 `/root:/path:/children` URL，自动处理空串与多重 `/` 的情况。
 fn build_children_url(path: Option<&str>) -> String {
     match path {
         Some(raw) if !raw.trim().is_empty() => {
@@ -49,6 +54,7 @@ fn build_children_url(path: Option<&str>) -> String {
 }
 
 fn fetch_drive_children(url: &str, access_token: &str) -> Result<DrivePage, String> {
+    // 设置较短超时，避免 UI 阻塞；下载等长耗时场景另行处理。
     let client = build_blocking_client(Duration::from_secs(30))?;
 
     let response = client
@@ -127,6 +133,7 @@ struct ThumbnailDto {
 }
 
 impl ThumbnailSetDto {
+    /// 选择最合适的缩略图 URL；优先 small 以减少流量，若缺失则回退。
     fn best_url(self) -> Option<String> {
         self.small
             .and_then(|t| t.url)

@@ -11,6 +11,9 @@ use std::{
     time::Duration,
 };
 
+/// 下载指定 drive item（仅文件），保存到 target_dir。
+/// - 优先使用 Graph 返回的 downloadUrl（免鉴权）。
+/// - 若 downloadUrl 缺失，回退到 `/content` 并携带 token。
 #[flutter_rust_bridge::frb]
 pub fn download_drive_item(
     item_id: String,
@@ -85,6 +88,7 @@ fn fetch_download_metadata(
     item_id: &str,
     access_token: &str,
 ) -> Result<DriveItemDownloadDto, String> {
+    // 单次请求只关心必要字段，避免传输冗余信息。
     let client = build_blocking_client(Duration::from_secs(30))?;
     let url = format!(
         "{GRAPH_BASE}/me/drive/items/{item_id}?$select=name,size,file,@microsoft.graph.downloadUrl"
@@ -114,6 +118,7 @@ fn fetch_download_metadata(
         .map_err(|e| format!("failed to parse download metadata: {e}"))
 }
 
+/// 对 Graph 返回的文件名进行清洗，兼容不同桌面平台的非法字符。
 fn sanitize_file_name(raw: &str) -> String {
     let trimmed = raw.trim();
     let fallback = "download.bin";
@@ -139,6 +144,7 @@ fn sanitize_file_name(raw: &str) -> String {
     }
 }
 
+/// 创建下载目录并返回目标文件路径，避免覆盖已存在文件（除非设置 overwrite）。
 fn prepare_destination(
     target_dir: &str,
     file_name: &str,
@@ -159,6 +165,7 @@ fn prepare_destination(
     Ok(destination)
 }
 
+/// 实际执行 HTTP 下载并流式写入磁盘，必要时附带 Bearer token。
 fn stream_download(
     download_url: &str,
     bearer_token: Option<&str>,
@@ -207,7 +214,7 @@ struct DriveItemDownloadDto {
     download_url: Option<String>,
 }
 
-#[allow(dead_code)]
+#[allow(dead_code)] // metadata 中可能暂时只读取 mime_type，因此关闭未使用告警
 #[derive(Debug, Deserialize)]
 struct DriveFileFacet {
     #[serde(rename = "mimeType")]
