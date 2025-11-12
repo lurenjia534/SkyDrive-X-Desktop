@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
+import 'package:skydrivex/utils/download_destination.dart';
 
 class DriveHomePageController {
   _DriveHomePageState? _state;
@@ -49,6 +52,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
   bool _isLoading = true;
   bool _isLoadingMore = false;
   final List<_FolderNode> _folderStack = [];
+  final Set<String> _activeDownloads = <String>{};
 
   String? get _currentFolderId =>
       _folderStack.isEmpty ? null : _folderStack.last.id;
@@ -157,10 +161,7 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
       _loadCurrentFolder(showSkeleton: true);
       return;
     }
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('暂不支持文件操作，敬请期待。')));
+    unawaited(_downloadFile(item));
   }
 
   void _handleBreadcrumbTap(int? index) {
@@ -186,6 +187,97 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
     });
     widget.controller?._cacheStack(_folderStack);
     _loadCurrentFolder(showSkeleton: true);
+  }
+
+  Future<void> _downloadFile(drive_api.DriveItemSummary item) async {
+    if (_activeDownloads.contains(item.id)) {
+      return;
+    }
+    if (mounted) {
+      setState(() {
+        _activeDownloads.add(item.id);
+      });
+    } else {
+      _activeDownloads.add(item.id);
+    }
+
+    String targetDir;
+    try {
+      targetDir = defaultDownloadDirectory();
+    } catch (err) {
+      if (mounted) {
+        setState(() {
+          _activeDownloads.remove(item.id);
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('无法确定下载目录：$err')));
+      } else {
+        _activeDownloads.remove(item.id);
+      }
+      return;
+    }
+
+    bool dialogShown = false;
+    if (mounted) {
+      // ignore: discarded_futures
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => _DriveDownloadDialog(fileName: item.name),
+      );
+      dialogShown = true;
+    }
+
+    try {
+      final result = await drive_api.downloadDriveItem(
+        itemId: item.id,
+        targetDir: targetDir,
+        overwrite: false,
+      );
+      if (!mounted) return;
+      final downloadedBytes =
+          _bigIntToSafeInt(result.expectedSize) ??
+          _bigIntToSafeInt(result.bytesDownloaded);
+      final sizeLabel = downloadedBytes != null
+          ? '（${_formatSize(downloadedBytes)}）'
+          : '';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '已下载 ${result.fileName}$sizeLabel\n${result.savedPath}',
+          ),
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('下载失败：$err')));
+      }
+    } finally {
+      if (dialogShown && mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+      if (mounted) {
+        setState(() {
+          _activeDownloads.remove(item.id);
+        });
+      } else {
+        _activeDownloads.remove(item.id);
+      }
+    }
+  }
+
+  int? _bigIntToSafeInt(BigInt? value) {
+    if (value == null) return null;
+    const maxSafeInt = 0x7fffffffffffffff;
+    final max = BigInt.from(maxSafeInt);
+    if (value > max) {
+      return null;
+    }
+    return value.toInt();
   }
 
   String _buildSubtitle(drive_api.DriveItemSummary item) {
@@ -312,11 +404,18 @@ class _DriveHomePageState extends ConsumerState<DriveHomePage> {
           }
           final item = _items[index];
           final subtitle = _buildSubtitle(item);
+          final trailing = item.isFolder
+              ? null
+              : _DriveDownloadIndicator(
+                  isDownloading: _activeDownloads.contains(item.id),
+                  colorScheme: colorScheme,
+                );
           return _DriveItemTile(
             item: item,
             subtitle: subtitle,
             colorScheme: colorScheme,
             onTap: () => _handleItemTap(item),
+            trailing: trailing,
           );
         },
       ),
@@ -401,6 +500,39 @@ class _DriveLoadMoreTile extends StatelessWidget {
   }
 }
 
+class _DriveDownloadIndicator extends StatelessWidget {
+  const _DriveDownloadIndicator({
+    required this.isDownloading,
+    required this.colorScheme,
+  });
+
+  final bool isDownloading;
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      child: isDownloading
+          ? SizedBox(
+              key: const ValueKey('download-progress'),
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colorScheme.primary,
+              ),
+            )
+          : Icon(
+              Icons.download_rounded,
+              key: const ValueKey('download-icon'),
+              color: colorScheme.primary.withOpacity(0.85),
+              size: 20,
+            ),
+    );
+  }
+}
+
 class _DriveLoadingList extends StatelessWidget {
   const _DriveLoadingList({super.key});
 
@@ -413,6 +545,36 @@ class _DriveLoadingList extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       itemCount: _itemCount,
       itemBuilder: (context, index) => _DriveSkeletonTile(index: index),
+    );
+  }
+}
+
+class _DriveDownloadDialog extends StatelessWidget {
+  const _DriveDownloadDialog({required this.fileName});
+
+  final String fileName;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('正在下载'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(
+            width: 48,
+            height: 48,
+            child: CircularProgressIndicator(),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            fileName,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -591,12 +753,14 @@ class _DriveItemTile extends StatelessWidget {
     required this.subtitle,
     required this.colorScheme,
     required this.onTap,
+    this.trailing,
   });
 
   final drive_api.DriveItemSummary item;
   final String subtitle;
   final ColorScheme colorScheme;
   final VoidCallback onTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -666,6 +830,7 @@ class _DriveItemTile extends StatelessWidget {
                   ],
                 ),
               ),
+              if (trailing != null) ...[const SizedBox(width: 12), trailing!],
             ],
           ),
         ),

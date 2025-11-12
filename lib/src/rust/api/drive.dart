@@ -6,9 +6,9 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `best_url`, `build_children_url`, `current_access_token`, `fetch_drive_children`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DriveChildrenResponse`, `DriveFileFacet`, `DriveFolderFacet`, `DriveItemDto`, `ThumbnailDto`, `ThumbnailSetDto`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
+// These functions are ignored because they are not marked as `pub`: `best_url`, `build_blocking_client`, `build_children_url`, `current_access_token`, `fetch_download_metadata`, `fetch_drive_children`, `prepare_destination`, `sanitize_file_name`, `stream_download`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DriveChildrenResponse`, `DriveFileFacet`, `DriveFolderFacet`, `DriveItemDownloadDto`, `DriveItemDto`, `ThumbnailDto`, `ThumbnailSetDto`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
 
 Future<DrivePage> listDriveChildren({
   String? folderId,
@@ -19,6 +19,47 @@ Future<DrivePage> listDriveChildren({
   folderPath: folderPath,
   nextLink: nextLink,
 );
+
+Future<DriveDownloadResult> downloadDriveItem({
+  required String itemId,
+  required String targetDir,
+  required bool overwrite,
+}) => RustLib.instance.api.crateApiDriveDownloadDriveItem(
+  itemId: itemId,
+  targetDir: targetDir,
+  overwrite: overwrite,
+);
+
+class DriveDownloadResult {
+  final String fileName;
+  final String savedPath;
+  final BigInt bytesDownloaded;
+  final BigInt? expectedSize;
+
+  const DriveDownloadResult({
+    required this.fileName,
+    required this.savedPath,
+    required this.bytesDownloaded,
+    this.expectedSize,
+  });
+
+  @override
+  int get hashCode =>
+      fileName.hashCode ^
+      savedPath.hashCode ^
+      bytesDownloaded.hashCode ^
+      expectedSize.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DriveDownloadResult &&
+          runtimeType == other.runtimeType &&
+          fileName == other.fileName &&
+          savedPath == other.savedPath &&
+          bytesDownloaded == other.bytesDownloaded &&
+          expectedSize == other.expectedSize;
+}
 
 class DriveItemSummary {
   final String id;
