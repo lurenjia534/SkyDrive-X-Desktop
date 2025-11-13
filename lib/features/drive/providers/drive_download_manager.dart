@@ -17,10 +17,12 @@ typedef DownloadStatus = drive_api.DownloadStatus;
 class DriveDownloadManager extends Notifier<drive_api.DownloadQueueState> {
   DriveDownloadManager();
 
+  // UI 希望看到更细腻的速度与进度，因此把轮询间隔调短一些。
   static const _pollInterval = Duration(milliseconds: 900);
 
   late final DriveDownloadService _service;
   Timer? _pollTimer;
+  // 记录每个任务上一次轮询的字节数与时间戳，用来计算瞬时速度。
   final Map<String, _SpeedSnapshot> _speedSnapshots = {};
   final Map<String, double> _speedMeters = {};
 
@@ -91,6 +93,7 @@ class DriveDownloadManager extends Notifier<drive_api.DownloadQueueState> {
     });
   }
 
+  /// 根据最新的队列快照增量计算下载速度，单位 bytes/sec。
   void _updateSpeeds(drive_api.DownloadQueueState snapshot) {
     final now = DateTime.now();
     final activeIds = <String>{};

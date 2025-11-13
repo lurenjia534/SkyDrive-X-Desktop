@@ -11,11 +11,14 @@ use std::{
     time::Duration,
 };
 
+/// 回调函数签名：传入当前已下载字节数以及 Graph 预估的总大小。
+/// - `Option<u64>` 用于处理 Graph 未返回 size 的场景。
 type ProgressCallback = Box<dyn FnMut(u64, Option<u64>) + Send>;
 
 /// 下载指定 drive item（仅文件），保存到 target_dir。
 /// - 优先使用 Graph 返回的 downloadUrl（免鉴权）。
 /// - 若 downloadUrl 缺失，回退到 `/content` 并携带 token。
+/// 对 Flutter 暴露的下载入口（保持原接口，内部委托到带进度的实现）。
 #[flutter_rust_bridge::frb]
 pub fn download_drive_item(
     item_id: String,
@@ -25,6 +28,8 @@ pub fn download_drive_item(
     download_drive_item_internal(item_id, target_dir, overwrite, None)
 }
 
+/// 供下载管理器调用的进度版下载函数。
+/// - `progress` 为可选回调，便于任务管理器实时同步进度。
 pub(crate) fn download_drive_item_with_progress(
     item_id: String,
     target_dir: String,
@@ -34,6 +39,7 @@ pub(crate) fn download_drive_item_with_progress(
     download_drive_item_internal(item_id, target_dir, overwrite, progress)
 }
 
+/// 实际执行下载的内部实现，共享输入验证与文件保存逻辑。
 fn download_drive_item_internal(
     item_id: String,
     target_dir: String,
@@ -198,6 +204,7 @@ fn prepare_destination(
 }
 
 /// 实际执行 HTTP 下载并流式写入磁盘，必要时附带 Bearer token。
+/// 逐块读取响应体，写入文件后触发进度回调，确保 UI 能看到实时变化。
 fn stream_download(
     download_url: &str,
     bearer_token: Option<&str>,

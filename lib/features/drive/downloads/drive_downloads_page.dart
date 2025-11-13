@@ -207,6 +207,7 @@ int _bigIntToSafeInt(BigInt? value) {
   return value.toInt();
 }
 
+/// 将 bytes/s 转换为简洁的人类可读文案。
 String? _formatSpeed(double? bytesPerSecond) {
   if (bytesPerSecond == null || bytesPerSecond.isNaN || bytesPerSecond <= 0) {
     return null;

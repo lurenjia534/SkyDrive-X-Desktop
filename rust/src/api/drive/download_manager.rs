@@ -166,6 +166,7 @@ impl DownloadManager {
                 Some(Box::new(move |downloaded: u64, expected: Option<u64>| {
                     progress_manager.report_progress(&progress_item_id, downloaded, expected);
                 }));
+            // 将请求委托给带进度的下载函数，事件在闭包里推送回管理器。
             let result = download_drive_item_with_progress(
                 item_id.clone(),
                 target_dir,
@@ -237,6 +238,7 @@ impl DownloadManager {
         }
     }
 
+    /// Rust 下载线程会通过该方法上报进度，随后同步数据库与内存状态。
     fn report_progress(&self, item_id: &str, bytes_downloaded: u64, expected_size: Option<u64>) {
         let mut state = match self.state.lock() {
             Ok(guard) => guard,
