@@ -62,3 +62,14 @@ pub struct DownloadQueueState {
     pub completed: Vec<DownloadTask>,
     pub failed: Vec<DownloadTask>,
 }
+
+/// 下载进度事件，通过 StreamSink 推送给 Flutter，供 UI 实时刷新进度与速度。
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug)]
+pub struct DownloadProgressUpdate {
+    pub item_id: String,
+    pub bytes_downloaded: u64,
+    pub expected_size: Option<u64>,
+    pub speed_bps: Option<f64>,
+    pub timestamp_millis: i64,
+}

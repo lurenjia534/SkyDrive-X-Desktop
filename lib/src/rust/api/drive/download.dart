@@ -14,6 +14,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 /// 下载指定 drive item（仅文件），保存到 target_dir。
 /// - 优先使用 Graph 返回的 downloadUrl（免鉴权）。
 /// - 若 downloadUrl 缺失，回退到 `/content` 并携带 token。
+/// 对 Flutter 暴露的下载入口（保持原接口，内部委托到带进度的实现）。
 Future<DriveDownloadResult> downloadDriveItem({
   required String itemId,
   required String targetDir,

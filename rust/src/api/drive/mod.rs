@@ -6,7 +6,8 @@ pub mod models;
 
 pub use download::download_drive_item;
 pub use download_manager::{
-    clear_download_history, download_queue_state, enqueue_download_task, remove_download_task,
+    clear_download_history, download_progress_stream, download_queue_state, enqueue_download_task,
+    remove_download_task,
 };
 pub use list::list_drive_children;
 pub use models::{

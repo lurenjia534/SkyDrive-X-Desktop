@@ -6,7 +6,43 @@
 import '../../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+
+/// 下载进度事件，通过 StreamSink 推送给 Flutter，供 UI 实时刷新进度与速度。
+class DownloadProgressUpdate {
+  final String itemId;
+  final BigInt bytesDownloaded;
+  final BigInt? expectedSize;
+  final double? speedBps;
+  final PlatformInt64 timestampMillis;
+
+  const DownloadProgressUpdate({
+    required this.itemId,
+    required this.bytesDownloaded,
+    this.expectedSize,
+    this.speedBps,
+    required this.timestampMillis,
+  });
+
+  @override
+  int get hashCode =>
+      itemId.hashCode ^
+      bytesDownloaded.hashCode ^
+      expectedSize.hashCode ^
+      speedBps.hashCode ^
+      timestampMillis.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DownloadProgressUpdate &&
+          runtimeType == other.runtimeType &&
+          itemId == other.itemId &&
+          bytesDownloaded == other.bytesDownloaded &&
+          expectedSize == other.expectedSize &&
+          speedBps == other.speedBps &&
+          timestampMillis == other.timestampMillis;
+}
 
 /// 下载队列状态，包含进行中、已完成与失败任务列表。
 class DownloadQueueState {

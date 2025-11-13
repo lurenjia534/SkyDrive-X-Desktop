@@ -31,6 +31,10 @@ class DriveDownloadService {
     return drive_manager_api.removeDownloadTask(itemId: itemId);
   }
 
+  Stream<drive_api.DownloadProgressUpdate> progressStream() {
+    return drive_manager_api.downloadProgressStream();
+  }
+
   String _resolveDownloadDirectory() {
     try {
       return defaultDownloadDirectory();

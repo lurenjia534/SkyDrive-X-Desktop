@@ -17,20 +17,23 @@ typedef DownloadStatus = drive_api.DownloadStatus;
 class DriveDownloadManager extends Notifier<drive_api.DownloadQueueState> {
   DriveDownloadManager();
 
-  // UI 希望看到更细腻的速度与进度，因此把轮询间隔调短一些。
-  static const _pollInterval = Duration(milliseconds: 900);
+  // 主更新路径改成 Stream 推送，轮询仅作为兜底机制即可。
+  static const _pollInterval = Duration(seconds: 5);
 
   late final DriveDownloadService _service;
   Timer? _pollTimer;
-  // 记录每个任务上一次轮询的字节数与时间戳，用来计算瞬时速度。
-  final Map<String, _SpeedSnapshot> _speedSnapshots = {};
+  StreamSubscription<drive_api.DownloadProgressUpdate>? _progressSub;
   final Map<String, double> _speedMeters = {};
 
   @override
   drive_api.DownloadQueueState build() {
     _service = const DriveDownloadService();
     _startPolling();
-    ref.onDispose(() => _pollTimer?.cancel());
+    _subscribeProgressStream();
+    ref.onDispose(() {
+      _pollTimer?.cancel();
+      _progressSub?.cancel();
+    });
     unawaited(_refreshQueue(force: true));
     return drive_api.DownloadQueueState(
       active: const <drive_api.DownloadTask>[],
@@ -45,7 +48,7 @@ class DriveDownloadManager extends Notifier<drive_api.DownloadQueueState> {
   }) async {
     try {
       final updated = await _service.enqueue(item: item, overwrite: overwrite);
-      _updateSpeeds(updated);
+      _pruneSpeeds(updated.active);
       state = updated;
     } on DownloadDirectoryUnavailable {
       rethrow;
@@ -57,14 +60,14 @@ class DriveDownloadManager extends Notifier<drive_api.DownloadQueueState> {
 
   Future<void> clearHistory() async {
     final updated = await _service.clearHistory();
-    _updateSpeeds(updated);
+    _pruneSpeeds(updated.active);
     state = updated;
   }
 
   Future<void> removeTask(String itemId) async {
     final updated = await _service.removeTask(itemId);
-    _speedSnapshots.remove(itemId);
     _speedMeters.remove(itemId);
+    _pruneSpeeds(updated.active);
     state = updated;
   }
 
@@ -78,7 +81,7 @@ class DriveDownloadManager extends Notifier<drive_api.DownloadQueueState> {
     if (!force && state.active.isEmpty) return;
     try {
       final snapshot = await _service.fetchQueue();
-      _updateSpeeds(snapshot);
+      _pruneSpeeds(snapshot.active);
       state = snapshot;
     } catch (err, stack) {
       debugPrint('refresh download queue failed: $err\n$stack');
@@ -93,24 +96,57 @@ class DriveDownloadManager extends Notifier<drive_api.DownloadQueueState> {
     });
   }
 
-  /// 根据最新的队列快照增量计算下载速度，单位 bytes/sec。
-  void _updateSpeeds(drive_api.DownloadQueueState snapshot) {
-    final now = DateTime.now();
-    final activeIds = <String>{};
-    for (final task in snapshot.active) {
-      final currentBytes = _bigIntToSafeInt(task.bytesDownloaded);
-      final last = _speedSnapshots[task.item.id];
-      if (last != null) {
-        final deltaBytes = currentBytes - last.bytes;
-        final deltaMs = now.difference(last.timestamp).inMilliseconds;
-        if (deltaMs > 0 && deltaBytes >= 0) {
-          _speedMeters[task.item.id] = deltaBytes / (deltaMs / 1000);
-        }
+  void _subscribeProgressStream() {
+    _progressSub?.cancel();
+    _progressSub = _service.progressStream().listen(
+      _handleProgressUpdate,
+      onError: (err, stack) =>
+          debugPrint('progress stream failed: $err\n$stack'),
+    );
+  }
+
+  void _handleProgressUpdate(drive_api.DownloadProgressUpdate update) {
+    final updatedActive = <drive_api.DownloadTask>[];
+    var touched = false;
+    for (final task in state.active) {
+      if (task.item.id == update.itemId) {
+        touched = true;
+        updatedActive.add(_mergeTaskWithProgress(task, update));
+      } else {
+        updatedActive.add(task);
       }
-      _speedSnapshots[task.item.id] = _SpeedSnapshot(currentBytes, now);
-      activeIds.add(task.item.id);
     }
-    _speedSnapshots.removeWhere((key, _) => !activeIds.contains(key));
+    if (!touched) return;
+
+    if (update.speedBps != null) {
+      _speedMeters[update.itemId] = update.speedBps!.toDouble();
+    }
+    _pruneSpeeds(updatedActive);
+    state = drive_api.DownloadQueueState(
+      active: updatedActive,
+      completed: state.completed,
+      failed: state.failed,
+    );
+  }
+
+  drive_api.DownloadTask _mergeTaskWithProgress(
+    drive_api.DownloadTask task,
+    drive_api.DownloadProgressUpdate update,
+  ) {
+    return drive_api.DownloadTask(
+      item: task.item,
+      status: task.status,
+      startedAt: task.startedAt,
+      completedAt: task.completedAt,
+      savedPath: task.savedPath,
+      sizeLabel: update.expectedSize ?? task.sizeLabel,
+      bytesDownloaded: update.bytesDownloaded,
+      errorMessage: task.errorMessage,
+    );
+  }
+
+  void _pruneSpeeds(Iterable<drive_api.DownloadTask> activeTasks) {
+    final activeIds = activeTasks.map((e) => e.item.id).toSet();
     _speedMeters.removeWhere((key, _) => !activeIds.contains(key));
   }
 }
@@ -130,20 +166,4 @@ extension DownloadTaskExt on drive_api.DownloadTask {
     }
     return downloaded.toDouble() / total.toDouble();
   }
-}
-
-class _SpeedSnapshot {
-  const _SpeedSnapshot(this.bytes, this.timestamp);
-  final int bytes;
-  final DateTime timestamp;
-}
-
-int _bigIntToSafeInt(BigInt? value) {
-  if (value == null) return 0;
-  const maxSafeInt = 0x7fffffffffffffff;
-  final max = BigInt.from(maxSafeInt);
-  if (value > max) {
-    return maxSafeInt;
-  }
-  return value.toInt();
 }

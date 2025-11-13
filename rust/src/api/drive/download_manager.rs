@@ -1,15 +1,18 @@
 use super::{
     download::download_drive_item_with_progress,
     models::{
-        DownloadQueueState, DownloadStatus, DownloadTask, DriveDownloadResult, DriveItemSummary,
+        DownloadProgressUpdate, DownloadQueueState, DownloadStatus, DownloadTask,
+        DriveDownloadResult, DriveItemSummary,
     },
 };
 use crate::db::{self, DownloadTaskRecord};
+use crate::frb_generated::StreamSink;
 use once_cell::sync::Lazy;
 use std::{
+    collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
     thread,
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Instant, SystemTime, UNIX_EPOCH},
 };
 
 const STATUS_IN_PROGRESS: i64 = 0;
@@ -23,6 +26,8 @@ static DOWNLOAD_MANAGER: Lazy<DownloadManager> = Lazy::new(DownloadManager::new)
 #[derive(Clone)]
 pub struct DownloadManager {
     state: Arc<Mutex<InnerState>>,
+    progress_meters: Arc<Mutex<HashMap<String, ProgressTick>>>,
+    subscribers: Arc<Mutex<Vec<StreamSink<DownloadProgressUpdate>>>>,
 }
 
 #[flutter_rust_bridge::frb(ignore)]
@@ -37,9 +42,28 @@ impl DownloadManager {
     fn new() -> Self {
         let manager = Self {
             state: Arc::new(Mutex::new(InnerState::default())),
+            progress_meters: Arc::new(Mutex::new(HashMap::new())),
+            subscribers: Arc::new(Mutex::new(Vec::new())),
         };
         manager.restore_from_storage();
         manager
+    }
+
+    fn emit_progress_snapshot(
+        &self,
+        item_id: &str,
+        bytes_downloaded: u64,
+        expected_size: Option<u64>,
+    ) {
+        let speed = self.compute_speed_bps(item_id, bytes_downloaded);
+        let update = DownloadProgressUpdate {
+            item_id: item_id.to_string(),
+            bytes_downloaded,
+            expected_size,
+            speed_bps: speed,
+            timestamp_millis: now_millis(),
+        };
+        self.broadcast_update(update);
     }
 
     fn shared() -> Self {
@@ -114,6 +138,73 @@ impl DownloadManager {
     fn clear_history_from_storage(&self) {
         if let Err(err) = db::clear_finished_download_tasks(STATUS_IN_PROGRESS) {
             eprintln!("[drive-download] failed to clear download history: {err}");
+        }
+    }
+
+    fn add_progress_sink(&self, stream_sink: StreamSink<DownloadProgressUpdate>) {
+        if let Ok(mut subs) = self.subscribers.lock() {
+            subs.push(stream_sink.clone());
+        }
+        if let Ok(state) = self.state.lock() {
+            for task in &state.active {
+                if let Some(bytes) = task.bytes_downloaded {
+                    let update = DownloadProgressUpdate {
+                        item_id: task.item.id.clone(),
+                        bytes_downloaded: bytes,
+                        expected_size: task.size_label,
+                        speed_bps: None,
+                        timestamp_millis: now_millis(),
+                    };
+                    let _ = stream_sink.add(update);
+                }
+            }
+        }
+    }
+
+    fn broadcast_update(&self, update: DownloadProgressUpdate) {
+        if let Ok(mut subs) = self.subscribers.lock() {
+            subs.retain_mut(|sink| sink.add(update.clone()).is_ok());
+        }
+    }
+
+    fn compute_speed_bps(&self, item_id: &str, bytes_downloaded: u64) -> Option<f64> {
+        let mut meters = match self.progress_meters.lock() {
+            Ok(guard) => guard,
+            Err(err) => {
+                eprintln!("[drive-download] failed to lock progress meters: {err}");
+                return None;
+            }
+        };
+        let now = Instant::now();
+        if let Some(previous) = meters.insert(
+            item_id.to_string(),
+            ProgressTick {
+                bytes_downloaded,
+                instant: now,
+            },
+        ) {
+            let delta_bytes = bytes_downloaded.saturating_sub(previous.bytes_downloaded);
+            let elapsed = now.duration_since(previous.instant).as_secs_f64();
+            if delta_bytes > 0 && elapsed > 0.0 {
+                return Some(delta_bytes as f64 / elapsed);
+            }
+        }
+        None
+    }
+
+    fn clear_progress_meter(&self, item_id: &str) {
+        if let Ok(mut meters) = self.progress_meters.lock() {
+            meters.remove(item_id);
+        }
+    }
+
+    fn prune_inactive_meters(&self, active_tasks: &[DownloadTask]) {
+        if let Ok(mut meters) = self.progress_meters.lock() {
+            let active_ids: HashSet<String> = active_tasks
+                .iter()
+                .map(|task| task.item.id.clone())
+                .collect();
+            meters.retain(|id, _| active_ids.contains(id));
         }
     }
 
@@ -207,6 +298,13 @@ impl DownloadManager {
         drop(state);
         if let Some(task) = updated_task {
             self.persist_task(&task);
+            self.clear_progress_meter(item_id);
+            let bytes = task.bytes_downloaded.unwrap_or(result.bytes_downloaded);
+            let expected = task
+                .size_label
+                .or(result.expected_size)
+                .or(Some(result.bytes_downloaded));
+            self.emit_progress_snapshot(item_id, bytes, expected);
         }
     }
 
@@ -235,6 +333,12 @@ impl DownloadManager {
         drop(state);
         if let Some(task) = updated_task {
             self.persist_task(&task);
+            self.clear_progress_meter(item_id);
+            self.emit_progress_snapshot(
+                item_id,
+                task.bytes_downloaded.unwrap_or(0),
+                task.size_label,
+            );
         }
     }
 
@@ -259,6 +363,8 @@ impl DownloadManager {
         drop(state);
         if let Some(task) = updated_task {
             self.persist_task(&task);
+            let size_hint = task.size_label;
+            self.emit_progress_snapshot(item_id, bytes_downloaded, size_hint);
         }
     }
 
@@ -274,6 +380,7 @@ impl DownloadManager {
         let snapshot = (*state).clone();
         drop(state);
         self.remove_task_from_storage(item_id);
+        self.clear_progress_meter(item_id);
         Ok(snapshot.into())
     }
 
@@ -288,6 +395,7 @@ impl DownloadManager {
         let snapshot = (*state).clone();
         drop(state);
         self.clear_history_from_storage();
+        self.prune_inactive_meters(&snapshot.active);
         Ok(snapshot.into())
     }
 
@@ -403,6 +511,12 @@ fn opt_i64_to_u64(value: Option<i64>) -> Option<u64> {
     value.and_then(|v| if v >= 0 { v.try_into().ok() } else { None })
 }
 
+#[derive(Clone)]
+struct ProgressTick {
+    bytes_downloaded: u64,
+    instant: Instant,
+}
+
 #[flutter_rust_bridge::frb]
 pub fn download_queue_state() -> DownloadQueueState {
     DownloadManager::shared().snapshot()
@@ -425,4 +539,9 @@ pub fn remove_download_task(item_id: String) -> Result<DownloadQueueState, Strin
 #[flutter_rust_bridge::frb]
 pub fn clear_download_history() -> Result<DownloadQueueState, String> {
     DownloadManager::shared().clear_history()
+}
+
+#[flutter_rust_bridge::frb]
+pub fn download_progress_stream(stream_sink: StreamSink<DownloadProgressUpdate>) {
+    DownloadManager::shared().add_progress_sink(stream_sink);
 }
