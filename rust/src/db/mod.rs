@@ -1,120 +1,49 @@
+mod auth;
+mod download_tasks;
+
 use directories::ProjectDirs;
-use rusqlite::{params, Connection, OptionalExtension};
-use std::convert::TryInto;
+use rusqlite::Connection;
 use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+pub use auth::{
+    build_record, clear_auth_record, load_auth_record, upsert_auth_record, AuthTokenRecord,
+};
+pub use download_tasks::{
+    clear_finished_download_tasks, delete_download_task, load_download_tasks, upsert_download_task,
+    DownloadTaskRecord,
+};
+
+/// DB 模块：提供统一的 sqlite 连接管理，同时 re-export 领域级 API。
+/// 目前支持 auth_tokens 与 download_tasks，两者共用同一数据库文件，便于部署。
+
 const QUALIFIER: &str = "com";
 const ORGANIZATION: &str = "Skydrivex";
 const APPLICATION: &str = "Skydrivex";
-const DB_FILE_NAME: &str = "auth.db";
+const DB_FILE_NAME: &str = "skydrivex.db";
 
 pub type StorageResult<T> = Result<T, String>;
-
-#[derive(Debug, Clone)]
-pub struct AuthTokenRecord {
-    pub client_id: String,
-    pub access_token: String,
-    pub refresh_token: Option<String>,
-    pub expires_in_seconds: Option<i64>,
-    pub id_token: Option<String>,
-    pub scope: Option<String>,
-    pub token_type: Option<String>,
-    pub updated_at_millis: i64,
-}
 
 pub fn init_storage() -> StorageResult<()> {
     with_connection(|_| Ok(()))
 }
 
-pub fn upsert_auth_record(record: &AuthTokenRecord) -> StorageResult<()> {
-    with_connection(|conn| {
-        conn.execute(
-            "INSERT INTO auth_tokens (
-                id,
-                client_id,
-                access_token,
-                refresh_token,
-                expires_in_seconds,
-                id_token,
-                scope,
-                token_type,
-                updated_at_millis
-            )
-            VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-                client_id = excluded.client_id,
-                access_token = excluded.access_token,
-                refresh_token = excluded.refresh_token,
-                expires_in_seconds = excluded.expires_in_seconds,
-                id_token = excluded.id_token,
-                scope = excluded.scope,
-                token_type = excluded.token_type,
-                updated_at_millis = excluded.updated_at_millis",
-            params![
-                record.client_id,
-                record.access_token,
-                record.refresh_token,
-                record.expires_in_seconds,
-                record.id_token,
-                record.scope,
-                record.token_type,
-                record.updated_at_millis,
-            ],
-        )
-        .map_err(|e| format!("failed to upsert auth tokens: {e}"))?;
-        Ok(())
-    })
-}
-
-pub fn load_auth_record() -> StorageResult<Option<AuthTokenRecord>> {
-    with_connection(|conn| {
-        conn.query_row(
-            "SELECT
-                client_id,
-                access_token,
-                refresh_token,
-                expires_in_seconds,
-                id_token,
-                scope,
-                token_type,
-                updated_at_millis
-            FROM auth_tokens
-            WHERE id = 1",
-            [],
-            |row| {
-                Ok(AuthTokenRecord {
-                    client_id: row.get(0)?,
-                    access_token: row.get(1)?,
-                    refresh_token: row.get(2)?,
-                    expires_in_seconds: row.get(3)?,
-                    id_token: row.get(4)?,
-                    scope: row.get(5)?,
-                    token_type: row.get(6)?,
-                    updated_at_millis: row.get(7)?,
-                })
-            },
-        )
-        .optional()
-        .map_err(|e| format!("failed to read auth tokens: {e}"))
-    })
-}
-
-pub fn clear_auth_record() -> StorageResult<()> {
-    with_connection(|conn| {
-        conn.execute("DELETE FROM auth_tokens WHERE id = 1", [])
-            .map_err(|e| format!("failed to clear auth tokens: {e}"))?;
-        Ok(())
-    })
-}
-
-fn with_connection<T, F>(operation: F) -> StorageResult<T>
+/// 内部公共 helper，减少重复打开连接/应用迁移的样板代码。
+pub(crate) fn with_connection<T, F>(operation: F) -> StorageResult<T>
 where
     F: FnOnce(&Connection) -> StorageResult<T>,
 {
     let conn = open_connection()?;
     operation(&conn)
+}
+
+/// 获取毫秒时间戳，供各表记录更新时间。
+pub(crate) fn current_timestamp_millis() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis() as i64)
+        .unwrap_or(0)
 }
 
 fn open_connection() -> StorageResult<Connection> {
@@ -131,20 +60,10 @@ fn open_connection() -> StorageResult<Connection> {
 }
 
 fn apply_migrations(conn: &Connection) -> StorageResult<()> {
-    conn.execute_batch(
-        "CREATE TABLE IF NOT EXISTS auth_tokens (
-            id INTEGER PRIMARY KEY CHECK (id = 1),
-            client_id TEXT NOT NULL,
-            access_token TEXT NOT NULL,
-            refresh_token TEXT,
-            expires_in_seconds INTEGER,
-            id_token TEXT,
-            scope TEXT,
-            token_type TEXT,
-            updated_at_millis INTEGER NOT NULL
-        );",
-    )
-    .map_err(|e| format!("failed to initialize database schema: {e}"))?;
+    conn.execute_batch(auth::AUTH_TABLE_SCHEMA)
+        .map_err(|e| format!("failed to initialize auth_tokens schema: {e}"))?;
+    conn.execute_batch(download_tasks::DOWNLOAD_TABLE_SCHEMA)
+        .map_err(|e| format!("failed to initialize download_tasks schema: {e}"))?;
     Ok(())
 }
 
@@ -152,32 +71,4 @@ fn database_path() -> StorageResult<PathBuf> {
     let dirs = ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION)
         .ok_or_else(|| "failed to resolve application data directory".to_string())?;
     Ok(dirs.data_dir().join(DB_FILE_NAME))
-}
-
-pub fn build_record(
-    client_id: String,
-    access_token: String,
-    refresh_token: Option<String>,
-    expires_in_seconds: Option<u64>,
-    id_token: Option<String>,
-    scope: Option<String>,
-    token_type: Option<String>,
-) -> AuthTokenRecord {
-    AuthTokenRecord {
-        client_id,
-        access_token,
-        refresh_token,
-        expires_in_seconds: expires_in_seconds.and_then(|value| value.try_into().ok()),
-        id_token,
-        scope,
-        token_type,
-        updated_at_millis: current_timestamp_millis(),
-    }
-}
-
-fn current_timestamp_millis() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_millis() as i64)
-        .unwrap_or(0)
 }
