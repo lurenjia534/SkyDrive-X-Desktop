@@ -50,7 +50,7 @@ class DriveDownloadsPage extends ConsumerWidget {
       padding: const EdgeInsets.all(20),
       children: [
         if (queue.active.isNotEmpty)
-          _DownloadSection(title: '下载中', tasks: queue.active.values.toList()),
+          _DownloadSection(title: '下载中', tasks: queue.active),
         if (queue.failed.isNotEmpty)
           _DownloadSection(title: '失败', tasks: queue.failed, showError: true),
         if (queue.completed.isNotEmpty)

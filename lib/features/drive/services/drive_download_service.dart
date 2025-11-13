@@ -1,21 +1,34 @@
 import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
+import 'package:skydrivex/src/rust/api/drive/download_manager.dart'
+    as drive_manager_api;
 import 'package:skydrivex/utils/download_destination.dart';
 
-/// 统一封装下载流程，确保目录解析与 Rust API 调用逻辑集中管理。
+/// 统一封装下载逻辑：Flutter 只解析保存目录，其余队列管理交由 Rust。
 class DriveDownloadService {
   const DriveDownloadService();
 
-  /// 返回下载结果；如果无法解析下载目录会抛出 [DownloadDirectoryUnavailable]。
-  Future<drive_api.DriveDownloadResult> download({
+  Future<drive_api.DownloadQueueState> enqueue({
     required drive_api.DriveItemSummary item,
     bool overwrite = false,
   }) async {
     final targetDir = _resolveDownloadDirectory();
-    return drive_api.downloadDriveItem(
-      itemId: item.id,
+    return drive_manager_api.enqueueDownloadTask(
+      item: item,
       targetDir: targetDir,
       overwrite: overwrite,
     );
+  }
+
+  Future<drive_api.DownloadQueueState> fetchQueue() {
+    return drive_manager_api.downloadQueueState();
+  }
+
+  Future<drive_api.DownloadQueueState> clearHistory() {
+    return drive_manager_api.clearDownloadHistory();
+  }
+
+  Future<drive_api.DownloadQueueState> removeTask(String itemId) {
+    return drive_manager_api.removeDownloadTask(itemId: itemId);
   }
 
   String _resolveDownloadDirectory() {

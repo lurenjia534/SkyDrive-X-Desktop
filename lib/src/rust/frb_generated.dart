@@ -6,6 +6,7 @@
 import 'api/auth/auth.dart';
 import 'api/auth/refresh.dart';
 import 'api/drive/download.dart';
+import 'api/drive/download_manager.dart';
 import 'api/drive/list.dart';
 import 'api/drive/models.dart';
 import 'api/simple.dart';
@@ -71,7 +72,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -1424810087;
+  int get rustContentHash => 2007958460;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -87,10 +88,22 @@ abstract class RustLibApi extends BaseApi {
     required List<String> scopes,
   });
 
+  Future<DownloadQueueState> crateApiDriveDownloadManagerClearDownloadHistory();
+
   Future<void> crateApiAuthAuthClearPersistedAuthState();
 
   Future<DriveDownloadResult> crateApiDriveDownloadDownloadDriveItem({
     required String itemId,
+    required String targetDir,
+    required bool overwrite,
+  });
+
+  Future<DownloadQueueState> crateApiDriveDownloadManagerDownloadQueueState();
+
+  Future<DownloadQueueState> crateApiDriveModelsDownloadQueueStateDefault();
+
+  Future<DownloadQueueState> crateApiDriveDownloadManagerEnqueueDownloadTask({
+    required DriveItemSummary item,
     required String targetDir,
     required bool overwrite,
   });
@@ -113,6 +126,10 @@ abstract class RustLibApi extends BaseApi {
   });
 
   Future<StoredAuthState> crateApiAuthRefreshRefreshTokens();
+
+  Future<DownloadQueueState> crateApiDriveDownloadManagerRemoveDownloadTask({
+    required String itemId,
+  });
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -159,7 +176,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiAuthAuthClearPersistedAuthState() {
+  Future<DownloadQueueState>
+  crateApiDriveDownloadManagerClearDownloadHistory() {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -168,6 +186,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             generalizedFrbRustBinding,
             serializer,
             funcId: 2,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_download_queue_state,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiDriveDownloadManagerClearDownloadHistoryConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiDriveDownloadManagerClearDownloadHistoryConstMeta =>
+      const TaskConstMeta(debugName: "clear_download_history", argNames: []);
+
+  @override
+  Future<void> crateApiAuthAuthClearPersistedAuthState() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 3,
             port: port_,
           );
         },
@@ -204,7 +250,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 4,
             port: port_,
           );
         },
@@ -226,13 +272,107 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<DownloadQueueState> crateApiDriveDownloadManagerDownloadQueueState() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 5,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_download_queue_state,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiDriveDownloadManagerDownloadQueueStateConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDriveDownloadManagerDownloadQueueStateConstMeta =>
+      const TaskConstMeta(debugName: "download_queue_state", argNames: []);
+
+  @override
+  Future<DownloadQueueState> crateApiDriveModelsDownloadQueueStateDefault() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_download_queue_state,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiDriveModelsDownloadQueueStateDefaultConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDriveModelsDownloadQueueStateDefaultConstMeta =>
+      const TaskConstMeta(
+        debugName: "download_queue_state_default",
+        argNames: [],
+      );
+
+  @override
+  Future<DownloadQueueState> crateApiDriveDownloadManagerEnqueueDownloadTask({
+    required DriveItemSummary item,
+    required String targetDir,
+    required bool overwrite,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_drive_item_summary(item, serializer);
+          sse_encode_String(targetDir, serializer);
+          sse_encode_bool(overwrite, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_download_queue_state,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiDriveDownloadManagerEnqueueDownloadTaskConstMeta,
+        argValues: [item, targetDir, overwrite],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDriveDownloadManagerEnqueueDownloadTaskConstMeta =>
+      const TaskConstMeta(
+        debugName: "enqueue_download_task",
+        argNames: ["item", "targetDir", "overwrite"],
+      );
+
+  @override
   String crateApiSimpleGreet({required String name}) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(name, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -257,7 +397,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 9,
             port: port_,
           );
         },
@@ -291,7 +431,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 10,
             port: port_,
           );
         },
@@ -321,7 +461,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 11,
             port: port_,
           );
         },
@@ -353,7 +493,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 12,
             port: port_,
           );
         },
@@ -383,7 +523,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 13,
             port: port_,
           );
         },
@@ -400,6 +540,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiAuthRefreshRefreshTokensConstMeta =>
       const TaskConstMeta(debugName: "refresh_tokens", argNames: []);
+
+  @override
+  Future<DownloadQueueState> crateApiDriveDownloadManagerRemoveDownloadTask({
+    required String itemId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(itemId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 14,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_download_queue_state,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiDriveDownloadManagerRemoveDownloadTaskConstMeta,
+        argValues: [itemId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDriveDownloadManagerRemoveDownloadTaskConstMeta =>
+      const TaskConstMeta(
+        debugName: "remove_download_task",
+        argNames: ["itemId"],
+      );
 
   @protected
   String dco_decode_String(dynamic raw) {
@@ -436,6 +609,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  DriveItemSummary dco_decode_box_autoadd_drive_item_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_drive_item_summary(raw);
+  }
+
+  @protected
   PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_i_64(raw);
@@ -451,6 +630,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   BigInt dco_decode_box_autoadd_u_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_u_64(raw);
+  }
+
+  @protected
+  DownloadQueueState dco_decode_download_queue_state(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return DownloadQueueState(
+      active: dco_decode_list_download_task(arr[0]),
+      completed: dco_decode_list_download_task(arr[1]),
+      failed: dco_decode_list_download_task(arr[2]),
+    );
+  }
+
+  @protected
+  DownloadStatus dco_decode_download_status(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return DownloadStatus.values[raw as int];
+  }
+
+  @protected
+  DownloadTask dco_decode_download_task(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return DownloadTask(
+      item: dco_decode_drive_item_summary(arr[0]),
+      status: dco_decode_download_status(arr[1]),
+      startedAt: dco_decode_i_64(arr[2]),
+      completedAt: dco_decode_opt_box_autoadd_i_64(arr[3]),
+      savedPath: dco_decode_opt_String(arr[4]),
+      sizeLabel: dco_decode_opt_box_autoadd_u_64(arr[5]),
+      errorMessage: dco_decode_opt_String(arr[6]),
+    );
   }
 
   @protected
@@ -498,6 +713,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int dco_decode_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
   PlatformInt64 dco_decode_i_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dcoDecodeI64(raw);
@@ -507,6 +728,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<String> dco_decode_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<DownloadTask> dco_decode_list_download_task(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_download_task).toList();
   }
 
   @protected
@@ -615,6 +842,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  DriveItemSummary sse_decode_box_autoadd_drive_item_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_drive_item_summary(deserializer));
+  }
+
+  @protected
   PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_i_64(deserializer));
@@ -632,6 +867,49 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_u_64(deserializer));
+  }
+
+  @protected
+  DownloadQueueState sse_decode_download_queue_state(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_active = sse_decode_list_download_task(deserializer);
+    var var_completed = sse_decode_list_download_task(deserializer);
+    var var_failed = sse_decode_list_download_task(deserializer);
+    return DownloadQueueState(
+      active: var_active,
+      completed: var_completed,
+      failed: var_failed,
+    );
+  }
+
+  @protected
+  DownloadStatus sse_decode_download_status(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return DownloadStatus.values[inner];
+  }
+
+  @protected
+  DownloadTask sse_decode_download_task(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_item = sse_decode_drive_item_summary(deserializer);
+    var var_status = sse_decode_download_status(deserializer);
+    var var_startedAt = sse_decode_i_64(deserializer);
+    var var_completedAt = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_savedPath = sse_decode_opt_String(deserializer);
+    var var_sizeLabel = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_errorMessage = sse_decode_opt_String(deserializer);
+    return DownloadTask(
+      item: var_item,
+      status: var_status,
+      startedAt: var_startedAt,
+      completedAt: var_completedAt,
+      savedPath: var_savedPath,
+      sizeLabel: var_sizeLabel,
+      errorMessage: var_errorMessage,
+    );
   }
 
   @protected
@@ -683,6 +961,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int sse_decode_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getInt32();
+  }
+
+  @protected
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getPlatformInt64();
@@ -696,6 +980,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <String>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<DownloadTask> sse_decode_list_download_task(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <DownloadTask>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_download_task(deserializer));
     }
     return ans_;
   }
@@ -798,12 +1096,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getInt32();
-  }
-
-  @protected
   void sse_encode_String(String self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer);
@@ -836,6 +1128,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_drive_item_summary(
+    DriveItemSummary self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_drive_item_summary(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_i_64(
     PlatformInt64 self,
     SseSerializer serializer,
@@ -857,6 +1158,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_64(self, serializer);
+  }
+
+  @protected
+  void sse_encode_download_queue_state(
+    DownloadQueueState self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_download_task(self.active, serializer);
+    sse_encode_list_download_task(self.completed, serializer);
+    sse_encode_list_download_task(self.failed, serializer);
+  }
+
+  @protected
+  void sse_encode_download_status(
+    DownloadStatus self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_download_task(DownloadTask self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_drive_item_summary(self.item, serializer);
+    sse_encode_download_status(self.status, serializer);
+    sse_encode_i_64(self.startedAt, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.completedAt, serializer);
+    sse_encode_opt_String(self.savedPath, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.sizeLabel, serializer);
+    sse_encode_opt_String(self.errorMessage, serializer);
   }
 
   @protected
@@ -895,6 +1228,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putInt32(self);
+  }
+
+  @protected
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putPlatformInt64(self);
@@ -906,6 +1245,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_download_task(
+    List<DownloadTask> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_download_task(item, serializer);
     }
   }
 
@@ -1003,11 +1354,5 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   void sse_encode_unit(void self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-  }
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putInt32(self);
   }
 }

@@ -30,3 +30,34 @@ pub struct DriveDownloadResult {
     pub bytes_downloaded: u64,
     pub expected_size: Option<u64>,
 }
+
+/// 下载任务状态，迁移至 Rust 端统一管理。
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug)]
+pub enum DownloadStatus {
+    InProgress,
+    Completed,
+    Failed,
+}
+
+/// 单条下载任务详情，供 Flutter 展示进度与历史。
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug)]
+pub struct DownloadTask {
+    pub item: DriveItemSummary,
+    pub status: DownloadStatus,
+    pub started_at: i64,
+    pub completed_at: Option<i64>,
+    pub saved_path: Option<String>,
+    pub size_label: Option<u64>,
+    pub error_message: Option<String>,
+}
+
+/// 下载队列状态，包含进行中、已完成与失败任务列表。
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug, Default)]
+pub struct DownloadQueueState {
+    pub active: Vec<DownloadTask>,
+    pub completed: Vec<DownloadTask>,
+    pub failed: Vec<DownloadTask>,
+}

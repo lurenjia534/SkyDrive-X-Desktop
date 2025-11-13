@@ -6,7 +6,82 @@
 import '../../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+
+/// 下载队列状态，包含进行中、已完成与失败任务列表。
+class DownloadQueueState {
+  final List<DownloadTask> active;
+  final List<DownloadTask> completed;
+  final List<DownloadTask> failed;
+
+  const DownloadQueueState({
+    required this.active,
+    required this.completed,
+    required this.failed,
+  });
+
+  static Future<DownloadQueueState> default_() =>
+      RustLib.instance.api.crateApiDriveModelsDownloadQueueStateDefault();
+
+  @override
+  int get hashCode => active.hashCode ^ completed.hashCode ^ failed.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DownloadQueueState &&
+          runtimeType == other.runtimeType &&
+          active == other.active &&
+          completed == other.completed &&
+          failed == other.failed;
+}
+
+/// 下载任务状态，迁移至 Rust 端统一管理。
+enum DownloadStatus { inProgress, completed, failed }
+
+/// 单条下载任务详情，供 Flutter 展示进度与历史。
+class DownloadTask {
+  final DriveItemSummary item;
+  final DownloadStatus status;
+  final PlatformInt64 startedAt;
+  final PlatformInt64? completedAt;
+  final String? savedPath;
+  final BigInt? sizeLabel;
+  final String? errorMessage;
+
+  const DownloadTask({
+    required this.item,
+    required this.status,
+    required this.startedAt,
+    this.completedAt,
+    this.savedPath,
+    this.sizeLabel,
+    this.errorMessage,
+  });
+
+  @override
+  int get hashCode =>
+      item.hashCode ^
+      status.hashCode ^
+      startedAt.hashCode ^
+      completedAt.hashCode ^
+      savedPath.hashCode ^
+      sizeLabel.hashCode ^
+      errorMessage.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DownloadTask &&
+          runtimeType == other.runtimeType &&
+          item == other.item &&
+          status == other.status &&
+          startedAt == other.startedAt &&
+          completedAt == other.completedAt &&
+          savedPath == other.savedPath &&
+          sizeLabel == other.sizeLabel &&
+          errorMessage == other.errorMessage;
+}
 
 /// 下载完成后的结果描述，便于前端提示保存路径与大小。
 class DriveDownloadResult {

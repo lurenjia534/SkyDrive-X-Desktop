@@ -9,6 +9,7 @@
 import 'api/auth/auth.dart';
 import 'api/auth/refresh.dart';
 import 'api/drive/download.dart';
+import 'api/drive/download_manager.dart';
 import 'api/drive/list.dart';
 import 'api/drive/models.dart';
 import 'api/simple.dart';
@@ -38,6 +39,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AuthTokens dco_decode_box_autoadd_auth_tokens(dynamic raw);
 
   @protected
+  DriveItemSummary dco_decode_box_autoadd_drive_item_summary(dynamic raw);
+
+  @protected
   PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw);
 
   @protected
@@ -45,6 +49,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   BigInt dco_decode_box_autoadd_u_64(dynamic raw);
+
+  @protected
+  DownloadQueueState dco_decode_download_queue_state(dynamic raw);
+
+  @protected
+  DownloadStatus dco_decode_download_status(dynamic raw);
+
+  @protected
+  DownloadTask dco_decode_download_task(dynamic raw);
 
   @protected
   DriveDownloadResult dco_decode_drive_download_result(dynamic raw);
@@ -56,10 +69,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   DrivePage dco_decode_drive_page(dynamic raw);
 
   @protected
+  int dco_decode_i_32(dynamic raw);
+
+  @protected
   PlatformInt64 dco_decode_i_64(dynamic raw);
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<DownloadTask> dco_decode_list_download_task(dynamic raw);
 
   @protected
   List<DriveItemSummary> dco_decode_list_drive_item_summary(dynamic raw);
@@ -104,6 +123,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AuthTokens sse_decode_box_autoadd_auth_tokens(SseDeserializer deserializer);
 
   @protected
+  DriveItemSummary sse_decode_box_autoadd_drive_item_summary(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
@@ -113,6 +137,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer);
+
+  @protected
+  DownloadQueueState sse_decode_download_queue_state(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  DownloadStatus sse_decode_download_status(SseDeserializer deserializer);
+
+  @protected
+  DownloadTask sse_decode_download_task(SseDeserializer deserializer);
 
   @protected
   DriveDownloadResult sse_decode_drive_download_result(
@@ -126,10 +161,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   DrivePage sse_decode_drive_page(SseDeserializer deserializer);
 
   @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
+
+  @protected
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<DownloadTask> sse_decode_list_download_task(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<DriveItemSummary> sse_decode_list_drive_item_summary(
@@ -166,9 +209,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
-
-  @protected
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
@@ -180,6 +220,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_auth_tokens(
     AuthTokens self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_drive_item_summary(
+    DriveItemSummary self,
     SseSerializer serializer,
   );
 
@@ -199,6 +245,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer);
 
   @protected
+  void sse_encode_download_queue_state(
+    DownloadQueueState self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_download_status(
+    DownloadStatus self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_download_task(DownloadTask self, SseSerializer serializer);
+
+  @protected
   void sse_encode_drive_download_result(
     DriveDownloadResult self,
     SseSerializer serializer,
@@ -214,10 +275,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_drive_page(DrivePage self, SseSerializer serializer);
 
   @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
+
+  @protected
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_download_task(
+    List<DownloadTask> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_drive_item_summary(
@@ -263,9 +333,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
 }
 
 // Section: wire_class
