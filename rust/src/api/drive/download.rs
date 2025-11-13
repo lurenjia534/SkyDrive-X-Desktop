@@ -6,10 +6,12 @@ use super::{
 use serde::Deserialize;
 use std::{
     fs::{self, File},
-    io::{self, BufWriter, Write},
+    io::{BufWriter, Read, Write},
     path::{Path, PathBuf},
     time::Duration,
 };
+
+type ProgressCallback = Box<dyn FnMut(u64, Option<u64>) + Send>;
 
 /// 下载指定 drive item（仅文件），保存到 target_dir。
 /// - 优先使用 Graph 返回的 downloadUrl（免鉴权）。
@@ -19,6 +21,24 @@ pub fn download_drive_item(
     item_id: String,
     target_dir: String,
     overwrite: bool,
+) -> Result<DriveDownloadResult, String> {
+    download_drive_item_internal(item_id, target_dir, overwrite, None)
+}
+
+pub(crate) fn download_drive_item_with_progress(
+    item_id: String,
+    target_dir: String,
+    overwrite: bool,
+    progress: Option<ProgressCallback>,
+) -> Result<DriveDownloadResult, String> {
+    download_drive_item_internal(item_id, target_dir, overwrite, progress)
+}
+
+fn download_drive_item_internal(
+    item_id: String,
+    target_dir: String,
+    overwrite: bool,
+    mut progress: Option<ProgressCallback>,
 ) -> Result<DriveDownloadResult, String> {
     if item_id.trim().is_empty() {
         return Err("drive item id is required".to_string());
@@ -64,7 +84,19 @@ pub fn download_drive_item(
         .unwrap_or_else(|| "download.bin".to_string());
 
     let destination = prepare_destination(&target_dir, &file_name, overwrite)?;
-    let bytes_downloaded = stream_download(&download_endpoint, bearer_token, &destination)?;
+    if let Some(cb) = progress.as_mut() {
+        cb(0, metadata.size);
+    }
+    let mut progress_ref = progress
+        .as_mut()
+        .map(|cb| cb.as_mut() as &mut (dyn FnMut(u64, Option<u64>) + Send));
+    let bytes_downloaded = stream_download(
+        &download_endpoint,
+        bearer_token,
+        &destination,
+        metadata.size,
+        progress_ref.as_deref_mut(),
+    )?;
     eprintln!(
         "[drive-download] saved {} bytes to {}",
         bytes_downloaded,
@@ -170,6 +202,8 @@ fn stream_download(
     download_url: &str,
     bearer_token: Option<&str>,
     destination: &Path,
+    total_size: Option<u64>,
+    mut progress: Option<&mut (dyn FnMut(u64, Option<u64>) + Send)>,
 ) -> Result<u64, String> {
     let client = build_blocking_client(Duration::from_secs(600))?;
     let mut request = client.get(download_url);
@@ -195,13 +229,28 @@ fn stream_download(
     })?;
     let mut writer = BufWriter::new(file);
 
-    let bytes_copied =
-        io::copy(&mut response, &mut writer).map_err(|e| format!("failed to write file: {e}"))?;
+    let mut downloaded: u64 = 0;
+    let mut buffer = [0u8; 64 * 1024];
+    loop {
+        let read_bytes = response
+            .read(&mut buffer)
+            .map_err(|e| format!("failed to read response body: {e}"))?;
+        if read_bytes == 0 {
+            break;
+        }
+        writer
+            .write_all(&buffer[..read_bytes])
+            .map_err(|e| format!("failed to write file: {e}"))?;
+        downloaded += read_bytes as u64;
+        if let Some(ref mut cb) = progress {
+            cb(downloaded, total_size);
+        }
+    }
     writer
         .flush()
         .map_err(|e| format!("failed to flush file: {e}"))?;
 
-    Ok(bytes_copied)
+    Ok(downloaded)
 }
 
 #[derive(Debug, Deserialize)]

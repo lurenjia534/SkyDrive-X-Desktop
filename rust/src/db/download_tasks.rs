@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS download_tasks (
     completed_at INTEGER,
     saved_path TEXT,
     size_label INTEGER,
+    bytes_downloaded INTEGER,
     error_message TEXT,
     updated_at_millis INTEGER NOT NULL
 );";
@@ -39,6 +40,7 @@ pub struct DownloadTaskRecord {
     pub completed_at: Option<i64>,
     pub saved_path: Option<String>,
     pub size_label: Option<i64>,
+    pub bytes_downloaded: Option<i64>,
     pub error_message: Option<String>,
     pub updated_at_millis: i64,
 }
@@ -60,10 +62,11 @@ pub fn upsert_download_task(record: &DownloadTaskRecord) -> StorageResult<()> {
                 completed_at,
                 saved_path,
                 size_label,
+                bytes_downloaded,
                 error_message,
                 updated_at_millis
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(item_id) DO UPDATE SET
                 item_name = excluded.item_name,
                 size = excluded.size,
@@ -77,6 +80,7 @@ pub fn upsert_download_task(record: &DownloadTaskRecord) -> StorageResult<()> {
                 completed_at = excluded.completed_at,
                 saved_path = excluded.saved_path,
                 size_label = excluded.size_label,
+                bytes_downloaded = excluded.bytes_downloaded,
                 error_message = excluded.error_message,
                 updated_at_millis = excluded.updated_at_millis",
             params![
@@ -93,6 +97,7 @@ pub fn upsert_download_task(record: &DownloadTaskRecord) -> StorageResult<()> {
                 record.completed_at,
                 record.saved_path,
                 record.size_label,
+                record.bytes_downloaded,
                 record.error_message,
                 record.updated_at_millis,
             ],
@@ -120,6 +125,7 @@ pub fn load_download_tasks() -> StorageResult<Vec<DownloadTaskRecord>> {
                     completed_at,
                     saved_path,
                     size_label,
+                    bytes_downloaded,
                     error_message,
                     updated_at_millis
                 FROM download_tasks
@@ -172,7 +178,8 @@ fn map_download_task(row: &Row) -> rusqlite::Result<DownloadTaskRecord> {
         completed_at: row.get(10)?,
         saved_path: row.get(11)?,
         size_label: row.get(12)?,
-        error_message: row.get(13)?,
-        updated_at_millis: row.get(14)?,
+        bytes_downloaded: row.get(13)?,
+        error_message: row.get(14)?,
+        updated_at_millis: row.get(15)?,
     })
 }

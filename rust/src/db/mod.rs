@@ -2,7 +2,7 @@ mod auth;
 mod download_tasks;
 
 use directories::ProjectDirs;
-use rusqlite::Connection;
+use rusqlite::{Connection, Error as SqliteError};
 use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -64,7 +64,26 @@ fn apply_migrations(conn: &Connection) -> StorageResult<()> {
         .map_err(|e| format!("failed to initialize auth_tokens schema: {e}"))?;
     conn.execute_batch(download_tasks::DOWNLOAD_TABLE_SCHEMA)
         .map_err(|e| format!("failed to initialize download_tasks schema: {e}"))?;
+    ensure_column(conn, "download_tasks", "bytes_downloaded", "INTEGER")?;
     Ok(())
+}
+
+fn ensure_column(
+    conn: &Connection,
+    table: &str,
+    column: &str,
+    definition: &str,
+) -> StorageResult<()> {
+    let sql = format!("ALTER TABLE {table} ADD COLUMN {column} {definition}");
+    match conn.execute(&sql, []) {
+        Ok(_) => Ok(()),
+        Err(SqliteError::SqliteFailure(_, Some(message)))
+            if message.contains("duplicate column name") =>
+        {
+            Ok(())
+        }
+        Err(err) => Err(format!("failed to add column {column} on {table}: {err}")),
+    }
 }
 
 fn database_path() -> StorageResult<PathBuf> {

@@ -606,6 +606,7 @@ impl SseDecode for crate::api::drive::models::DownloadTask {
         let mut var_completedAt = <Option<i64>>::sse_decode(deserializer);
         let mut var_savedPath = <Option<String>>::sse_decode(deserializer);
         let mut var_sizeLabel = <Option<u64>>::sse_decode(deserializer);
+        let mut var_bytesDownloaded = <Option<u64>>::sse_decode(deserializer);
         let mut var_errorMessage = <Option<String>>::sse_decode(deserializer);
         return crate::api::drive::models::DownloadTask {
             item: var_item,
@@ -614,6 +615,7 @@ impl SseDecode for crate::api::drive::models::DownloadTask {
             completed_at: var_completedAt,
             saved_path: var_savedPath,
             size_label: var_sizeLabel,
+            bytes_downloaded: var_bytesDownloaded,
             error_message: var_errorMessage,
         };
     }
@@ -991,6 +993,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::drive::models::DownloadTask {
             self.completed_at.into_into_dart().into_dart(),
             self.saved_path.into_into_dart().into_dart(),
             self.size_label.into_into_dart().into_dart(),
+            self.bytes_downloaded.into_into_dart().into_dart(),
             self.error_message.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -1162,6 +1165,7 @@ impl SseEncode for crate::api::drive::models::DownloadTask {
         <Option<i64>>::sse_encode(self.completed_at, serializer);
         <Option<String>>::sse_encode(self.saved_path, serializer);
         <Option<u64>>::sse_encode(self.size_label, serializer);
+        <Option<u64>>::sse_encode(self.bytes_downloaded, serializer);
         <Option<String>>::sse_encode(self.error_message, serializer);
     }
 }

@@ -47,6 +47,7 @@ class DownloadTask {
   final PlatformInt64? completedAt;
   final String? savedPath;
   final BigInt? sizeLabel;
+  final BigInt? bytesDownloaded;
   final String? errorMessage;
 
   const DownloadTask({
@@ -56,6 +57,7 @@ class DownloadTask {
     this.completedAt,
     this.savedPath,
     this.sizeLabel,
+    this.bytesDownloaded,
     this.errorMessage,
   });
 
@@ -67,6 +69,7 @@ class DownloadTask {
       completedAt.hashCode ^
       savedPath.hashCode ^
       sizeLabel.hashCode ^
+      bytesDownloaded.hashCode ^
       errorMessage.hashCode;
 
   @override
@@ -80,6 +83,7 @@ class DownloadTask {
           completedAt == other.completedAt &&
           savedPath == other.savedPath &&
           sizeLabel == other.sizeLabel &&
+          bytesDownloaded == other.bytesDownloaded &&
           errorMessage == other.errorMessage;
 }
 

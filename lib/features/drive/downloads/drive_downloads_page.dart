@@ -50,14 +50,20 @@ class DriveDownloadsPage extends ConsumerWidget {
       padding: const EdgeInsets.all(20),
       children: [
         if (queue.active.isNotEmpty)
-          _DownloadSection(title: '下载中', tasks: queue.active),
+          _DownloadSection(title: '下载中', tasks: queue.active, ref: ref),
         if (queue.failed.isNotEmpty)
-          _DownloadSection(title: '失败', tasks: queue.failed, showError: true),
+          _DownloadSection(
+            title: '失败',
+            tasks: queue.failed,
+            showError: true,
+            ref: ref,
+          ),
         if (queue.completed.isNotEmpty)
           _DownloadSection(
             title: '已完成',
             tasks: queue.completed,
             showPath: true,
+            ref: ref,
           ),
       ],
     );
@@ -68,12 +74,14 @@ class _DownloadSection extends StatelessWidget {
   const _DownloadSection({
     required this.title,
     required this.tasks,
+    required this.ref,
     this.showError = false,
     this.showPath = false,
   });
 
   final String title;
   final List<DownloadTask> tasks;
+  final WidgetRef ref;
   final bool showError;
   final bool showPath;
 
@@ -89,6 +97,7 @@ class _DownloadSection extends StatelessWidget {
             task: task,
             showError: showError,
             showPath: showPath,
+            ref: ref,
           ),
         ),
         const SizedBox(height: 16),
@@ -102,11 +111,13 @@ class _DownloadTile extends StatelessWidget {
     required this.task,
     required this.showError,
     required this.showPath,
+    required this.ref,
   });
 
   final DownloadTask task;
   final bool showError;
   final bool showPath;
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -122,13 +133,44 @@ class _DownloadTile extends StatelessWidget {
       }
     }();
 
-    final subtitle = showError && task.errorMessage != null
-        ? task.errorMessage!
-        : showPath && task.savedPath != null
-        ? task.savedPath!
-        : task.sizeLabel != null
-        ? '大小 ${formatFileSize(_bigIntToSafeInt(task.sizeLabel))}'
-        : '大小未知';
+    final manager = ref.read(driveDownloadManagerProvider.notifier);
+    final progress = task.progressRatio;
+    final downloadedLabel = task.bytesDownloaded != null
+        ? formatFileSize(_bigIntToSafeInt(task.bytesDownloaded))
+        : '0 B';
+    final totalLabel = task.sizeLabel != null
+        ? formatFileSize(_bigIntToSafeInt(task.sizeLabel))
+        : '未知';
+    final speed = manager.speedFor(task.item.id);
+    final speedLabel = _formatSpeed(speed);
+
+    Widget buildSubtitle() {
+      if (showError && task.errorMessage != null) {
+        return Text('$statusLabel · ${task.errorMessage!}');
+      }
+      if (showPath && task.savedPath != null) {
+        return Text('$statusLabel · ${task.savedPath!}');
+      }
+      if (task.status != DownloadStatus.inProgress) {
+        final sizeInfo = task.sizeLabel != null ? '大小 $totalLabel' : '大小未知';
+        return Text('$statusLabel · $sizeInfo');
+      }
+      final details = [
+        if (progress != null)
+          '${(progress * 100).clamp(0, 100).toStringAsFixed(0)}%',
+        '$downloadedLabel / $totalLabel',
+        if (speedLabel != null) speedLabel,
+      ].where((element) => element.isNotEmpty).join(' · ');
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$statusLabel · $details'),
+          const SizedBox(height: 6),
+          LinearProgressIndicator(value: progress?.clamp(0, 1), minHeight: 6),
+        ],
+      );
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -142,7 +184,7 @@ class _DownloadTile extends StatelessWidget {
               : colorScheme.primary,
         ),
         title: Text(task.item.name),
-        subtitle: Text('$statusLabel · $subtitle'),
+        subtitle: buildSubtitle(),
         trailing: task.status == DownloadStatus.inProgress
             ? const SizedBox(
                 width: 20,
@@ -163,4 +205,19 @@ int _bigIntToSafeInt(BigInt? value) {
     return maxSafeInt;
   }
   return value.toInt();
+}
+
+String? _formatSpeed(double? bytesPerSecond) {
+  if (bytesPerSecond == null || bytesPerSecond.isNaN || bytesPerSecond <= 0) {
+    return null;
+  }
+  const kb = 1024;
+  const mb = kb * 1024;
+  if (bytesPerSecond >= mb) {
+    return '${(bytesPerSecond / mb).toStringAsFixed(1)} MB/s';
+  }
+  if (bytesPerSecond >= kb) {
+    return '${(bytesPerSecond / kb).toStringAsFixed(1)} KB/s';
+  }
+  return '${bytesPerSecond.toStringAsFixed(0)} B/s';
 }

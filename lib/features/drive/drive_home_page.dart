@@ -106,10 +106,18 @@ class _DriveHomeView extends ConsumerWidget {
                     }
                     final item = state.items[index];
                     final subtitle = buildDriveSubtitle(item);
+                    drive_api.DownloadTask? activeTask;
+                    for (final task in downloadQueue.active) {
+                      if (task.item.id == item.id) {
+                        activeTask = task;
+                        break;
+                      }
+                    }
                     final trailing = item.isFolder
                         ? null
                         : DriveDownloadIndicator(
-                            isDownloading: downloadQueue.isActive(item.id),
+                            isDownloading: activeTask != null,
+                            progress: activeTask?.progressRatio,
                             colorScheme: Theme.of(context).colorScheme,
                           );
                     return DriveItemTile(

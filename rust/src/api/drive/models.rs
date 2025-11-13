@@ -50,6 +50,7 @@ pub struct DownloadTask {
     pub completed_at: Option<i64>,
     pub saved_path: Option<String>,
     pub size_label: Option<u64>,
+    pub bytes_downloaded: Option<u64>,
     pub error_message: Option<String>,
 }
 

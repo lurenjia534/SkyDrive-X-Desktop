@@ -5,10 +5,12 @@ class DriveDownloadIndicator extends StatelessWidget {
     super.key,
     required this.isDownloading,
     required this.colorScheme,
+    this.progress,
   });
 
   final bool isDownloading;
   final ColorScheme colorScheme;
+  final double? progress;
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +24,7 @@ class DriveDownloadIndicator extends StatelessWidget {
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 color: colorScheme.primary,
+                value: progress?.clamp(0, 1),
               ),
             )
           : Icon(

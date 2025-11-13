@@ -655,8 +655,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   DownloadTask dco_decode_download_task(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 7)
-      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return DownloadTask(
       item: dco_decode_drive_item_summary(arr[0]),
       status: dco_decode_download_status(arr[1]),
@@ -664,7 +664,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       completedAt: dco_decode_opt_box_autoadd_i_64(arr[3]),
       savedPath: dco_decode_opt_String(arr[4]),
       sizeLabel: dco_decode_opt_box_autoadd_u_64(arr[5]),
-      errorMessage: dco_decode_opt_String(arr[6]),
+      bytesDownloaded: dco_decode_opt_box_autoadd_u_64(arr[6]),
+      errorMessage: dco_decode_opt_String(arr[7]),
     );
   }
 
@@ -900,6 +901,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_completedAt = sse_decode_opt_box_autoadd_i_64(deserializer);
     var var_savedPath = sse_decode_opt_String(deserializer);
     var var_sizeLabel = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_bytesDownloaded = sse_decode_opt_box_autoadd_u_64(deserializer);
     var var_errorMessage = sse_decode_opt_String(deserializer);
     return DownloadTask(
       item: var_item,
@@ -908,6 +910,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       completedAt: var_completedAt,
       savedPath: var_savedPath,
       sizeLabel: var_sizeLabel,
+      bytesDownloaded: var_bytesDownloaded,
       errorMessage: var_errorMessage,
     );
   }
@@ -1189,6 +1192,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_box_autoadd_i_64(self.completedAt, serializer);
     sse_encode_opt_String(self.savedPath, serializer);
     sse_encode_opt_box_autoadd_u_64(self.sizeLabel, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.bytesDownloaded, serializer);
     sse_encode_opt_String(self.errorMessage, serializer);
   }
 

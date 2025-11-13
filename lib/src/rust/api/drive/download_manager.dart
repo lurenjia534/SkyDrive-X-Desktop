@@ -7,7 +7,7 @@ import '../../frb_generated.dart';
 import 'models.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `clear_history_from_storage`, `clear_history`, `enqueue_internal`, `mark_failure`, `mark_success`, `new`, `now_millis`, `opt_i64_to_u64`, `opt_u64_to_i64`, `persist_task`, `record_from_task`, `remove_task_from_storage`, `remove_task`, `restore_from_storage`, `shared`, `snapshot`, `status_from_i64`, `status_to_i64`, `task_from_record`
+// These functions are ignored because they are not marked as `pub`: `clear_history_from_storage`, `clear_history`, `enqueue_internal`, `mark_failure`, `mark_success`, `new`, `now_millis`, `opt_i64_to_u64`, `opt_u64_to_i64`, `persist_task`, `record_from_task`, `remove_task_from_storage`, `remove_task`, `report_progress`, `restore_from_storage`, `shared`, `snapshot`, `status_from_i64`, `status_to_i64`, `task_from_record`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DownloadManager`, `InnerState`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `from`
 // These functions are ignored (category: IgnoreBecauseOwnerTyShouldIgnore): `default`

@@ -1,5 +1,5 @@
 use super::{
-    download::download_drive_item,
+    download::download_drive_item_with_progress,
     models::{
         DownloadQueueState, DownloadStatus, DownloadTask, DriveDownloadResult, DriveItemSummary,
     },
@@ -150,6 +150,7 @@ impl DownloadManager {
             completed_at: None,
             saved_path: None,
             size_label: item.size,
+            bytes_downloaded: Some(0),
             error_message: None,
         };
         state.active.push(task.clone());
@@ -159,7 +160,18 @@ impl DownloadManager {
         let manager = self.clone();
         let item_id = item.id.clone();
         thread::spawn(move || {
-            let result = download_drive_item(item_id.clone(), target_dir, overwrite);
+            let progress_manager = manager.clone();
+            let progress_item_id = item_id.clone();
+            let progress_callback: Option<Box<dyn FnMut(u64, Option<u64>) + Send>> =
+                Some(Box::new(move |downloaded: u64, expected: Option<u64>| {
+                    progress_manager.report_progress(&progress_item_id, downloaded, expected);
+                }));
+            let result = download_drive_item_with_progress(
+                item_id.clone(),
+                target_dir,
+                overwrite,
+                progress_callback,
+            );
             match result {
                 Ok(done) => manager.mark_success(&item_id, done),
                 Err(err) => manager.mark_failure(&item_id, err),
@@ -186,6 +198,7 @@ impl DownloadManager {
             task.completed_at = Some(now_millis());
             task.saved_path = Some(result.saved_path.clone());
             task.size_label = Some(result.expected_size.unwrap_or(result.bytes_downloaded));
+            task.bytes_downloaded = Some(result.bytes_downloaded);
             task.error_message = None;
             state.completed.insert(0, task.clone());
             updated_task = Some(task);
@@ -217,6 +230,29 @@ impl DownloadManager {
         } else {
             // 如果任务不在 active 中，确保不会重复保留旧的失败记录。
             state.failed.retain(|task| task.item.id != item_id);
+        }
+        drop(state);
+        if let Some(task) = updated_task {
+            self.persist_task(&task);
+        }
+    }
+
+    fn report_progress(&self, item_id: &str, bytes_downloaded: u64, expected_size: Option<u64>) {
+        let mut state = match self.state.lock() {
+            Ok(guard) => guard,
+            Err(err) => {
+                eprintln!("[drive-download] failed to lock state on progress: {err}");
+                return;
+            }
+        };
+
+        let mut updated_task = None;
+        if let Some(task) = state.active.iter_mut().find(|t| t.item.id == item_id) {
+            task.bytes_downloaded = Some(bytes_downloaded);
+            if expected_size.is_some() {
+                task.size_label = expected_size;
+            }
+            updated_task = Some(task.clone());
         }
         drop(state);
         if let Some(task) = updated_task {
@@ -294,6 +330,7 @@ fn record_from_task(task: &DownloadTask) -> DownloadTaskRecord {
         completed_at: task.completed_at,
         saved_path: task.saved_path.clone(),
         size_label: opt_u64_to_i64(task.size_label),
+        bytes_downloaded: opt_u64_to_i64(task.bytes_downloaded),
         error_message: task.error_message.clone(),
         updated_at_millis: now_millis(),
     }
@@ -314,6 +351,7 @@ fn task_from_record(record: DownloadTaskRecord) -> DownloadTask {
         completed_at,
         saved_path,
         size_label,
+        bytes_downloaded,
         error_message,
         ..
     } = record;
@@ -334,6 +372,7 @@ fn task_from_record(record: DownloadTaskRecord) -> DownloadTask {
         completed_at,
         saved_path,
         size_label: opt_i64_to_u64(size_label),
+        bytes_downloaded: opt_i64_to_u64(bytes_downloaded),
         error_message,
     }
 }
