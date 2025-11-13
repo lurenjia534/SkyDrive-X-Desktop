@@ -20,6 +20,8 @@ use std::{
 /// 全局下载管理器实例：避免多次初始化，同时方便在 FRB 桥接层与其他模块之间共享。
 static DOWNLOAD_MANAGER: Lazy<DownloadManager> = Lazy::new(DownloadManager::new);
 
+const INTERRUPTED_DOWNLOAD_MESSAGE: &str = "应用已关闭或异常退出，下载被中断，请重新下载";
+
 /// 核心状态机：负责调度、下载线程管理、速度计算与事件广播。
 #[derive(Clone)]
 pub struct DownloadManager {
@@ -63,12 +65,20 @@ impl DownloadManager {
     /// 启动期间从数据库恢复最近的任务队列，确保重启后仍有上下文。
     fn restore_from_storage(&self) {
         let records = self.store.load();
-        let mut active = Vec::new();
+        let mut active: Vec<DownloadTask> = Vec::new();
         let mut completed = Vec::new();
         let mut failed = Vec::new();
-        for task in records {
+        for mut task in records {
             match task.status {
-                DownloadStatus::InProgress => active.push(task),
+                DownloadStatus::InProgress => {
+                    task.status = DownloadStatus::Failed;
+                    task.completed_at = Some(current_timestamp());
+                    if task.error_message.is_none() {
+                        task.error_message = Some(INTERRUPTED_DOWNLOAD_MESSAGE.to_string());
+                    }
+                    self.store.upsert(&task);
+                    failed.push(task);
+                }
                 DownloadStatus::Completed => completed.push(task),
                 DownloadStatus::Failed => failed.push(task),
             }
