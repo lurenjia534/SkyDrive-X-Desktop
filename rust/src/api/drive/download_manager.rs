@@ -11,8 +11,10 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+/// 全局下载管理器实例；通过 `Lazy` 确保只初始化一次，并能在线程之间安全共享。
 static DOWNLOAD_MANAGER: Lazy<DownloadManager> = Lazy::new(DownloadManager::new);
 
+/// 负责调度下载任务与维护队列状态的核心结构。
 #[derive(Clone)]
 pub struct DownloadManager {
     state: Arc<Mutex<InnerState>>,
@@ -37,6 +39,7 @@ impl DownloadManager {
         DOWNLOAD_MANAGER.clone()
     }
 
+    /// 写入任务并启动后续下载线程；返回最新队列快照。
     fn enqueue_internal(
         &self,
         item: DriveItemSummary,
@@ -87,6 +90,7 @@ impl DownloadManager {
         Ok(self.snapshot())
     }
 
+    /// 下载完成后将任务从 active 移动到 completed，并记录保存路径。
     fn mark_success(&self, item_id: &str, result: DriveDownloadResult) {
         let mut state = match self.state.lock() {
             Ok(guard) => guard,
@@ -107,6 +111,7 @@ impl DownloadManager {
         }
     }
 
+    /// 下载异常时记录失败信息，保留最近失败历史。
     fn mark_failure(&self, item_id: &str, err_msg: String) {
         let mut state = match self.state.lock() {
             Ok(guard) => guard,
@@ -128,6 +133,7 @@ impl DownloadManager {
         }
     }
 
+    /// 删除任意状态的任务记录，常用于用户手动清理。
     fn remove_task(&self, item_id: &str) -> Result<DownloadQueueState, String> {
         let mut state = self
             .state
@@ -140,6 +146,7 @@ impl DownloadManager {
         Ok(snapshot.into())
     }
 
+    /// 清空历史记录，保留进行中的任务。
     fn clear_history(&self) -> Result<DownloadQueueState, String> {
         let mut state = self
             .state
@@ -151,6 +158,7 @@ impl DownloadManager {
         Ok(snapshot.into())
     }
 
+    /// 生成当前队列的不可变快照，避免 Flutter 持有 Mutex。
     fn snapshot(&self) -> DownloadQueueState {
         match self.state.lock() {
             Ok(guard) => (*guard).clone().into(),
