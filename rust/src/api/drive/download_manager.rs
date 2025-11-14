@@ -2,7 +2,8 @@ use crate::frb_generated::StreamSink;
 use crate::{
     api::drive::models::{DownloadProgressUpdate, DownloadQueueState, DriveItemSummary},
     download_manager::{
-        clear_download_history as core_clear_history, download_queue_state as core_queue_state,
+        clear_download_history as core_clear_history,
+        clear_failed_download_tasks as core_clear_failed, download_queue_state as core_queue_state,
         enqueue_download_task as core_enqueue, remove_download_task as core_remove,
         subscribe_progress as core_subscribe_progress,
     },
@@ -26,6 +27,11 @@ pub fn enqueue_download_task(
 #[flutter_rust_bridge::frb]
 pub fn remove_download_task(item_id: String) -> Result<DownloadQueueState, String> {
     core_remove(&item_id)
+}
+
+#[flutter_rust_bridge::frb]
+pub fn clear_failed_download_tasks() -> Result<DownloadQueueState, String> {
+    core_clear_failed()
 }
 
 #[flutter_rust_bridge::frb]

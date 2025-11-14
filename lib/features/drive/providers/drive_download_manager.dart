@@ -71,6 +71,16 @@ class DriveDownloadManager extends Notifier<drive_api.DownloadQueueState> {
     state = updated;
   }
 
+  Future<void> clearFailedTasks() async {
+    try {
+      final updated = await _service.clearFailedTasks();
+      state = updated;
+    } catch (err, stack) {
+      debugPrint('clear failed download tasks failed: $err\n$stack');
+      rethrow;
+    }
+  }
+
   bool isActive(String itemId) {
     return state.active.any((task) => task.item.id == itemId);
   }

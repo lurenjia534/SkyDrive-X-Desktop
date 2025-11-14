@@ -253,6 +253,29 @@ impl DownloadManager {
         Ok(snapshot.into())
     }
 
+    /// 仅清理失败任务，保留 active/completed 队列，方便 UI 一键清扫失败记录。
+    pub fn clear_failed_tasks(&self) -> Result<DownloadQueueState, String> {
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| "download manager poisoned".to_string())?;
+        if state.failed.is_empty() {
+            return Ok((*state).clone().into());
+        }
+        let failed_ids: Vec<String> = state
+            .failed
+            .iter()
+            .map(|task| task.item.id.clone())
+            .collect();
+        state.failed.clear();
+        let snapshot = (*state).clone();
+        drop(state);
+        for id in failed_ids {
+            self.store.remove(&id);
+        }
+        Ok(snapshot.into())
+    }
+
     /// 返回当前状态的浅拷贝，供 FRB 直接转成 Dart 结构。
     pub fn snapshot(&self) -> DownloadQueueState {
         match self.state.lock() {
@@ -408,6 +431,10 @@ pub fn remove_download_task(item_id: &str) -> Result<DownloadQueueState, String>
 
 pub fn clear_download_history() -> Result<DownloadQueueState, String> {
     DownloadManager::shared().clear_history()
+}
+
+pub fn clear_failed_download_tasks() -> Result<DownloadQueueState, String> {
+    DownloadManager::shared().clear_failed_tasks()
 }
 
 pub fn subscribe_progress() -> Receiver<DownloadProgressUpdate> {

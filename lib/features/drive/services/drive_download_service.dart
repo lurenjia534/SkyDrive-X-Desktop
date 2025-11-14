@@ -27,6 +27,10 @@ class DriveDownloadService {
     return drive_manager_api.clearDownloadHistory();
   }
 
+  Future<drive_api.DownloadQueueState> clearFailedTasks() {
+    return drive_manager_api.clearFailedDownloadTasks();
+  }
+
   Future<drive_api.DownloadQueueState> removeTask(String itemId) {
     return drive_manager_api.removeDownloadTask(itemId: itemId);
   }

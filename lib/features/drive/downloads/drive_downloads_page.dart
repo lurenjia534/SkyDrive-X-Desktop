@@ -1,3 +1,9 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/features/drive/providers/drive_download_manager.dart';
@@ -57,6 +63,9 @@ class DriveDownloadsPage extends ConsumerWidget {
             tasks: queue.failed,
             showError: true,
             ref: ref,
+            onClear: ref
+                .read(driveDownloadManagerProvider.notifier)
+                .clearFailedTasks,
           ),
         if (queue.completed.isNotEmpty)
           _DownloadSection(
@@ -77,6 +86,7 @@ class _DownloadSection extends StatelessWidget {
     required this.ref,
     this.showError = false,
     this.showPath = false,
+    this.onClear,
   });
 
   final String title;
@@ -84,13 +94,26 @@ class _DownloadSection extends StatelessWidget {
   final WidgetRef ref;
   final bool showError;
   final bool showPath;
+  final AsyncCallback? onClear;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: Theme.of(context).textTheme.titleMedium),
+        Row(
+          children: [
+            Expanded(
+              child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+            ),
+            if (onClear != null)
+              TextButton.icon(
+                onPressed: () => unawaited(onClear!()),
+                icon: const Icon(Icons.delete_sweep_rounded, size: 18),
+                label: const Text('清除失败'),
+              ),
+          ],
+        ),
         const SizedBox(height: 8),
         ...tasks.map(
           (task) => _DownloadTile(
