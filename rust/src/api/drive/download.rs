@@ -8,6 +8,10 @@ use std::{
     fs::{self, File},
     io::{BufWriter, Read, Write},
     path::{Path, PathBuf},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
     time::Duration,
 };
 
@@ -25,7 +29,7 @@ pub fn download_drive_item(
     target_dir: String,
     overwrite: bool,
 ) -> Result<DriveDownloadResult, String> {
-    download_drive_item_internal(item_id, target_dir, overwrite, None)
+    download_drive_item_internal(item_id, target_dir, overwrite, None, None)
 }
 
 /// 供下载管理器调用的进度版下载函数。
@@ -35,8 +39,9 @@ pub(crate) fn download_drive_item_with_progress(
     target_dir: String,
     overwrite: bool,
     progress: Option<ProgressCallback>,
+    cancel_flag: Option<Arc<AtomicBool>>,
 ) -> Result<DriveDownloadResult, String> {
-    download_drive_item_internal(item_id, target_dir, overwrite, progress)
+    download_drive_item_internal(item_id, target_dir, overwrite, progress, cancel_flag)
 }
 
 /// 实际执行下载的内部实现，共享输入验证与文件保存逻辑。
@@ -45,6 +50,7 @@ fn download_drive_item_internal(
     target_dir: String,
     overwrite: bool,
     mut progress: Option<ProgressCallback>,
+    cancel_flag: Option<Arc<AtomicBool>>,
 ) -> Result<DriveDownloadResult, String> {
     if item_id.trim().is_empty() {
         return Err("drive item id is required".to_string());
@@ -102,6 +108,7 @@ fn download_drive_item_internal(
         &destination,
         metadata.size,
         progress_ref.as_deref_mut(),
+        cancel_flag.as_ref(),
     )?;
     eprintln!(
         "[drive-download] saved {} bytes to {}",
@@ -211,6 +218,7 @@ fn stream_download(
     destination: &Path,
     total_size: Option<u64>,
     mut progress: Option<&mut (dyn FnMut(u64, Option<u64>) + Send)>,
+    cancel_flag: Option<&Arc<AtomicBool>>,
 ) -> Result<u64, String> {
     let client = build_blocking_client(Duration::from_secs(600))?;
     let mut request = client.get(download_url);
@@ -239,6 +247,14 @@ fn stream_download(
     let mut downloaded: u64 = 0;
     let mut buffer = [0u8; 64 * 1024];
     loop {
+        if let Some(flag) = cancel_flag {
+            if flag.load(Ordering::Relaxed) {
+                drop(response);
+                drop(writer);
+                let _ = fs::remove_file(destination);
+                return Err("下载已取消".to_string());
+            }
+        }
         let read_bytes = response
             .read(&mut buffer)
             .map_err(|e| format!("failed to read response body: {e}"))?;

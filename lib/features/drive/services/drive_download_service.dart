@@ -35,6 +35,10 @@ class DriveDownloadService {
     return drive_manager_api.removeDownloadTask(itemId: itemId);
   }
 
+  Future<drive_api.DownloadQueueState> cancelTask(String itemId) {
+    return drive_manager_api.cancelDownloadTask(itemId: itemId);
+  }
+
   Stream<drive_api.DownloadProgressUpdate> progressStream() {
     return drive_manager_api.downloadProgressStream();
   }

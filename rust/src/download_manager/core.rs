@@ -10,6 +10,7 @@ use once_cell::sync::Lazy;
 use std::{
     collections::{HashMap, HashSet},
     sync::{
+        atomic::{AtomicBool, Ordering},
         mpsc::{self, Receiver, Sender},
         Arc, Mutex,
     },
@@ -29,6 +30,7 @@ pub struct DownloadManager {
     store: Arc<dyn DownloadStore>,
     progress_meters: Arc<Mutex<HashMap<String, ProgressTick>>>,
     subscribers: Arc<Mutex<Vec<Sender<DownloadProgressUpdate>>>>,
+    cancel_tokens: Arc<Mutex<HashMap<String, Arc<AtomicBool>>>>,
 }
 
 /// 内部状态快照，仅在 rust 内部使用，避免 FRB 生成多余绑定。
@@ -53,6 +55,7 @@ impl DownloadManager {
             store: Arc::new(SqliteDownloadStore::default()),
             progress_meters: Arc::new(Mutex::new(HashMap::new())),
             subscribers: Arc::new(Mutex::new(Vec::new())),
+            cancel_tokens: Arc::new(Mutex::new(HashMap::new())),
         };
         manager.restore_from_storage();
         manager
@@ -131,6 +134,9 @@ impl DownloadManager {
         drop(state);
         self.store.upsert(&task);
 
+        let cancel_token = Arc::new(AtomicBool::new(false));
+        self.register_cancel_token(&item.id, cancel_token.clone());
+
         let manager = self.clone();
         let item_id = item.id.clone();
         thread::spawn(move || {
@@ -145,6 +151,7 @@ impl DownloadManager {
                 target_dir,
                 overwrite,
                 progress_callback,
+                Some(cancel_token.clone()),
             );
             match result {
                 Ok(done) => manager.mark_success(&item_id, done),
@@ -186,6 +193,7 @@ impl DownloadManager {
                 task.bytes_downloaded.unwrap_or(result.bytes_downloaded),
                 task.size_label.or(result.expected_size),
             );
+            self.clear_cancel_token(item_id);
         }
     }
 
@@ -219,11 +227,13 @@ impl DownloadManager {
                 task.bytes_downloaded.unwrap_or(0),
                 task.size_label,
             );
+            self.clear_cancel_token(item_id);
         }
     }
 
     /// 移除任意状态的任务，用于用户手动清理条目。
     pub fn remove(&self, item_id: &str) -> Result<DownloadQueueState, String> {
+        let _ = self.signal_cancel(item_id);
         let mut state = self
             .state
             .lock()
@@ -251,6 +261,15 @@ impl DownloadManager {
         self.store.clear_history();
         self.prune_inactive_meters(&snapshot.active);
         Ok(snapshot.into())
+    }
+
+    /// 标记指定任务为取消状态，下载线程会在下一次轮询时终止。
+    pub fn cancel(&self, item_id: &str) -> Result<DownloadQueueState, String> {
+        if self.signal_cancel(item_id) {
+            Ok(self.snapshot())
+        } else {
+            Err("未找到对应的下载任务或任务已结束".to_string())
+        }
     }
 
     /// 仅清理失败任务，保留 active/completed 队列，方便 UI 一键清扫失败记录。
@@ -367,6 +386,28 @@ impl DownloadManager {
         }
     }
 
+    fn register_cancel_token(&self, item_id: &str, token: Arc<AtomicBool>) {
+        if let Ok(mut tokens) = self.cancel_tokens.lock() {
+            tokens.insert(item_id.to_string(), token);
+        }
+    }
+
+    fn clear_cancel_token(&self, item_id: &str) {
+        if let Ok(mut tokens) = self.cancel_tokens.lock() {
+            tokens.remove(item_id);
+        }
+    }
+
+    fn signal_cancel(&self, item_id: &str) -> bool {
+        if let Ok(tokens) = self.cancel_tokens.lock() {
+            if let Some(token) = tokens.get(item_id) {
+                token.store(true, Ordering::Relaxed);
+                return true;
+            }
+        }
+        false
+    }
+
     /// 提供一个新的 channel 接收器，用于持续消费进度事件。
     pub fn subscribe_progress(&self) -> Receiver<DownloadProgressUpdate> {
         let (tx, rx) = mpsc::channel();
@@ -427,6 +468,10 @@ pub fn enqueue_download_task(
 
 pub fn remove_download_task(item_id: &str) -> Result<DownloadQueueState, String> {
     DownloadManager::shared().remove(item_id)
+}
+
+pub fn cancel_download_task(item_id: &str) -> Result<DownloadQueueState, String> {
+    DownloadManager::shared().cancel(item_id)
 }
 
 pub fn clear_download_history() -> Result<DownloadQueueState, String> {

@@ -71,6 +71,12 @@ class DriveDownloadManager extends Notifier<drive_api.DownloadQueueState> {
     state = updated;
   }
 
+  Future<void> cancelTask(String itemId) async {
+    final updated = await _service.cancelTask(itemId);
+    _pruneSpeeds(updated.active);
+    state = updated;
+  }
+
   Future<void> clearFailedTasks() async {
     try {
       final updated = await _service.clearFailedTasks();

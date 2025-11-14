@@ -1,9 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'dart:async';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/features/drive/providers/drive_download_manager.dart';
@@ -209,10 +206,24 @@ class _DownloadTile extends StatelessWidget {
         title: Text(task.item.name),
         subtitle: buildSubtitle(),
         trailing: task.status == DownloadStatus.inProgress
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    tooltip: '取消下载',
+                    onPressed: () => unawaited(
+                      ref
+                          .read(driveDownloadManagerProvider.notifier)
+                          .cancelTask(task.item.id),
+                    ),
+                  ),
+                ],
               )
             : null,
       ),

@@ -25,6 +25,11 @@ Future<DownloadQueueState> removeDownloadTask({required String itemId}) =>
       itemId: itemId,
     );
 
+Future<DownloadQueueState> cancelDownloadTask({required String itemId}) =>
+    RustLib.instance.api.crateApiDriveDownloadManagerCancelDownloadTask(
+      itemId: itemId,
+    );
+
 Future<DownloadQueueState> clearFailedDownloadTasks() =>
     RustLib.instance.api.crateApiDriveDownloadManagerClearFailedDownloadTasks();
 
