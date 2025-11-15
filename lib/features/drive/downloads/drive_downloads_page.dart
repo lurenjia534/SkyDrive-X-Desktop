@@ -214,14 +214,30 @@ class _DownloadTile extends StatelessWidget {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    tooltip: '取消下载',
-                    onPressed: () => unawaited(
-                      ref
-                          .read(driveDownloadManagerProvider.notifier)
-                          .cancelTask(task.item.id),
-                    ),
+                  Builder(
+                    builder: (context) {
+                      final cancelling =
+                          ref.watch(driveDownloadManagerProvider.notifier).isCancelling(
+                                task.item.id,
+                              );
+                      return IconButton(
+                        icon: cancelling
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.close_rounded),
+                        tooltip: cancelling ? '取消中...' : '取消下载',
+                        onPressed: cancelling
+                            ? null
+                            : () => unawaited(
+                                  ref
+                                      .read(driveDownloadManagerProvider.notifier)
+                                      .cancelTask(task.item.id),
+                                ),
+                      );
+                    },
                   ),
                 ],
               )
