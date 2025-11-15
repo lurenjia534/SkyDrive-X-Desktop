@@ -1,10 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'auth_controller.dart';
 import '../drive/drive_workspace_page.dart';
+import 'auth_controller.dart';
+import 'auth_session_coordinator.dart';
 
 class AuthPrototypePage extends ConsumerStatefulWidget {
   const AuthPrototypePage({super.key});
@@ -14,79 +13,48 @@ class AuthPrototypePage extends ConsumerStatefulWidget {
 }
 
 class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
-  static const _refreshInterval = Duration(minutes: 50);
   final TextEditingController _clientIdController = TextEditingController();
-  Timer? _refreshTimer;
-  ProviderSubscription<AuthState>? _authSubscription;
-  bool _navigatedToDrive = false;
+  bool _isNavigating = false;
 
   @override
   void initState() {
     super.initState();
-    _authSubscription = ref.listenManual<AuthState>(authControllerProvider, (
-      previous,
-      next,
-    ) {
-      final hadTokens = previous?.tokens != null;
-      final hasTokens = next.tokens != null;
-      if (!hadTokens && hasTokens) {
-        _startRefreshTimer();
-        _navigateToDrive();
-      } else if (hadTokens && !hasTokens) {
-        _stopRefreshTimer();
-        _navigatedToDrive = false;
-      }
-    }, fireImmediately: true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _attemptRestoreSession();
+      ref
+          .read(authSessionCoordinatorProvider.notifier)
+          .attemptRestoreSession();
+    });
+    ref.listen<AuthSessionState>(authSessionCoordinatorProvider, (prev, next) {
+      if (!mounted) return;
+      if (next.shouldNavigateToDrive && !_isNavigating) {
+        _isNavigating = true;
+        _navigateToDrive();
+        ref
+            .read(authSessionCoordinatorProvider.notifier)
+            .clearNavigationIntent();
+      }
     });
   }
 
   @override
   void dispose() {
-    _stopRefreshTimer();
-    _authSubscription?.close();
     _clientIdController.dispose();
     super.dispose();
   }
 
-  Future<void> _attemptRestoreSession() async {
-    final controller = ref.read(authControllerProvider.notifier);
-    await controller.restoreSession();
+  Future<void> _handleSignIn() async {
+    await ref
+        .read(authSessionCoordinatorProvider.notifier)
+        .authenticateWithClientId(_clientIdController.text);
   }
 
-  Future<void> _startAuthentication() async {
-    final clientId = _clientIdController.text.trim();
-    final controller = ref.read(authControllerProvider.notifier);
-    if (clientId.isEmpty) {
-      controller.setValidationError('Client ID is required.');
+  void _navigateToDrive() {
+    final tokens = ref.read(authControllerProvider).tokens;
+    if (tokens == null || !mounted) {
+      _isNavigating = false;
       return;
     }
-
-    await controller.authenticate(
-      clientId: clientId,
-      scopes: kRequiredAuthScopes,
-    );
-  }
-
-  void _startRefreshTimer() {
-    _refreshTimer?.cancel();
-    _refreshTimer = Timer.periodic(_refreshInterval, (_) {
-      ref.read(authControllerProvider.notifier).refreshSilently();
-    });
-  }
-
-  void _stopRefreshTimer() {
-    _refreshTimer?.cancel();
-    _refreshTimer = null;
-  }
-
-  Future<void> _navigateToDrive() async {
-    if (_navigatedToDrive || !mounted) return;
-    final tokens = ref.read(authControllerProvider).tokens;
-    if (tokens == null) return;
-    _navigatedToDrive = true;
-    await Navigator.of(context).pushReplacement(
+    Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => DriveWorkspacePage(
           authPageBuilder: (_) => const AuthPrototypePage(),
@@ -99,8 +67,8 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final authState = ref.watch(authControllerProvider);
-    final error = authState.error;
     final isAuthenticating = authState.isAuthenticating;
+    final error = authState.error;
 
     return Scaffold(
       body: Container(
@@ -134,44 +102,7 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 28,
-                            backgroundColor: colorScheme.primary.withOpacity(
-                              0.12,
-                            ),
-                            child: Icon(
-                              Icons.cloud_sync_rounded,
-                              size: 32,
-                              color: colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '连接 Microsoft 账户',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineSmall
-                                      ?.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '使用浏览器完成授权，以便 Skydrivex 同步 OneDrive 数据。',
-                                  style: Theme.of(context).textTheme.bodyMedium
-                                      ?.copyWith(
-                                        color: colorScheme.onSurfaceVariant,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                      _AuthHeader(colorScheme: colorScheme),
                       if (isAuthenticating) ...[
                         const SizedBox(height: 24),
                         const LinearProgressIndicator(minHeight: 3),
@@ -192,9 +123,7 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
                       const _ScopeInfoCard(),
                       const SizedBox(height: 28),
                       ElevatedButton.icon(
-                        onPressed: isAuthenticating
-                            ? null
-                            : _startAuthentication,
+                        onPressed: isAuthenticating ? null : _handleSignIn,
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size.fromHeight(52),
                           shape: RoundedRectangleBorder(
@@ -219,28 +148,9 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
                       ),
                       const SizedBox(height: 20),
                       if (error != null)
-                        Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            color: colorScheme.errorContainer,
-                          ),
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(
-                                Icons.error_outline_rounded,
-                                color: colorScheme.error,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  error,
-                                  style: TextStyle(color: colorScheme.error),
-                                ),
-                              ),
-                            ],
-                          ),
+                        _ErrorBanner(
+                          message: error,
+                          colorScheme: colorScheme,
                         ),
                     ],
                   ),
@@ -249,6 +159,85 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AuthHeader extends StatelessWidget {
+  const _AuthHeader({required this.colorScheme});
+
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 28,
+          backgroundColor: colorScheme.primary.withOpacity(0.12),
+          child: Icon(
+            Icons.cloud_sync_rounded,
+            size: 32,
+            color: colorScheme.primary,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '连接 Microsoft 账户',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '使用浏览器完成授权，以便 Skydrivex 同步 OneDrive 数据。',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message, required this.colorScheme});
+
+  final String message;
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: colorScheme.errorContainer,
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.error_outline_rounded,
+            color: colorScheme.error,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(color: colorScheme.error),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -312,8 +301,8 @@ class _ScopeInfoCard extends StatelessWidget {
                 Text(
                   '请求的作用域',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                        fontWeight: FontWeight.w700,
+                      ),
                 ),
               ],
             ),

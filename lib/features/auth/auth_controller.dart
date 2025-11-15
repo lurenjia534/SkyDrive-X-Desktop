@@ -71,6 +71,15 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
+  Future<void> authenticateWithClientId(String clientId) async {
+    final trimmed = clientId.trim();
+    if (trimmed.isEmpty) {
+      setValidationError('Client ID is required.');
+      return;
+    }
+    await authenticate(clientId: trimmed, scopes: kRequiredAuthScopes);
+  }
+
   Future<void> restoreSession() async {
     try {
       final persisted = await auth_api.loadPersistedAuthState();
