@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:skydrivex/features/drive/providers/download_directory_provider.dart';
+import 'package:skydrivex/utils/download_destination.dart';
 
 class DriveSettingsPage extends StatelessWidget {
   const DriveSettingsPage({super.key});
@@ -15,6 +18,10 @@ class DriveSettingsPage extends StatelessWidget {
         _SettingsSectionTitle(label: '同步'),
         SizedBox(height: 8),
         _SettingsSyncTile(),
+        SizedBox(height: 24),
+        _SettingsSectionTitle(label: '下载'),
+        SizedBox(height: 8),
+        _DownloadDirectoryTile(),
       ],
     );
   }
@@ -121,5 +128,172 @@ class _SettingsSyncTile extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _DownloadDirectoryTile extends ConsumerWidget {
+  const _DownloadDirectoryTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(downloadDirectoryProvider);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    Widget content;
+    if (state.isLoading) {
+      content = const Center(child: CircularProgressIndicator(strokeWidth: 2));
+    } else if (state.hasError) {
+      content = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '无法获取下载路径',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            state.error.toString(),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.error,
+                ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => ref
+                .read(downloadDirectoryProvider.notifier)
+                .refreshDirectory(),
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('重试'),
+          ),
+        ],
+      );
+    } else {
+      final path = state.value ?? '';
+      content = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '下载保存目录',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
+              IconButton(
+                tooltip: '刷新',
+                icon: const Icon(Icons.refresh_rounded),
+                onPressed: () => ref
+                    .read(downloadDirectoryProvider.notifier)
+                    .refreshDirectory(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SelectableText(
+            path,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 10,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => _promptForPath(context, ref, path),
+                icon: const Icon(Icons.edit_location_alt_rounded, size: 18),
+                label: const Text('修改路径'),
+              ),
+              TextButton.icon(
+                onPressed: () => _restoreDefault(context, ref),
+                icon: const Icon(Icons.undo_rounded, size: 18),
+                label: const Text('恢复默认'),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceVariant.withOpacity(0.65),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      child: content,
+    );
+  }
+
+  Future<void> _promptForPath(
+    BuildContext context,
+    WidgetRef ref,
+    String current,
+  ) async {
+    final controller = TextEditingController(text: current);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('修改下载目录'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: '目录路径',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(context).pop(controller.text.trim()),
+              child: const Text('保存'),
+            ),
+          ],
+        );
+      },
+    );
+    if (result == null || result.isEmpty) return;
+    try {
+      await ref.read(downloadDirectoryProvider.notifier).updateDirectory(result);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('下载路径已更新')));
+      }
+    } catch (err) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('更新失败：$err')),
+        );
+      }
+    }
+  }
+
+  Future<void> _restoreDefault(BuildContext context, WidgetRef ref) async {
+    final defaultPath = defaultDownloadDirectory();
+    try {
+      await ref
+          .read(downloadDirectoryProvider.notifier)
+          .updateDirectory(defaultPath);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已恢复默认下载路径')),
+        );
+      }
+    } catch (err) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('操作失败：$err')),
+        );
+      }
+    }
   }
 }

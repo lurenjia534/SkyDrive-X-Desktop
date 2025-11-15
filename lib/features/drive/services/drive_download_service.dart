@@ -1,7 +1,6 @@
 import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
 import 'package:skydrivex/src/rust/api/drive/download_manager.dart'
     as drive_manager_api;
-import 'package:skydrivex/utils/download_destination.dart';
 
 /// 统一封装下载逻辑：Flutter 只解析保存目录，其余队列管理交由 Rust。
 class DriveDownloadService {
@@ -11,7 +10,7 @@ class DriveDownloadService {
     required drive_api.DriveItemSummary item,
     bool overwrite = false,
   }) async {
-    final targetDir = _resolveDownloadDirectory();
+    final targetDir = await currentDownloadDirectory();
     return drive_manager_api.enqueueDownloadTask(
       item: item,
       targetDir: targetDir,
@@ -43,9 +42,17 @@ class DriveDownloadService {
     return drive_manager_api.downloadProgressStream();
   }
 
-  String _resolveDownloadDirectory() {
+  Future<String> currentDownloadDirectory() async {
     try {
-      return defaultDownloadDirectory();
+      return await drive_manager_api.getDownloadDirectory();
+    } catch (err) {
+      throw DownloadDirectoryUnavailable(err.toString());
+    }
+  }
+
+  Future<String> updateDownloadDirectory(String path) async {
+    try {
+      return await drive_manager_api.setDownloadDirectory(path: path);
     } catch (err) {
       throw DownloadDirectoryUnavailable(err.toString());
     }

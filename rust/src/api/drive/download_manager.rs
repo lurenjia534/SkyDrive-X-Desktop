@@ -4,7 +4,8 @@ use crate::{
     download_manager::{
         cancel_download_task as core_cancel, clear_download_history as core_clear_history,
         clear_failed_download_tasks as core_clear_failed, download_queue_state as core_queue_state,
-        enqueue_download_task as core_enqueue, remove_download_task as core_remove,
+        enqueue_download_task as core_enqueue, get_download_directory as core_get_download_dir,
+        remove_download_task as core_remove, set_download_directory as core_set_download_dir,
         subscribe_progress as core_subscribe_progress,
     },
 };
@@ -42,6 +43,16 @@ pub fn clear_failed_download_tasks() -> Result<DownloadQueueState, String> {
 #[flutter_rust_bridge::frb]
 pub fn clear_download_history() -> Result<DownloadQueueState, String> {
     core_clear_history()
+}
+
+#[flutter_rust_bridge::frb]
+pub fn get_download_directory() -> Result<String, String> {
+    core_get_download_dir()
+}
+
+#[flutter_rust_bridge::frb]
+pub fn set_download_directory(path: String) -> Result<String, String> {
+    core_set_download_dir(path)
 }
 
 #[flutter_rust_bridge::frb]

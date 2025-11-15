@@ -36,5 +36,13 @@ Future<DownloadQueueState> clearFailedDownloadTasks() =>
 Future<DownloadQueueState> clearDownloadHistory() =>
     RustLib.instance.api.crateApiDriveDownloadManagerClearDownloadHistory();
 
+Future<String> getDownloadDirectory() =>
+    RustLib.instance.api.crateApiDriveDownloadManagerGetDownloadDirectory();
+
+Future<String> setDownloadDirectory({required String path}) => RustLib
+    .instance
+    .api
+    .crateApiDriveDownloadManagerSetDownloadDirectory(path: path);
+
 Stream<DownloadProgressUpdate> downloadProgressStream() =>
     RustLib.instance.api.crateApiDriveDownloadManagerDownloadProgressStream();
