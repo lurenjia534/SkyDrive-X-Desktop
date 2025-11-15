@@ -11,9 +11,11 @@ const List<String> kRequiredAuthScopes = [
   'openid',
 ];
 
+/// Riverpod Provider：管理认证状态（token、错误、加载中）。
 final authControllerProvider =
     NotifierProvider.autoDispose<AuthController, AuthState>(AuthController.new);
 
+/// 认证状态：记录 token、错误信息与当前是否在认证中。
 class AuthState {
   const AuthState({this.tokens, this.error, this.isAuthenticating = false});
 
@@ -21,6 +23,7 @@ class AuthState {
   final String? error;
   final bool isAuthenticating;
 
+  /// 便捷的状态拷贝方法，可同时清空旧 token/错误。
   AuthState copyWith({
     bool? isAuthenticating,
     AuthTokens? tokens,
@@ -36,6 +39,7 @@ class AuthState {
   }
 }
 
+/// 认证控制器：负责调用 Rust API、刷新 token，并根据情况更新状态。
 class AuthController extends Notifier<AuthState> {
   @override
   AuthState build() => const AuthState();
@@ -48,6 +52,7 @@ class AuthController extends Notifier<AuthState> {
     );
   }
 
+  /// 主动触发浏览器认证流程。
   Future<void> authenticate({
     required String clientId,
     required List<String> scopes,
@@ -71,6 +76,7 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
+  /// UI 调用入口：先校验 Client ID，再走统一的 authenticate 逻辑。
   Future<void> authenticateWithClientId(String clientId) async {
     final trimmed = clientId.trim();
     if (trimmed.isEmpty) {
@@ -80,6 +86,7 @@ class AuthController extends Notifier<AuthState> {
     await authenticate(clientId: trimmed, scopes: kRequiredAuthScopes);
   }
 
+  /// 尝试从本地持久化状态恢复 Session。
   Future<void> restoreSession() async {
     try {
       final persisted = await auth_api.loadPersistedAuthState();
@@ -91,8 +98,10 @@ class AuthController extends Notifier<AuthState> {
     await _refreshTokens(showLoading: true);
   }
 
+  /// 静默刷新 token，返回是否刷新成功。
   Future<bool> refreshSilently() => _refreshTokens(showLoading: false);
 
+  /// 通用刷新逻辑：可选显示 Loading，刷新失败时会清空 token。
   Future<bool> _refreshTokens({required bool showLoading}) async {
     if (showLoading) {
       state = state.copyWith(isAuthenticating: true, clearError: true);
