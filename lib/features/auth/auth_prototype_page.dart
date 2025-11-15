@@ -15,6 +15,7 @@ class AuthPrototypePage extends ConsumerStatefulWidget {
 class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
   final TextEditingController _clientIdController = TextEditingController();
   bool _isNavigating = false;
+  ProviderSubscription<AuthSessionState>? _sessionSubscription;
 
   @override
   void initState() {
@@ -24,21 +25,26 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
           .read(authSessionCoordinatorProvider.notifier)
           .attemptRestoreSession();
     });
-    ref.listen<AuthSessionState>(authSessionCoordinatorProvider, (prev, next) {
-      if (!mounted) return;
-      if (next.shouldNavigateToDrive && !_isNavigating) {
-        _isNavigating = true;
-        _navigateToDrive();
-        ref
-            .read(authSessionCoordinatorProvider.notifier)
-            .clearNavigationIntent();
-      }
-    });
+    _sessionSubscription = ref.listenManual<AuthSessionState>(
+      authSessionCoordinatorProvider,
+      (prev, next) {
+        if (!mounted) return;
+        if (next.shouldNavigateToDrive && !_isNavigating) {
+          _isNavigating = true;
+          _navigateToDrive();
+          ref
+              .read(authSessionCoordinatorProvider.notifier)
+              .clearNavigationIntent();
+        }
+      },
+      fireImmediately: true,
+    );
   }
 
   @override
   void dispose() {
     _clientIdController.dispose();
+    _sessionSubscription?.close();
     super.dispose();
   }
 
