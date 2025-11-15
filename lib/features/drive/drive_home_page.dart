@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:skydrivex/features/drive/providers/download_directory_provider.dart';
 import 'package:skydrivex/features/drive/providers/drive_download_manager.dart';
 import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
 import 'package:skydrivex/features/drive/utils/drive_item_formatters.dart';
@@ -169,7 +170,21 @@ Future<void> _handleDownload(
     _showSnack(context, '下载中：${item.name}');
     return;
   }
-  await manager.enqueue(item);
+  String targetDir;
+  try {
+    targetDir = await ref.read(downloadDirectoryProvider.future);
+  } catch (err) {
+    if (!context.mounted) return;
+    _showSnack(context, '无法获取下载目录：$err');
+    return;
+  }
+  try {
+    await manager.enqueue(item, targetDirectory: targetDir);
+  } catch (err) {
+    if (!context.mounted) return;
+    _showSnack(context, '加入下载队列失败：$err');
+    return;
+  }
   if (!context.mounted) return;
   _showSnack(context, '已加入下载队列：${item.name}');
 }

@@ -9,6 +9,7 @@ import 'api/drive/download.dart';
 import 'api/drive/download_manager.dart';
 import 'api/drive/list.dart';
 import 'api/drive/models.dart';
+import 'api/settings/download_directory.dart';
 import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -72,7 +73,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 524223216;
+  int get rustContentHash => -1941853829;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -118,7 +119,7 @@ abstract class RustLibApi extends BaseApi {
     required bool overwrite,
   });
 
-  Future<String> crateApiDriveDownloadManagerGetDownloadDirectory();
+  Future<String> crateApiSettingsDownloadDirectoryGetDownloadDirectory();
 
   String crateApiSimpleGreet({required String name});
 
@@ -143,7 +144,7 @@ abstract class RustLibApi extends BaseApi {
     required String itemId,
   });
 
-  Future<String> crateApiDriveDownloadManagerSetDownloadDirectory({
+  Future<String> crateApiSettingsDownloadDirectorySetDownloadDirectory({
     required String path,
   });
 }
@@ -489,7 +490,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<String> crateApiDriveDownloadManagerGetDownloadDirectory() {
+  Future<String> crateApiSettingsDownloadDirectoryGetDownloadDirectory() {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -505,7 +506,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeSuccessData: sse_decode_String,
           decodeErrorData: sse_decode_String,
         ),
-        constMeta: kCrateApiDriveDownloadManagerGetDownloadDirectoryConstMeta,
+        constMeta:
+            kCrateApiSettingsDownloadDirectoryGetDownloadDirectoryConstMeta,
         argValues: [],
         apiImpl: this,
       ),
@@ -513,7 +515,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   TaskConstMeta
-  get kCrateApiDriveDownloadManagerGetDownloadDirectoryConstMeta =>
+  get kCrateApiSettingsDownloadDirectoryGetDownloadDirectoryConstMeta =>
       const TaskConstMeta(debugName: "get_download_directory", argNames: []);
 
   @override
@@ -726,7 +728,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<String> crateApiDriveDownloadManagerSetDownloadDirectory({
+  Future<String> crateApiSettingsDownloadDirectorySetDownloadDirectory({
     required String path,
   }) {
     return handler.executeNormal(
@@ -745,7 +747,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeSuccessData: sse_decode_String,
           decodeErrorData: sse_decode_String,
         ),
-        constMeta: kCrateApiDriveDownloadManagerSetDownloadDirectoryConstMeta,
+        constMeta:
+            kCrateApiSettingsDownloadDirectorySetDownloadDirectoryConstMeta,
         argValues: [path],
         apiImpl: this,
       ),
@@ -753,7 +756,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   TaskConstMeta
-  get kCrateApiDriveDownloadManagerSetDownloadDirectoryConstMeta =>
+  get kCrateApiSettingsDownloadDirectorySetDownloadDirectoryConstMeta =>
       const TaskConstMeta(
         debugName: "set_download_directory",
         argNames: ["path"],

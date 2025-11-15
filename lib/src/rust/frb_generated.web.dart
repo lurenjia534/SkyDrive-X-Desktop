@@ -12,6 +12,7 @@ import 'api/drive/download.dart';
 import 'api/drive/download_manager.dart';
 import 'api/drive/list.dart';
 import 'api/drive/models.dart';
+import 'api/settings/download_directory.dart';
 import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';

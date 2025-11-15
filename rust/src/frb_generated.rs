@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 524223216;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1941853829;
 
 // Section: executor
 
@@ -400,7 +400,7 @@ fn wire__crate__api__drive__download_manager__enqueue_download_task_impl(
         },
     )
 }
-fn wire__crate__api__drive__download_manager__get_download_directory_impl(
+fn wire__crate__api__settings__download_directory__get_download_directory_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -425,7 +425,8 @@ fn wire__crate__api__drive__download_manager__get_download_directory_impl(
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, String>((move || {
-                    let output_ok = crate::api::drive::download_manager::get_download_directory()?;
+                    let output_ok =
+                        crate::api::settings::download_directory::get_download_directory()?;
                     Ok(output_ok)
                 })())
             }
@@ -668,7 +669,7 @@ fn wire__crate__api__drive__download_manager__remove_download_task_impl(
         },
     )
 }
-fn wire__crate__api__drive__download_manager__set_download_directory_impl(
+fn wire__crate__api__settings__download_directory__set_download_directory_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -695,7 +696,7 @@ fn wire__crate__api__drive__download_manager__set_download_directory_impl(
             move |context| {
                 transform_result_sse::<_, String>((move || {
                     let output_ok =
-                        crate::api::drive::download_manager::set_download_directory(api_path)?;
+                        crate::api::settings::download_directory::set_download_directory(api_path)?;
                     Ok(output_ok)
                 })())
             }
@@ -1118,7 +1119,7 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        11 => wire__crate__api__drive__download_manager__get_download_directory_impl(
+        11 => wire__crate__api__settings__download_directory__get_download_directory_impl(
             port,
             ptr,
             rust_vec_len,
@@ -1149,7 +1150,7 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        19 => wire__crate__api__drive__download_manager__set_download_directory_impl(
+        19 => wire__crate__api__settings__download_directory__set_download_directory_impl(
             port,
             ptr,
             rust_vec_len,

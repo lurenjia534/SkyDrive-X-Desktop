@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:skydrivex/features/drive/services/drive_download_service.dart';
+import 'package:skydrivex/features/drive/services/download_directory_service.dart';
 
 final downloadDirectoryProvider = AsyncNotifierProvider.autoDispose<
   DownloadDirectoryController,
@@ -7,11 +7,11 @@ final downloadDirectoryProvider = AsyncNotifierProvider.autoDispose<
 >(DownloadDirectoryController.new);
 
 class DownloadDirectoryController extends AsyncNotifier<String> {
-  late final DriveDownloadService _service;
+  late final DownloadDirectoryService _service;
 
   @override
   Future<String> build() async {
-    _service = const DriveDownloadService();
+    _service = const DownloadDirectoryService();
     return _fetch();
   }
 
@@ -23,7 +23,7 @@ class DownloadDirectoryController extends AsyncNotifier<String> {
   Future<void> updateDirectory(String path) async {
     state = const AsyncLoading();
     try {
-      final value = await _service.updateDownloadDirectory(path);
+      final value = await _service.updateDirectory(path);
       state = AsyncValue.data(value);
     } catch (err, stack) {
       state = AsyncValue.error(err, stack);
@@ -32,6 +32,6 @@ class DownloadDirectoryController extends AsyncNotifier<String> {
   }
 
   Future<String> _fetch() {
-    return _service.currentDownloadDirectory();
+    return _service.currentDirectory();
   }
 }

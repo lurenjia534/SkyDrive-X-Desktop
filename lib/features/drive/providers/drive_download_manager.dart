@@ -50,14 +50,17 @@ class DriveDownloadManager extends Notifier<drive_api.DownloadQueueState> {
   /// 入队新的下载任务，并立即刷新状态以驱动 UI。
   Future<void> enqueue(
     drive_api.DriveItemSummary item, {
+    required String targetDirectory,
     bool overwrite = false,
   }) async {
     try {
-      final updated = await _service.enqueue(item: item, overwrite: overwrite);
+      final updated = await _service.enqueue(
+        item: item,
+        targetDir: targetDirectory,
+        overwrite: overwrite,
+      );
       _pruneSpeeds(updated.active);
       state = updated;
-    } on DownloadDirectoryUnavailable {
-      rethrow;
     } catch (err, stack) {
       debugPrint('enqueue download failed: $err\n$stack');
       rethrow;

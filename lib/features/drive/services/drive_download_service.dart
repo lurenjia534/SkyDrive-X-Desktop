@@ -8,9 +8,9 @@ class DriveDownloadService {
 
   Future<drive_api.DownloadQueueState> enqueue({
     required drive_api.DriveItemSummary item,
+    required String targetDir,
     bool overwrite = false,
-  }) async {
-    final targetDir = await currentDownloadDirectory();
+  }) {
     return drive_manager_api.enqueueDownloadTask(
       item: item,
       targetDir: targetDir,
@@ -41,29 +41,4 @@ class DriveDownloadService {
   Stream<drive_api.DownloadProgressUpdate> progressStream() {
     return drive_manager_api.downloadProgressStream();
   }
-
-  Future<String> currentDownloadDirectory() async {
-    try {
-      return await drive_manager_api.getDownloadDirectory();
-    } catch (err) {
-      throw DownloadDirectoryUnavailable(err.toString());
-    }
-  }
-
-  Future<String> updateDownloadDirectory(String path) async {
-    try {
-      return await drive_manager_api.setDownloadDirectory(path: path);
-    } catch (err) {
-      throw DownloadDirectoryUnavailable(err.toString());
-    }
-  }
-}
-
-class DownloadDirectoryUnavailable implements Exception {
-  const DownloadDirectoryUnavailable(this.message);
-
-  final String message;
-
-  @override
-  String toString() => 'DownloadDirectoryUnavailable: $message';
 }
