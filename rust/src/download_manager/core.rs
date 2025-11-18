@@ -11,8 +11,8 @@ use std::{
     collections::{HashMap, HashSet},
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc::{self, Receiver, Sender},
-        Arc, Mutex,
+        mpsc::{self, Receiver, SyncSender, TrySendError},
+        Arc, Condvar, Mutex, MutexGuard,
     },
     thread,
     time::{Instant, SystemTime, UNIX_EPOCH},
@@ -20,6 +20,10 @@ use std::{
 
 /// 全局下载管理器实例：避免多次初始化，同时方便在 FRB 桥接层与其他模块之间共享。
 static DOWNLOAD_MANAGER: Lazy<DownloadManager> = Lazy::new(DownloadManager::new);
+/// 默认并发下载上限，避免无限制创建线程。
+const DEFAULT_MAX_CONCURRENCY: usize = 4;
+/// 进度广播的有界缓冲大小（每个订阅者），避免无界内存增长。
+const PROGRESS_CHANNEL_CAP: usize = 64;
 
 const INTERRUPTED_DOWNLOAD_MESSAGE: &str = "应用已关闭或异常退出，下载被中断，请重新下载";
 
@@ -28,9 +32,14 @@ const INTERRUPTED_DOWNLOAD_MESSAGE: &str = "应用已关闭或异常退出，下
 pub struct DownloadManager {
     state: Arc<Mutex<InnerState>>,
     store: Arc<dyn DownloadStore>,
+    /// 记录速度计算用的最近一次采样
     progress_meters: Arc<Mutex<HashMap<String, ProgressTick>>>,
-    subscribers: Arc<Mutex<Vec<Sender<DownloadProgressUpdate>>>>,
+    /// 订阅者列表，需要保护避免在 send 阶段被并发修改
+    subscribers: Arc<Mutex<Vec<SyncSender<DownloadProgressUpdate>>>>,
+    /// 每个任务的取消令牌
     cancel_tokens: Arc<Mutex<HashMap<String, Arc<AtomicBool>>>>,
+    /// 控制同时进行的下载数量，避免无限制创建线程
+    concurrency_guard: Arc<Semaphore>,
 }
 
 /// 内部状态快照，仅在 rust 内部使用，避免 FRB 生成多余绑定。
@@ -56,6 +65,7 @@ impl DownloadManager {
             progress_meters: Arc::new(Mutex::new(HashMap::new())),
             subscribers: Arc::new(Mutex::new(Vec::new())),
             cancel_tokens: Arc::new(Mutex::new(HashMap::new())),
+            concurrency_guard: Arc::new(Semaphore::new(DEFAULT_MAX_CONCURRENCY)),
         };
         manager.restore_from_storage();
         manager
@@ -110,10 +120,7 @@ impl DownloadManager {
             return Err("target directory is required".to_string());
         }
 
-        let mut state = self
-            .state
-            .lock()
-            .map_err(|_| "download manager poisoned".to_string())?;
+        let mut state = self.state.lock().unwrap_or_else(|p| p.into_inner());
         if state.active.iter().any(|task| task.item.id == item.id) {
             return Err("该文件已在下载队列中".to_string());
         }
@@ -140,6 +147,8 @@ impl DownloadManager {
         let manager = self.clone();
         let item_id = item.id.clone();
         thread::spawn(move || {
+            // 获取并发许可，超限时会阻塞在此，避免无限制创建线程
+            let _permit = manager.concurrency_guard.acquire();
             let progress_manager = manager.clone();
             let progress_item_id = item_id.clone();
             let progress_callback: Option<Box<dyn FnMut(u64, Option<u64>) + Send>> =
@@ -166,9 +175,9 @@ impl DownloadManager {
     fn mark_success(&self, item_id: &str, result: DriveDownloadResult) {
         let mut state = match self.state.lock() {
             Ok(guard) => guard,
-            Err(err) => {
-                eprintln!("[download-manager] failed to lock state on success: {err}");
-                return;
+            Err(poison) => {
+                eprintln!("[download-manager] state lock poisoned on success; recovering");
+                poison.into_inner()
             }
         };
 
@@ -201,9 +210,9 @@ impl DownloadManager {
     fn mark_failure(&self, item_id: &str, err_msg: String) {
         let mut state = match self.state.lock() {
             Ok(guard) => guard,
-            Err(err) => {
-                eprintln!("[download-manager] failed to lock state on failure: {err}");
-                return;
+            Err(poison) => {
+                eprintln!("[download-manager] state lock poisoned on failure; recovering");
+                poison.into_inner()
             }
         };
 
@@ -234,10 +243,7 @@ impl DownloadManager {
     /// 移除任意状态的任务，用于用户手动清理条目。
     pub fn remove(&self, item_id: &str) -> Result<DownloadQueueState, String> {
         let _ = self.signal_cancel(item_id);
-        let mut state = self
-            .state
-            .lock()
-            .map_err(|_| "download manager poisoned".to_string())?;
+        let mut state = self.state.lock().unwrap_or_else(|p| p.into_inner());
         state.active.retain(|task| task.item.id != item_id);
         state.completed.retain(|task| task.item.id != item_id);
         state.failed.retain(|task| task.item.id != item_id);
@@ -250,10 +256,7 @@ impl DownloadManager {
 
     /// 清除 completed/failed 历史记录；active 队列保持不变。
     pub fn clear_history(&self) -> Result<DownloadQueueState, String> {
-        let mut state = self
-            .state
-            .lock()
-            .map_err(|_| "download manager poisoned".to_string())?;
+        let mut state = self.state.lock().unwrap_or_else(|p| p.into_inner());
         state.completed.clear();
         state.failed.clear();
         let snapshot = (*state).clone();
@@ -274,10 +277,7 @@ impl DownloadManager {
 
     /// 仅清理失败任务，保留 active/completed 队列，方便 UI 一键清扫失败记录。
     pub fn clear_failed_tasks(&self) -> Result<DownloadQueueState, String> {
-        let mut state = self
-            .state
-            .lock()
-            .map_err(|_| "download manager poisoned".to_string())?;
+        let mut state = self.state.lock().unwrap_or_else(|p| p.into_inner());
         if state.failed.is_empty() {
             return Ok((*state).clone().into());
         }
@@ -297,19 +297,20 @@ impl DownloadManager {
 
     /// 返回当前状态的浅拷贝，供 FRB 直接转成 Dart 结构。
     pub fn snapshot(&self) -> DownloadQueueState {
-        match self.state.lock() {
-            Ok(guard) => (*guard).clone().into(),
-            Err(_) => DownloadQueueState::default(),
-        }
+        self.state
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .clone()
+            .into()
     }
 
     /// 下载线程调用的进度回调：更新内存+持久化，并向订阅者广播增量。
     fn report_progress(&self, item_id: &str, bytes_downloaded: u64, expected_size: Option<u64>) {
         let mut state = match self.state.lock() {
             Ok(guard) => guard,
-            Err(err) => {
-                eprintln!("[download-manager] failed to lock state on progress: {err}");
-                return;
+            Err(poison) => {
+                eprintln!("[download-manager] state lock poisoned on progress; recovering");
+                poison.into_inner()
             }
         };
 
@@ -348,9 +349,9 @@ impl DownloadManager {
     fn compute_speed_bps(&self, item_id: &str, bytes_downloaded: u64) -> Option<f64> {
         let mut meters = match self.progress_meters.lock() {
             Ok(guard) => guard,
-            Err(err) => {
-                eprintln!("[download-manager] failed to lock progress meters: {err}");
-                return None;
+            Err(poison) => {
+                eprintln!("[download-manager] meters lock poisoned; recovering");
+                poison.into_inner()
             }
         };
         let now = Instant::now();
@@ -371,69 +372,124 @@ impl DownloadManager {
     }
 
     fn clear_progress_meter(&self, item_id: &str) {
-        if let Ok(mut meters) = self.progress_meters.lock() {
-            meters.remove(item_id);
-        }
+        let mut meters = recover_lock(&self.progress_meters);
+        meters.remove(item_id);
     }
 
     fn prune_inactive_meters(&self, active_tasks: &[DownloadTask]) {
-        if let Ok(mut meters) = self.progress_meters.lock() {
-            let active_ids: HashSet<String> = active_tasks
-                .iter()
-                .map(|task| task.item.id.clone())
-                .collect();
-            meters.retain(|id, _| active_ids.contains(id));
-        }
+        let mut meters = recover_lock(&self.progress_meters);
+        let active_ids: HashSet<String> = active_tasks
+            .iter()
+            .map(|task| task.item.id.clone())
+            .collect();
+        meters.retain(|id, _| active_ids.contains(id));
     }
 
     fn register_cancel_token(&self, item_id: &str, token: Arc<AtomicBool>) {
-        if let Ok(mut tokens) = self.cancel_tokens.lock() {
-            tokens.insert(item_id.to_string(), token);
-        }
+        let mut tokens = recover_lock(&self.cancel_tokens);
+        tokens.insert(item_id.to_string(), token);
     }
 
     fn clear_cancel_token(&self, item_id: &str) {
-        if let Ok(mut tokens) = self.cancel_tokens.lock() {
-            tokens.remove(item_id);
-        }
+        let mut tokens = recover_lock(&self.cancel_tokens);
+        tokens.remove(item_id);
     }
 
     fn signal_cancel(&self, item_id: &str) -> bool {
-        if let Ok(tokens) = self.cancel_tokens.lock() {
-            if let Some(token) = tokens.get(item_id) {
-                token.store(true, Ordering::Relaxed);
-                return true;
-            }
+        let tokens = recover_lock(&self.cancel_tokens);
+        if let Some(token) = tokens.get(item_id) {
+            token.store(true, Ordering::Relaxed);
+            return true;
         }
         false
     }
 
     /// 提供一个新的 channel 接收器，用于持续消费进度事件。
     pub fn subscribe_progress(&self) -> Receiver<DownloadProgressUpdate> {
-        let (tx, rx) = mpsc::channel();
-        if let Ok(mut subs) = self.subscribers.lock() {
-            subs.push(tx.clone());
-        }
-        if let Ok(state) = self.state.lock() {
-            for task in &state.active {
-                if let Some(bytes) = task.bytes_downloaded {
-                    let _ = tx.send(DownloadProgressUpdate {
-                        item_id: task.item.id.clone(),
-                        bytes_downloaded: bytes,
-                        expected_size: task.size_label,
-                        speed_bps: None,
-                        timestamp_millis: current_timestamp(),
-                    });
-                }
+        // 有界缓冲，避免订阅端阻塞导致内存膨胀
+        let (tx, rx) = mpsc::sync_channel(PROGRESS_CHANNEL_CAP);
+        let mut subs = recover_lock(&self.subscribers);
+        subs.push(tx.clone());
+        drop(subs);
+
+        let state = recover_lock(&self.state);
+        for task in &state.active {
+            if let Some(bytes) = task.bytes_downloaded {
+                let _ = tx.try_send(DownloadProgressUpdate {
+                    item_id: task.item.id.clone(),
+                    bytes_downloaded: bytes,
+                    expected_size: task.size_label,
+                    speed_bps: None,
+                    timestamp_millis: current_timestamp(),
+                });
             }
         }
         rx
     }
 
     fn broadcast_update(&self, update: DownloadProgressUpdate) {
-        if let Ok(mut subs) = self.subscribers.lock() {
-            subs.retain_mut(|sender| sender.send(update.clone()).is_ok());
+        let mut subs = recover_lock(&self.subscribers);
+        subs.retain_mut(|sender| match sender.try_send(update.clone()) {
+            Ok(_) => true,
+            Err(TrySendError::Full(_)) => {
+                // 丢弃本次进度，避免阻塞；订阅者仍保留
+                true
+            }
+            Err(TrySendError::Disconnected(_)) => false,
+        });
+    }
+}
+
+fn recover_lock<'a, T>(mutex: &'a Mutex<T>) -> MutexGuard<'a, T> {
+    match mutex.lock() {
+        Ok(guard) => guard,
+        // 遇到中毒锁时直接取出内部数据继续运行，避免整个下载管理器瘫痪
+        Err(poison) => poison.into_inner(),
+    }
+}
+
+/// 简易信号量，用 Mutex+Condvar 实现固定并发控制。
+struct Semaphore {
+    permits: Mutex<usize>,
+    cvar: Condvar,
+}
+
+impl Semaphore {
+    fn new(max: usize) -> Self {
+        Self {
+            permits: Mutex::new(max),
+            cvar: Condvar::new(),
         }
+    }
+
+    /// 获取一个许可，必要时阻塞至有空闲。
+    fn acquire(&self) -> SemaphorePermit<'_> {
+        let mut permits = self.permits.lock().unwrap_or_else(|p| p.into_inner());
+        while *permits == 0 {
+            permits = self
+                .cvar
+                .wait(permits)
+                .unwrap_or_else(|p| p.into_inner());
+        }
+        *permits -= 1;
+        SemaphorePermit { semaphore: self }
+    }
+
+    fn release(&self) {
+        let mut permits = self.permits.lock().unwrap_or_else(|p| p.into_inner());
+        *permits += 1;
+        self.cvar.notify_one();
+    }
+}
+
+/// RAII 许可，Drop 时自动释放。
+struct SemaphorePermit<'a> {
+    semaphore: &'a Semaphore,
+}
+
+impl<'a> Drop for SemaphorePermit<'a> {
+    fn drop(&mut self) {
+        self.semaphore.release();
     }
 }
 
