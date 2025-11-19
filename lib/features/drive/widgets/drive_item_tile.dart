@@ -20,7 +20,8 @@ class DriveItemTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isFolder = item.isFolder;
-    final hasThumbnail = item.thumbnailUrl != null && !isFolder;
+    final hasThumbnail = _shouldShowThumbnail(item);
+    final thumbnailUrl = item.thumbnailUrl;
     final iconData = isFolder
         ? Icons.folder_rounded
         : Icons.insert_drive_file_rounded;
@@ -48,9 +49,14 @@ class DriveItemTile extends StatelessWidget {
                 child: hasThumbnail
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          item.thumbnailUrl!,
-                          fit: BoxFit.cover,
+                        child: _ThumbnailImage(
+                          url: thumbnailUrl!,
+                          itemId: item.id,
+                          fallback: _DriveTileIcon(
+                            icon: iconData,
+                            background: iconBackground,
+                            iconColor: iconColor,
+                          ),
                         ),
                       )
                     : _DriveTileIcon(
@@ -115,4 +121,42 @@ class _DriveTileIcon extends StatelessWidget {
       child: Icon(icon, color: iconColor),
     );
   }
+}
+
+class _ThumbnailImage extends StatelessWidget {
+  const _ThumbnailImage({
+    required this.url,
+    required this.itemId,
+    required this.fallback,
+  });
+
+  final String url;
+  final String itemId;
+  final Widget fallback;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return fallback;
+      },
+    );
+  }
+}
+
+/// Decide whether we should render a remote thumbnail for this drive item.
+/// Some Graph entries (folders, 0-byte files, items without `thumbnailUrl`)
+/// do not have valid thumbnails and would trigger 416 responses if we try.
+bool _shouldShowThumbnail(drive_api.DriveItemSummary item) {
+  if (item.isFolder) return false;
+  final url = item.thumbnailUrl;
+  if (url == null || url.isEmpty) return false;
+  final size = item.size;
+  if (size != null && size == BigInt.zero) {
+    // 0B 文件在 Graph 端不会返回有效缩略图，直接回退为图标
+    return false;
+  }
+  return true;
 }
