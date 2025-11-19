@@ -15,7 +15,7 @@ use std::{
         Arc, Condvar, Mutex, MutexGuard,
     },
     thread,
-    time::{Instant, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 /// 全局下载管理器实例：避免多次初始化，同时方便在 FRB 桥接层与其他模块之间共享。
@@ -24,6 +24,12 @@ static DOWNLOAD_MANAGER: Lazy<DownloadManager> = Lazy::new(DownloadManager::new)
 const DEFAULT_MAX_CONCURRENCY: usize = 4;
 /// 进度广播的有界缓冲大小（每个订阅者），避免无界内存增长。
 const PROGRESS_CHANNEL_CAP: usize = 64;
+/// 每次持久化前至少累计的字节增量，避免频繁写入 SQLite。
+const PROGRESS_PERSIST_BYTES_THRESHOLD: u64 = 256 * 1024;
+/// 持久化节流的最小时间间隔，保证长时间空闲也能写入。
+const PROGRESS_PERSIST_INTERVAL: Duration = Duration::from_secs(1);
+/// 速度采样的最小时间间隔，避免因为瞬时回调过于密集而产生虚高速率。
+const SPEED_SAMPLE_MIN_INTERVAL: Duration = Duration::from_millis(300);
 
 const INTERRUPTED_DOWNLOAD_MESSAGE: &str = "应用已关闭或异常退出，下载被中断，请重新下载";
 
@@ -34,6 +40,8 @@ pub struct DownloadManager {
     store: Arc<dyn DownloadStore>,
     /// 记录速度计算用的最近一次采样
     progress_meters: Arc<Mutex<HashMap<String, ProgressTick>>>,
+    /// 控制写库频率的标记，避免高频 IO
+    persist_markers: Arc<Mutex<HashMap<String, PersistMarker>>>,
     /// 订阅者列表，需要保护避免在 send 阶段被并发修改
     subscribers: Arc<Mutex<Vec<SyncSender<DownloadProgressUpdate>>>>,
     /// 每个任务的取消令牌
@@ -57,12 +65,19 @@ struct ProgressTick {
     instant: Instant,
 }
 
+/// 节流标记：用于判断是否到了持久化进度的时机。
+struct PersistMarker {
+    bytes_downloaded: u64,
+    instant: Instant,
+}
+
 impl DownloadManager {
     fn new() -> Self {
         let manager = Self {
             state: Arc::new(Mutex::new(InnerState::default())),
             store: Arc::new(SqliteDownloadStore::default()),
             progress_meters: Arc::new(Mutex::new(HashMap::new())),
+            persist_markers: Arc::new(Mutex::new(HashMap::new())),
             subscribers: Arc::new(Mutex::new(Vec::new())),
             cancel_tokens: Arc::new(Mutex::new(HashMap::new())),
             concurrency_guard: Arc::new(Semaphore::new(DEFAULT_MAX_CONCURRENCY)),
@@ -262,7 +277,7 @@ impl DownloadManager {
         let snapshot = (*state).clone();
         drop(state);
         self.store.clear_history();
-        self.prune_inactive_meters(&snapshot.active);
+        self.prune_inactive_trackers(&snapshot.active);
         Ok(snapshot.into())
     }
 
@@ -324,7 +339,9 @@ impl DownloadManager {
         }
         drop(state);
         if let Some(task) = updated_task {
-            self.store.upsert(&task);
+            if self.should_persist_progress(item_id, bytes_downloaded) {
+                self.store.upsert(&task);
+            }
             self.emit_progress_snapshot(item_id, bytes_downloaded, task.size_label);
         }
     }
@@ -347,42 +364,39 @@ impl DownloadManager {
     }
 
     fn compute_speed_bps(&self, item_id: &str, bytes_downloaded: u64) -> Option<f64> {
-        let mut meters = match self.progress_meters.lock() {
-            Ok(guard) => guard,
-            Err(poison) => {
-                eprintln!("[download-manager] meters lock poisoned; recovering");
-                poison.into_inner()
-            }
-        };
         let now = Instant::now();
-        if let Some(previous) = meters.insert(
-            item_id.to_string(),
-            ProgressTick {
-                bytes_downloaded,
-                instant: now,
-            },
-        ) {
-            let delta_bytes = bytes_downloaded.saturating_sub(previous.bytes_downloaded);
-            let elapsed = now.duration_since(previous.instant).as_secs_f64();
-            if delta_bytes > 0 && elapsed > 0.0 {
-                return Some(delta_bytes as f64 / elapsed);
-            }
+        let mut meters = recover_lock(&self.progress_meters);
+        let entry = meters.entry(item_id.to_string()).or_insert_with(|| ProgressTick {
+            bytes_downloaded,
+            instant: now,
+        });
+        let delta_bytes = bytes_downloaded.saturating_sub(entry.bytes_downloaded);
+        let elapsed = now.duration_since(entry.instant);
+        if delta_bytes == 0 || elapsed < SPEED_SAMPLE_MIN_INTERVAL {
+            return None;
         }
-        None
+        entry.bytes_downloaded = bytes_downloaded;
+        entry.instant = now;
+        Some(delta_bytes as f64 / elapsed.as_secs_f64())
     }
 
     fn clear_progress_meter(&self, item_id: &str) {
         let mut meters = recover_lock(&self.progress_meters);
         meters.remove(item_id);
+        drop(meters);
+        self.clear_persist_marker(item_id);
     }
 
-    fn prune_inactive_meters(&self, active_tasks: &[DownloadTask]) {
-        let mut meters = recover_lock(&self.progress_meters);
+    fn prune_inactive_trackers(&self, active_tasks: &[DownloadTask]) {
         let active_ids: HashSet<String> = active_tasks
             .iter()
             .map(|task| task.item.id.clone())
             .collect();
+        let mut meters = recover_lock(&self.progress_meters);
         meters.retain(|id, _| active_ids.contains(id));
+        drop(meters);
+        let mut markers = recover_lock(&self.persist_markers);
+        markers.retain(|id, _| active_ids.contains(id));
     }
 
     fn register_cancel_token(&self, item_id: &str, token: Arc<AtomicBool>) {
@@ -402,6 +416,39 @@ impl DownloadManager {
             return true;
         }
         false
+    }
+
+    fn should_persist_progress(&self, item_id: &str, bytes_downloaded: u64) -> bool {
+        let now = Instant::now();
+        let mut inserted = false;
+        let mut markers = recover_lock(&self.persist_markers);
+        let entry = markers.entry(item_id.to_string()).or_insert_with(|| {
+            inserted = true;
+            PersistMarker {
+                bytes_downloaded,
+                instant: now,
+            }
+        });
+        if inserted {
+            // 首次写入或重启后，需要立即持久化一次
+            return true;
+        }
+
+        let delta_bytes = bytes_downloaded.saturating_sub(entry.bytes_downloaded);
+        let elapsed = now.duration_since(entry.instant);
+        if delta_bytes >= PROGRESS_PERSIST_BYTES_THRESHOLD || elapsed >= PROGRESS_PERSIST_INTERVAL {
+            // 达到节流阈值后更新标记，允许写库
+            entry.bytes_downloaded = bytes_downloaded;
+            entry.instant = now;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn clear_persist_marker(&self, item_id: &str) {
+        let mut markers = recover_lock(&self.persist_markers);
+        markers.remove(item_id);
     }
 
     /// 提供一个新的 channel 接收器，用于持续消费进度事件。
