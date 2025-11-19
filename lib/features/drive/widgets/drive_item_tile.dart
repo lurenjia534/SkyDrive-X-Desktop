@@ -146,9 +146,9 @@ class _ThumbnailImage extends StatelessWidget {
   }
 }
 
-/// Decide whether we should render a remote thumbnail for this drive item.
-/// Some Graph entries (folders, 0-byte files, items without `thumbnailUrl`)
-/// do not have valid thumbnails and would trigger 416 responses if we try.
+///决定是否应该为此驱动器项目呈现远程缩略图。
+///一些图表条目（文件夹、0字节文件、没有`thumbnailUrl`的项目）
+///没有有效的缩略图，如果我们尝试，将会触发 416 响应。
 bool _shouldShowThumbnail(drive_api.DriveItemSummary item) {
   if (item.isFolder) return false;
   final url = item.thumbnailUrl;
