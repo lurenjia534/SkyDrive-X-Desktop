@@ -1,6 +1,7 @@
 mod auth;
 mod download_tasks;
 mod settings;
+mod upload_tasks;
 
 use directories::ProjectDirs;
 use rusqlite::{Connection, Error as SqliteError};
@@ -16,6 +17,10 @@ pub use download_tasks::{
     DownloadTaskRecord,
 };
 pub use settings::{get_setting, set_setting};
+pub use upload_tasks::{
+    clear_finished_upload_tasks, delete_upload_task, load_upload_tasks, upsert_upload_task,
+    UploadTaskRecord,
+};
 
 /// DB 模块：提供统一的 sqlite 连接管理，同时 re-export 领域级 API。
 /// 目前支持 auth_tokens 与 download_tasks，两者共用同一数据库文件，便于部署。
@@ -66,6 +71,8 @@ fn apply_migrations(conn: &Connection) -> StorageResult<()> {
         .map_err(|e| format!("failed to initialize auth_tokens schema: {e}"))?;
     conn.execute_batch(download_tasks::DOWNLOAD_TABLE_SCHEMA)
         .map_err(|e| format!("failed to initialize download_tasks schema: {e}"))?;
+    conn.execute_batch(upload_tasks::UPLOAD_TABLE_SCHEMA)
+        .map_err(|e| format!("failed to initialize upload_tasks schema: {e}"))?;
     conn.execute_batch(settings::SETTINGS_TABLE_SCHEMA)
         .map_err(|e| format!("failed to initialize settings schema: {e}"))?;
     ensure_column(conn, "download_tasks", "bytes_downloaded", "INTEGER")?;

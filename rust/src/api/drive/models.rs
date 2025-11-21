@@ -40,6 +40,16 @@ pub enum DownloadStatus {
     Failed,
 }
 
+/// 上传任务状态。
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug)]
+pub enum UploadStatus {
+    InProgress,
+    Completed,
+    Failed,
+    Cancelled,
+}
+
 /// 单条下载任务详情，供 Flutter 展示进度与历史。
 #[flutter_rust_bridge::frb]
 #[derive(Clone, Debug)]
@@ -54,6 +64,25 @@ pub struct DownloadTask {
     pub error_message: Option<String>,
 }
 
+/// 单条上传任务详情。
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug)]
+pub struct UploadTask {
+    pub task_id: String,
+    pub file_name: String,
+    pub local_path: String,
+    pub size: Option<u64>,
+    pub mime_type: Option<String>,
+    pub parent_id: Option<String>,
+    pub remote_id: Option<String>,
+    pub status: UploadStatus,
+    pub started_at: i64,
+    pub completed_at: Option<i64>,
+    pub bytes_uploaded: Option<u64>,
+    pub error_message: Option<String>,
+    pub session_url: Option<String>,
+}
+
 /// 下载队列状态，包含进行中、已完成与失败任务列表。
 #[flutter_rust_bridge::frb]
 #[derive(Clone, Debug, Default)]
@@ -63,12 +92,32 @@ pub struct DownloadQueueState {
     pub failed: Vec<DownloadTask>,
 }
 
+/// 上传队列状态。
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug, Default)]
+pub struct UploadQueueState {
+    pub active: Vec<UploadTask>,
+    pub completed: Vec<UploadTask>,
+    pub failed: Vec<UploadTask>,
+}
+
 /// 下载进度事件，通过 StreamSink 推送给 Flutter，供 UI 实时刷新进度与速度。
 #[flutter_rust_bridge::frb]
 #[derive(Clone, Debug)]
 pub struct DownloadProgressUpdate {
     pub item_id: String,
     pub bytes_downloaded: u64,
+    pub expected_size: Option<u64>,
+    pub speed_bps: Option<f64>,
+    pub timestamp_millis: i64,
+}
+
+/// 上传进度事件，用于前端展示实时上传状态。
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug)]
+pub struct UploadProgressUpdate {
+    pub task_id: String,
+    pub bytes_uploaded: u64,
     pub expected_size: Option<u64>,
     pub speed_bps: Option<f64>,
     pub timestamp_millis: i64,

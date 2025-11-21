@@ -6,7 +6,7 @@
 import '../../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 /// 下载进度事件，通过 StreamSink 推送给 Flutter，供 UI 实时刷新进度与速度。
 class DownloadProgressUpdate {
@@ -221,4 +221,139 @@ class DrivePage {
           runtimeType == other.runtimeType &&
           items == other.items &&
           nextLink == other.nextLink;
+}
+
+/// 上传进度事件，用于前端展示实时上传状态。
+class UploadProgressUpdate {
+  final String taskId;
+  final BigInt bytesUploaded;
+  final BigInt? expectedSize;
+  final double? speedBps;
+  final PlatformInt64 timestampMillis;
+
+  const UploadProgressUpdate({
+    required this.taskId,
+    required this.bytesUploaded,
+    this.expectedSize,
+    this.speedBps,
+    required this.timestampMillis,
+  });
+
+  @override
+  int get hashCode =>
+      taskId.hashCode ^
+      bytesUploaded.hashCode ^
+      expectedSize.hashCode ^
+      speedBps.hashCode ^
+      timestampMillis.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UploadProgressUpdate &&
+          runtimeType == other.runtimeType &&
+          taskId == other.taskId &&
+          bytesUploaded == other.bytesUploaded &&
+          expectedSize == other.expectedSize &&
+          speedBps == other.speedBps &&
+          timestampMillis == other.timestampMillis;
+}
+
+/// 上传队列状态。
+class UploadQueueState {
+  final List<UploadTask> active;
+  final List<UploadTask> completed;
+  final List<UploadTask> failed;
+
+  const UploadQueueState({
+    required this.active,
+    required this.completed,
+    required this.failed,
+  });
+
+  static Future<UploadQueueState> default_() =>
+      RustLib.instance.api.crateApiDriveModelsUploadQueueStateDefault();
+
+  @override
+  int get hashCode => active.hashCode ^ completed.hashCode ^ failed.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UploadQueueState &&
+          runtimeType == other.runtimeType &&
+          active == other.active &&
+          completed == other.completed &&
+          failed == other.failed;
+}
+
+/// 上传任务状态。
+enum UploadStatus { inProgress, completed, failed, cancelled }
+
+/// 单条上传任务详情。
+class UploadTask {
+  final String taskId;
+  final String fileName;
+  final String localPath;
+  final BigInt? size;
+  final String? mimeType;
+  final String? parentId;
+  final String? remoteId;
+  final UploadStatus status;
+  final PlatformInt64 startedAt;
+  final PlatformInt64? completedAt;
+  final BigInt? bytesUploaded;
+  final String? errorMessage;
+  final String? sessionUrl;
+
+  const UploadTask({
+    required this.taskId,
+    required this.fileName,
+    required this.localPath,
+    this.size,
+    this.mimeType,
+    this.parentId,
+    this.remoteId,
+    required this.status,
+    required this.startedAt,
+    this.completedAt,
+    this.bytesUploaded,
+    this.errorMessage,
+    this.sessionUrl,
+  });
+
+  @override
+  int get hashCode =>
+      taskId.hashCode ^
+      fileName.hashCode ^
+      localPath.hashCode ^
+      size.hashCode ^
+      mimeType.hashCode ^
+      parentId.hashCode ^
+      remoteId.hashCode ^
+      status.hashCode ^
+      startedAt.hashCode ^
+      completedAt.hashCode ^
+      bytesUploaded.hashCode ^
+      errorMessage.hashCode ^
+      sessionUrl.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UploadTask &&
+          runtimeType == other.runtimeType &&
+          taskId == other.taskId &&
+          fileName == other.fileName &&
+          localPath == other.localPath &&
+          size == other.size &&
+          mimeType == other.mimeType &&
+          parentId == other.parentId &&
+          remoteId == other.remoteId &&
+          status == other.status &&
+          startedAt == other.startedAt &&
+          completedAt == other.completedAt &&
+          bytesUploaded == other.bytesUploaded &&
+          errorMessage == other.errorMessage &&
+          sessionUrl == other.sessionUrl;
 }

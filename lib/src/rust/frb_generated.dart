@@ -10,6 +10,7 @@ import 'api/drive/download_manager.dart';
 import 'api/drive/list.dart';
 import 'api/drive/models.dart';
 import 'api/drive/upload.dart';
+import 'api/drive/upload_manager.dart';
 import 'api/settings/download_concurrency.dart';
 import 'api/settings/download_directory.dart';
 import 'api/simple.dart';
@@ -75,7 +76,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 876171201;
+  int get rustContentHash => -753874976;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -95,12 +96,20 @@ abstract class RustLibApi extends BaseApi {
     required String itemId,
   });
 
+  Future<UploadQueueState> crateApiDriveUploadManagerCancelUploadTask({
+    required String taskId,
+  });
+
   Future<DownloadQueueState> crateApiDriveDownloadManagerClearDownloadHistory();
 
   Future<DownloadQueueState>
   crateApiDriveDownloadManagerClearFailedDownloadTasks();
 
+  Future<UploadQueueState> crateApiDriveUploadManagerClearFailedUploadTasks();
+
   Future<void> crateApiAuthAuthClearPersistedAuthState();
+
+  Future<UploadQueueState> crateApiDriveUploadManagerClearUploadHistory();
 
   Future<DriveDownloadResult> crateApiDriveDownloadDownloadDriveItem({
     required String itemId,
@@ -118,6 +127,14 @@ abstract class RustLibApi extends BaseApi {
   Future<DownloadQueueState> crateApiDriveDownloadManagerEnqueueDownloadTask({
     required DriveItemSummary item,
     required String targetDir,
+    required bool overwrite,
+  });
+
+  Future<UploadQueueState> crateApiDriveUploadManagerEnqueueUploadTask({
+    String? parentId,
+    required String fileName,
+    required String localPath,
+    required List<int> content,
     required bool overwrite,
   });
 
@@ -148,6 +165,10 @@ abstract class RustLibApi extends BaseApi {
     required String itemId,
   });
 
+  Future<UploadQueueState> crateApiDriveUploadManagerRemoveUploadTask({
+    required String taskId,
+  });
+
   Future<int> crateApiSettingsDownloadConcurrencySetDownloadConcurrency({
     required int limit,
   });
@@ -155,6 +176,12 @@ abstract class RustLibApi extends BaseApi {
   Future<String> crateApiSettingsDownloadDirectorySetDownloadDirectory({
     required String path,
   });
+
+  Stream<UploadProgressUpdate> crateApiDriveUploadManagerUploadProgressStream();
+
+  Future<UploadQueueState> crateApiDriveUploadManagerUploadQueueState();
+
+  Future<UploadQueueState> crateApiDriveModelsUploadQueueStateDefault();
 
   Future<DriveItemSummary> crateApiDriveUploadUploadSmallFile({
     String? parentId,
@@ -241,6 +268,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<UploadQueueState> crateApiDriveUploadManagerCancelUploadTask({
+    required String taskId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(taskId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 3,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_upload_queue_state,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiDriveUploadManagerCancelUploadTaskConstMeta,
+        argValues: [taskId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDriveUploadManagerCancelUploadTaskConstMeta =>
+      const TaskConstMeta(
+        debugName: "cancel_upload_task",
+        argNames: ["taskId"],
+      );
+
+  @override
   Future<DownloadQueueState>
   crateApiDriveDownloadManagerClearDownloadHistory() {
     return handler.executeNormal(
@@ -250,7 +310,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 4,
             port: port_,
           );
         },
@@ -279,7 +339,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 5,
             port: port_,
           );
         },
@@ -303,6 +363,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<UploadQueueState> crateApiDriveUploadManagerClearFailedUploadTasks() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_upload_queue_state,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiDriveUploadManagerClearFailedUploadTasksConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiDriveUploadManagerClearFailedUploadTasksConstMeta =>
+      const TaskConstMeta(debugName: "clear_failed_upload_tasks", argNames: []);
+
+  @override
   Future<void> crateApiAuthAuthClearPersistedAuthState() {
     return handler.executeNormal(
       NormalTask(
@@ -311,7 +399,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 7,
             port: port_,
           );
         },
@@ -333,6 +421,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<UploadQueueState> crateApiDriveUploadManagerClearUploadHistory() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 8,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_upload_queue_state,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiDriveUploadManagerClearUploadHistoryConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDriveUploadManagerClearUploadHistoryConstMeta =>
+      const TaskConstMeta(debugName: "clear_upload_history", argNames: []);
+
+  @override
   Future<DriveDownloadResult> crateApiDriveDownloadDownloadDriveItem({
     required String itemId,
     required String targetDir,
@@ -348,7 +463,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 9,
             port: port_,
           );
         },
@@ -385,7 +500,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 7,
+              funcId: 10,
               port: port_,
             );
           },
@@ -419,7 +534,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 11,
             port: port_,
           );
         },
@@ -446,7 +561,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 12,
             port: port_,
           );
         },
@@ -483,7 +598,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 13,
             port: port_,
           );
         },
@@ -505,6 +620,47 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<UploadQueueState> crateApiDriveUploadManagerEnqueueUploadTask({
+    String? parentId,
+    required String fileName,
+    required String localPath,
+    required List<int> content,
+    required bool overwrite,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_opt_String(parentId, serializer);
+          sse_encode_String(fileName, serializer);
+          sse_encode_String(localPath, serializer);
+          sse_encode_list_prim_u_8_loose(content, serializer);
+          sse_encode_bool(overwrite, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 14,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_upload_queue_state,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiDriveUploadManagerEnqueueUploadTaskConstMeta,
+        argValues: [parentId, fileName, localPath, content, overwrite],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDriveUploadManagerEnqueueUploadTaskConstMeta =>
+      const TaskConstMeta(
+        debugName: "enqueue_upload_task",
+        argNames: ["parentId", "fileName", "localPath", "content", "overwrite"],
+      );
+
+  @override
   Future<int> crateApiSettingsDownloadConcurrencyGetDownloadConcurrency() {
     return handler.executeNormal(
       NormalTask(
@@ -513,7 +669,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 15,
             port: port_,
           );
         },
@@ -542,7 +698,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 16,
             port: port_,
           );
         },
@@ -569,7 +725,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(name, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -594,7 +750,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 18,
             port: port_,
           );
         },
@@ -628,7 +784,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 15,
+            funcId: 19,
             port: port_,
           );
         },
@@ -658,7 +814,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 20,
             port: port_,
           );
         },
@@ -690,7 +846,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 21,
             port: port_,
           );
         },
@@ -720,7 +876,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 22,
             port: port_,
           );
         },
@@ -750,7 +906,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 23,
             port: port_,
           );
         },
@@ -772,6 +928,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<UploadQueueState> crateApiDriveUploadManagerRemoveUploadTask({
+    required String taskId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(taskId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 24,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_upload_queue_state,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiDriveUploadManagerRemoveUploadTaskConstMeta,
+        argValues: [taskId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDriveUploadManagerRemoveUploadTaskConstMeta =>
+      const TaskConstMeta(
+        debugName: "remove_upload_task",
+        argNames: ["taskId"],
+      );
+
+  @override
   Future<int> crateApiSettingsDownloadConcurrencySetDownloadConcurrency({
     required int limit,
   }) {
@@ -783,7 +972,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 25,
             port: port_,
           );
         },
@@ -818,7 +1007,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 26,
             port: port_,
           );
         },
@@ -842,6 +1031,102 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Stream<UploadProgressUpdate>
+  crateApiDriveUploadManagerUploadProgressStream() {
+    final streamSink = RustStreamSink<UploadProgressUpdate>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_StreamSink_upload_progress_update_Sse(
+              streamSink,
+              serializer,
+            );
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 27,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: null,
+          ),
+          constMeta: kCrateApiDriveUploadManagerUploadProgressStreamConstMeta,
+          argValues: [streamSink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return streamSink.stream;
+  }
+
+  TaskConstMeta get kCrateApiDriveUploadManagerUploadProgressStreamConstMeta =>
+      const TaskConstMeta(
+        debugName: "upload_progress_stream",
+        argNames: ["streamSink"],
+      );
+
+  @override
+  Future<UploadQueueState> crateApiDriveUploadManagerUploadQueueState() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 28,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_upload_queue_state,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiDriveUploadManagerUploadQueueStateConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDriveUploadManagerUploadQueueStateConstMeta =>
+      const TaskConstMeta(debugName: "upload_queue_state", argNames: []);
+
+  @override
+  Future<UploadQueueState> crateApiDriveModelsUploadQueueStateDefault() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 29,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_upload_queue_state,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiDriveModelsUploadQueueStateDefaultConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDriveModelsUploadQueueStateDefaultConstMeta =>
+      const TaskConstMeta(
+        debugName: "upload_queue_state_default",
+        argNames: [],
+      );
+
+  @override
   Future<DriveItemSummary> crateApiDriveUploadUploadSmallFile({
     String? parentId,
     required String fileName,
@@ -859,7 +1144,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 30,
             port: port_,
           );
         },
@@ -889,6 +1174,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   RustStreamSink<DownloadProgressUpdate>
   dco_decode_StreamSink_download_progress_update_Sse(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<UploadProgressUpdate>
+  dco_decode_StreamSink_upload_progress_update_Sse(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     throw UnimplementedError();
   }
@@ -1102,6 +1394,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<UploadTask> dco_decode_list_upload_task(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_upload_task).toList();
+  }
+
+  @protected
   String? dco_decode_opt_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_String(raw);
@@ -1169,6 +1467,63 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  UploadProgressUpdate dco_decode_upload_progress_update(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return UploadProgressUpdate(
+      taskId: dco_decode_String(arr[0]),
+      bytesUploaded: dco_decode_u_64(arr[1]),
+      expectedSize: dco_decode_opt_box_autoadd_u_64(arr[2]),
+      speedBps: dco_decode_opt_box_autoadd_f_64(arr[3]),
+      timestampMillis: dco_decode_i_64(arr[4]),
+    );
+  }
+
+  @protected
+  UploadQueueState dco_decode_upload_queue_state(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return UploadQueueState(
+      active: dco_decode_list_upload_task(arr[0]),
+      completed: dco_decode_list_upload_task(arr[1]),
+      failed: dco_decode_list_upload_task(arr[2]),
+    );
+  }
+
+  @protected
+  UploadStatus dco_decode_upload_status(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return UploadStatus.values[raw as int];
+  }
+
+  @protected
+  UploadTask dco_decode_upload_task(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 13)
+      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
+    return UploadTask(
+      taskId: dco_decode_String(arr[0]),
+      fileName: dco_decode_String(arr[1]),
+      localPath: dco_decode_String(arr[2]),
+      size: dco_decode_opt_box_autoadd_u_64(arr[3]),
+      mimeType: dco_decode_opt_String(arr[4]),
+      parentId: dco_decode_opt_String(arr[5]),
+      remoteId: dco_decode_opt_String(arr[6]),
+      status: dco_decode_upload_status(arr[7]),
+      startedAt: dco_decode_i_64(arr[8]),
+      completedAt: dco_decode_opt_box_autoadd_i_64(arr[9]),
+      bytesUploaded: dco_decode_opt_box_autoadd_u_64(arr[10]),
+      errorMessage: dco_decode_opt_String(arr[11]),
+      sessionUrl: dco_decode_opt_String(arr[12]),
+    );
+  }
+
+  @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_String(deserializer);
@@ -1178,6 +1533,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   RustStreamSink<DownloadProgressUpdate>
   sse_decode_StreamSink_download_progress_update_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<UploadProgressUpdate>
+  sse_decode_StreamSink_upload_progress_update_Sse(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -1441,6 +1805,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<UploadTask> sse_decode_list_upload_task(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <UploadTask>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_upload_task(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -1534,6 +1910,78 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  UploadProgressUpdate sse_decode_upload_progress_update(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_taskId = sse_decode_String(deserializer);
+    var var_bytesUploaded = sse_decode_u_64(deserializer);
+    var var_expectedSize = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_speedBps = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_timestampMillis = sse_decode_i_64(deserializer);
+    return UploadProgressUpdate(
+      taskId: var_taskId,
+      bytesUploaded: var_bytesUploaded,
+      expectedSize: var_expectedSize,
+      speedBps: var_speedBps,
+      timestampMillis: var_timestampMillis,
+    );
+  }
+
+  @protected
+  UploadQueueState sse_decode_upload_queue_state(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_active = sse_decode_list_upload_task(deserializer);
+    var var_completed = sse_decode_list_upload_task(deserializer);
+    var var_failed = sse_decode_list_upload_task(deserializer);
+    return UploadQueueState(
+      active: var_active,
+      completed: var_completed,
+      failed: var_failed,
+    );
+  }
+
+  @protected
+  UploadStatus sse_decode_upload_status(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return UploadStatus.values[inner];
+  }
+
+  @protected
+  UploadTask sse_decode_upload_task(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_taskId = sse_decode_String(deserializer);
+    var var_fileName = sse_decode_String(deserializer);
+    var var_localPath = sse_decode_String(deserializer);
+    var var_size = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_mimeType = sse_decode_opt_String(deserializer);
+    var var_parentId = sse_decode_opt_String(deserializer);
+    var var_remoteId = sse_decode_opt_String(deserializer);
+    var var_status = sse_decode_upload_status(deserializer);
+    var var_startedAt = sse_decode_i_64(deserializer);
+    var var_completedAt = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_bytesUploaded = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_errorMessage = sse_decode_opt_String(deserializer);
+    var var_sessionUrl = sse_decode_opt_String(deserializer);
+    return UploadTask(
+      taskId: var_taskId,
+      fileName: var_fileName,
+      localPath: var_localPath,
+      size: var_size,
+      mimeType: var_mimeType,
+      parentId: var_parentId,
+      remoteId: var_remoteId,
+      status: var_status,
+      startedAt: var_startedAt,
+      completedAt: var_completedAt,
+      bytesUploaded: var_bytesUploaded,
+      errorMessage: var_errorMessage,
+      sessionUrl: var_sessionUrl,
+    );
+  }
+
+  @protected
   void sse_encode_AnyhowException(
     AnyhowException self,
     SseSerializer serializer,
@@ -1552,6 +2000,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       self.setupAndSerialize(
         codec: SseCodec(
           decodeSuccessData: sse_decode_download_progress_update,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_upload_progress_update_Sse(
+    RustStreamSink<UploadProgressUpdate> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_upload_progress_update,
           decodeErrorData: sse_decode_AnyhowException,
         ),
       ),
@@ -1785,6 +2250,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_upload_task(
+    List<UploadTask> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_upload_task(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -1872,5 +2349,53 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   void sse_encode_unit(void self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  void sse_encode_upload_progress_update(
+    UploadProgressUpdate self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.taskId, serializer);
+    sse_encode_u_64(self.bytesUploaded, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.expectedSize, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.speedBps, serializer);
+    sse_encode_i_64(self.timestampMillis, serializer);
+  }
+
+  @protected
+  void sse_encode_upload_queue_state(
+    UploadQueueState self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_upload_task(self.active, serializer);
+    sse_encode_list_upload_task(self.completed, serializer);
+    sse_encode_list_upload_task(self.failed, serializer);
+  }
+
+  @protected
+  void sse_encode_upload_status(UploadStatus self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_upload_task(UploadTask self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.taskId, serializer);
+    sse_encode_String(self.fileName, serializer);
+    sse_encode_String(self.localPath, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.size, serializer);
+    sse_encode_opt_String(self.mimeType, serializer);
+    sse_encode_opt_String(self.parentId, serializer);
+    sse_encode_opt_String(self.remoteId, serializer);
+    sse_encode_upload_status(self.status, serializer);
+    sse_encode_i_64(self.startedAt, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.completedAt, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.bytesUploaded, serializer);
+    sse_encode_opt_String(self.errorMessage, serializer);
+    sse_encode_opt_String(self.sessionUrl, serializer);
   }
 }

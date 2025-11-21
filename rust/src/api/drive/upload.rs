@@ -5,6 +5,10 @@ use super::{
 };
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde::Deserialize;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use std::time::Duration;
 
 /// Graph 简易上传的官方上限（单请求），超出需走分片上传。
@@ -20,6 +24,18 @@ pub fn upload_small_file(
     file_name: String,
     content: Vec<u8>,
     overwrite: bool,
+) -> Result<DriveItemSummary, String> {
+    upload_small_file_with_hooks(parent_id, file_name, content, overwrite, None, None)
+}
+
+#[allow(dead_code)]
+pub(crate) fn upload_small_file_with_hooks(
+    parent_id: Option<String>,
+    file_name: String,
+    content: Vec<u8>,
+    overwrite: bool,
+    cancel_flag: Option<Arc<AtomicBool>>,
+    progress: Option<Box<dyn Fn(u64, Option<u64>) + Send>>,
 ) -> Result<DriveItemSummary, String> {
     if file_name.trim().is_empty() {
         return Err("file name cannot be empty".to_string());
@@ -51,7 +67,7 @@ pub fn upload_small_file(
         .put(url)
         .bearer_auth(access_token)
         .header("Content-Type", "application/octet-stream")
-        .body(content)
+        .body(content.clone())
         .send()
         .map_err(|e| format!("failed to upload file: {e}"))?;
 
@@ -64,6 +80,17 @@ pub fn upload_small_file(
             "graph api returned HTTP {} while uploading",
             response.status()
         ));
+    }
+
+    if let Some(cb) = progress {
+        let total = Some(content.len() as u64);
+        cb(total.unwrap_or_default(), total);
+    }
+
+    if let Some(flag) = cancel_flag {
+        if flag.load(Ordering::Relaxed) {
+            return Err("上传已取消".to_string());
+        }
     }
 
     let dto: DriveItemUploadResponse = response
