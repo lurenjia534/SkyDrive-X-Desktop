@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:skydrivex/features/drive/providers/download_concurrency_provider.dart';
 import 'package:skydrivex/features/drive/providers/download_directory_provider.dart';
 import 'package:skydrivex/utils/download_destination.dart';
 
@@ -22,6 +25,8 @@ class DriveSettingsPage extends StatelessWidget {
         _SettingsSectionTitle(label: '下载'),
         SizedBox(height: 8),
         _DownloadDirectoryTile(),
+        SizedBox(height: 16),
+        _DownloadConcurrencyTile(),
       ],
     );
   }
@@ -295,5 +300,121 @@ class _DownloadDirectoryTile extends ConsumerWidget {
         );
       }
     }
+  }
+}
+
+class _DownloadConcurrencyTile extends ConsumerWidget {
+  const _DownloadConcurrencyTile();
+
+  static const _options = [1, 2, 3, 4, 5, 6, 7, 8];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(downloadConcurrencyProvider);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    Widget content;
+    if (state.isLoading) {
+      content = const Center(child: CircularProgressIndicator(strokeWidth: 2));
+    } else if (state.hasError) {
+      content = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '无法获取并行下载数量',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            state.error.toString(),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.error,
+                ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => ref
+                .read(downloadConcurrencyProvider.notifier)
+                .refreshLimit(),
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('重试'),
+          ),
+        ],
+      );
+    } else {
+      final value = state.value ?? _options.first;
+      content = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '同时下载的任务数量',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
+              IconButton(
+                tooltip: '刷新',
+                icon: const Icon(Icons.refresh_rounded),
+                onPressed: () => ref
+                    .read(downloadConcurrencyProvider.notifier)
+                    .refreshLimit(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '限制后台并行下载任务数，避免占满网络带宽。',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              DropdownButton<int>(
+                value: value,
+                items: _options
+                    .map(
+                      (option) => DropdownMenuItem<int>(
+                        value: option,
+                        child: Text('$option 个任务'),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (selected) {
+                  if (selected != null && selected != value) {
+                    unawaited(
+                      ref
+                          .read(downloadConcurrencyProvider.notifier)
+                          .updateLimit(selected),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '当前：$value 个',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                    ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceVariant.withOpacity(0.65),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      child: content,
+    );
   }
 }

@@ -6,6 +6,9 @@ use crate::api::drive::{
         DriveDownloadResult, DriveItemSummary,
     },
 };
+use crate::settings::download_concurrency::{
+    default_download_concurrency, get_download_concurrency,
+};
 use once_cell::sync::Lazy;
 use std::{
     collections::{HashMap, HashSet},
@@ -20,8 +23,6 @@ use std::{
 
 /// 全局下载管理器实例：避免多次初始化，同时方便在 FRB 桥接层与其他模块之间共享。
 static DOWNLOAD_MANAGER: Lazy<DownloadManager> = Lazy::new(DownloadManager::new);
-/// 默认并发下载上限，避免无限制创建线程。
-const DEFAULT_MAX_CONCURRENCY: usize = 4;
 /// 进度广播的有界缓冲大小（每个订阅者），避免无界内存增长。
 const PROGRESS_CHANNEL_CAP: usize = 64;
 /// 每次持久化前至少累计的字节增量，避免频繁写入 SQLite。
@@ -73,6 +74,12 @@ struct PersistMarker {
 
 impl DownloadManager {
     fn new() -> Self {
+        let max_concurrency = get_download_concurrency().unwrap_or_else(|err| {
+            eprintln!(
+                "[download-manager] failed to load concurrency setting: {err}; fallback to default"
+            );
+            default_download_concurrency()
+        });
         let manager = Self {
             state: Arc::new(Mutex::new(InnerState::default())),
             store: Arc::new(SqliteDownloadStore::default()),
@@ -80,7 +87,7 @@ impl DownloadManager {
             persist_markers: Arc::new(Mutex::new(HashMap::new())),
             subscribers: Arc::new(Mutex::new(Vec::new())),
             cancel_tokens: Arc::new(Mutex::new(HashMap::new())),
-            concurrency_guard: Arc::new(Semaphore::new(DEFAULT_MAX_CONCURRENCY)),
+            concurrency_guard: Arc::new(Semaphore::new(max_concurrency)),
         };
         manager.restore_from_storage();
         manager
@@ -281,6 +288,11 @@ impl DownloadManager {
         Ok(snapshot.into())
     }
 
+    /// 更新同时下载的最大数量，从设置项或用户调整处调用。
+    pub fn update_concurrency_limit(&self, new_limit: usize) {
+        self.concurrency_guard.set_max(new_limit.max(1));
+    }
+
     /// 标记指定任务为取消状态，下载线程会在下一次轮询时终止。
     pub fn cancel(&self, item_id: &str) -> Result<DownloadQueueState, String> {
         if self.signal_cancel(item_id) {
@@ -366,10 +378,12 @@ impl DownloadManager {
     fn compute_speed_bps(&self, item_id: &str, bytes_downloaded: u64) -> Option<f64> {
         let now = Instant::now();
         let mut meters = recover_lock(&self.progress_meters);
-        let entry = meters.entry(item_id.to_string()).or_insert_with(|| ProgressTick {
-            bytes_downloaded,
-            instant: now,
-        });
+        let entry = meters
+            .entry(item_id.to_string())
+            .or_insert_with(|| ProgressTick {
+                bytes_downloaded,
+                instant: now,
+            });
         let delta_bytes = bytes_downloaded.saturating_sub(entry.bytes_downloaded);
         let elapsed = now.duration_since(entry.instant);
         if delta_bytes == 0 || elapsed < SPEED_SAMPLE_MIN_INTERVAL {
@@ -497,35 +511,54 @@ fn recover_lock<'a, T>(mutex: &'a Mutex<T>) -> MutexGuard<'a, T> {
 
 /// 简易信号量，用 Mutex+Condvar 实现固定并发控制。
 struct Semaphore {
-    permits: Mutex<usize>,
+    state: Mutex<SemaphoreState>,
     cvar: Condvar,
+}
+
+struct SemaphoreState {
+    available: usize,
+    max: usize,
 }
 
 impl Semaphore {
     fn new(max: usize) -> Self {
         Self {
-            permits: Mutex::new(max),
+            state: Mutex::new(SemaphoreState {
+                available: max,
+                max,
+            }),
             cvar: Condvar::new(),
         }
     }
 
     /// 获取一个许可，必要时阻塞至有空闲。
     fn acquire(&self) -> SemaphorePermit<'_> {
-        let mut permits = self.permits.lock().unwrap_or_else(|p| p.into_inner());
-        while *permits == 0 {
-            permits = self
-                .cvar
-                .wait(permits)
-                .unwrap_or_else(|p| p.into_inner());
+        let mut state = self.state.lock().unwrap_or_else(|p| p.into_inner());
+        while state.available == 0 {
+            state = self.cvar.wait(state).unwrap_or_else(|p| p.into_inner());
         }
-        *permits -= 1;
+        state.available -= 1;
         SemaphorePermit { semaphore: self }
     }
 
     fn release(&self) {
-        let mut permits = self.permits.lock().unwrap_or_else(|p| p.into_inner());
-        *permits += 1;
-        self.cvar.notify_one();
+        let mut state = self.state.lock().unwrap_or_else(|p| p.into_inner());
+        if state.available < state.max {
+            state.available += 1;
+            self.cvar.notify_one();
+        }
+    }
+
+    fn set_max(&self, new_max: usize) {
+        let mut state = self.state.lock().unwrap_or_else(|p| p.into_inner());
+        let in_use = state.max.saturating_sub(state.available);
+        state.max = new_max;
+        state.available = if new_max > in_use {
+            new_max - in_use
+        } else {
+            0
+        };
+        self.cvar.notify_all();
     }
 }
 
