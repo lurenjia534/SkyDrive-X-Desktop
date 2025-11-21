@@ -5,6 +5,7 @@ use super::{
 };
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde::Deserialize;
+use std::io::{Cursor, Read};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -35,7 +36,7 @@ pub(crate) fn upload_small_file_with_hooks(
     content: Vec<u8>,
     overwrite: bool,
     cancel_flag: Option<Arc<AtomicBool>>,
-    progress: Option<Box<dyn Fn(u64, Option<u64>) + Send>>,
+    progress: Option<Box<dyn FnMut(u64, Option<u64>) + Send>>,
 ) -> Result<DriveItemSummary, String> {
     if file_name.trim().is_empty() {
         return Err("file name cannot be empty".to_string());
@@ -63,11 +64,18 @@ pub(crate) fn upload_small_file_with_hooks(
         )
     };
 
+    let total_len = content.len() as u64;
+    let reader = ProgressReader::new(
+        Cursor::new(content),
+        total_len,
+        cancel_flag.clone(),
+        progress,
+    );
     let response = client
         .put(url)
         .bearer_auth(access_token)
         .header("Content-Type", "application/octet-stream")
-        .body(content.clone())
+        .body(reqwest::blocking::Body::sized(reader, total_len))
         .send()
         .map_err(|e| format!("failed to upload file: {e}"))?;
 
@@ -80,17 +88,6 @@ pub(crate) fn upload_small_file_with_hooks(
             "graph api returned HTTP {} while uploading",
             response.status()
         ));
-    }
-
-    if let Some(cb) = progress {
-        let total = Some(content.len() as u64);
-        cb(total.unwrap_or_default(), total);
-    }
-
-    if let Some(flag) = cancel_flag {
-        if flag.load(Ordering::Relaxed) {
-            return Err("上传已取消".to_string());
-        }
     }
 
     let dto: DriveItemUploadResponse = response
@@ -129,5 +126,52 @@ impl From<DriveItemUploadResponse> for DriveItemSummary {
             last_modified: value.last_modified_date_time,
             thumbnail_url: None,
         }
+    }
+}
+
+/// 负责对上传请求体做进度回调与取消检测的 Reader。
+struct ProgressReader<R: Read> {
+    inner: R,
+    sent: u64,
+    total: u64,
+    cancel_flag: Option<Arc<AtomicBool>>,
+    progress: Option<Box<dyn FnMut(u64, Option<u64>) + Send>>,
+}
+
+impl<R: Read> ProgressReader<R> {
+    fn new(
+        inner: R,
+        total: u64,
+        cancel_flag: Option<Arc<AtomicBool>>,
+        progress: Option<Box<dyn FnMut(u64, Option<u64>) + Send>>,
+    ) -> Self {
+        Self {
+            inner,
+            sent: 0,
+            total,
+            cancel_flag,
+            progress,
+        }
+    }
+}
+
+impl<R: Read> Read for ProgressReader<R> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if let Some(flag) = self.cancel_flag.as_ref() {
+            if flag.load(Ordering::Relaxed) {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Interrupted,
+                    "upload cancelled",
+                ));
+            }
+        }
+        let read_bytes = self.inner.read(buf)?;
+        if read_bytes > 0 {
+            self.sent = self.sent.saturating_add(read_bytes as u64);
+            if let Some(cb) = self.progress.as_mut() {
+                cb(self.sent, Some(self.total));
+            }
+        }
+        Ok(read_bytes)
     }
 }

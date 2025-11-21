@@ -2,7 +2,7 @@
 use super::storage::{SqliteUploadStore, UploadStore};
 use crate::api::drive::{
     models::{UploadProgressUpdate, UploadQueueState, UploadStatus, UploadTask},
-    upload::upload_small_file,
+    upload::upload_small_file_with_hooks,
 };
 use once_cell::sync::Lazy;
 use std::{
@@ -172,12 +172,23 @@ impl UploadManager {
         let manager = self.clone();
         thread::spawn(move || {
             let _permit = manager.concurrency_guard.acquire();
-            let result = upload_small_file(parent_id, file_name, bytes, overwrite);
-            match result {
-                Ok(summary) => {
-                    manager.report_progress(&task_id, total_size, Some(total_size));
-                    manager.mark_success(&task_id, summary.id);
+            let progress_cb: Option<Box<dyn FnMut(u64, Option<u64>) + Send>> = Some(Box::new({
+                let manager = manager.clone();
+                let task_id = task_id.clone();
+                move |uploaded, total| {
+                    manager.report_progress(&task_id, uploaded, total);
                 }
+            }));
+            let result = upload_small_file_with_hooks(
+                parent_id,
+                file_name,
+                bytes,
+                overwrite,
+                Some(cancel_token.clone()),
+                progress_cb,
+            );
+            match result {
+                Ok(summary) => manager.mark_success(&task_id, summary.id),
                 Err(err) => manager.mark_failure(&task_id, err),
             }
         });
