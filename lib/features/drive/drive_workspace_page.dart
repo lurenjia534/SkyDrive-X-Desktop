@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/features/auth/auth_controller.dart';
 import 'package:skydrivex/features/drive/downloads/drive_downloads_page.dart';
 import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
 import 'package:skydrivex/features/drive/settings/drive_settings_page.dart';
 import 'package:skydrivex/features/drive/widgets/quick_action_side_sheet.dart';
+import 'package:skydrivex/features/drive/services/drive_upload_service.dart';
 import 'package:skydrivex/src/rust/api/auth/auth.dart' as auth_api;
 
 import 'drive_home_page.dart';
@@ -21,9 +23,12 @@ class DriveWorkspacePage extends ConsumerStatefulWidget {
 
 class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
   static const double _railBreakpoint = 720;
+  static const int _simpleUploadMaxBytes = 250 * 1024 * 1024;
 
   int _selectedSectionIndex = 0;
   bool _isClearingCredentials = false;
+  bool _isUploading = false;
+  final _uploadService = const DriveUploadService();
   late final List<Widget> _sections;
 
   @override
@@ -45,9 +50,9 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
     if (!mounted) return;
     showQuickActionSideSheet(
       context,
-      onUploadPhoto: () => _showPlaceholder('上传入口待接入前端逻辑'),
+      onUploadPhoto: _pickAndUploadSmallFile,
       onCreateFolder: () => _showPlaceholder('新建文件夹入口待接入前端逻辑'),
-      onUploadDoc: () => _showPlaceholder('上传文档入口待接入前端逻辑'),
+      onUploadDoc: _pickAndUploadSmallFile,
     );
   }
 
@@ -146,6 +151,46 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
       ),
     );
   }
+
+  Future<void> _pickAndUploadSmallFile() async {
+    if (_isUploading) return;
+    setState(() {
+      _isUploading = true;
+    });
+    try {
+      final typeGroup = const XTypeGroup(
+        label: 'images',
+        extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'],
+      );
+      final file = await openFile(acceptedTypeGroups: [typeGroup]);
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      if (bytes.length > _simpleUploadMaxBytes) {
+        _showPlaceholder('文件超过 250MB，请使用分片上传');
+        return;
+      }
+      final breadcrumbs =
+          ref.read(driveHomeControllerProvider).asData?.value.breadcrumbs ?? [];
+      final parentId = breadcrumbs.isNotEmpty ? breadcrumbs.last.id : null;
+      await _uploadService.uploadSmallFile(
+        parentId: parentId,
+        fileName: file.name,
+        bytes: bytes,
+        overwrite: false,
+      );
+      _showPlaceholder('上传成功：${file.name}');
+      await ref.read(driveHomeControllerProvider.notifier).refresh();
+    } catch (err) {
+      _showPlaceholder('上传失败：$err');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
+    }
+  }
+
 }
 
 class _DriveSectionPlaceholder extends StatelessWidget {
