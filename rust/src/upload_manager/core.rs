@@ -1,3 +1,4 @@
+// 上传队列核心：对标 download_manager，负责调度、状态管理、持久化与进度广播。
 use super::storage::{SqliteUploadStore, UploadStore};
 use crate::api::drive::{
     models::{UploadProgressUpdate, UploadQueueState, UploadStatus, UploadTask},
@@ -18,23 +19,33 @@ use uuid::Uuid;
 
 static UPLOAD_MANAGER: Lazy<UploadManager> = Lazy::new(UploadManager::new);
 
+// 应用异常退出后，未完成的任务会被标记为失败并附上该提示。
 const INTERRUPTED_UPLOAD_MESSAGE: &str = "应用已关闭或异常退出，上传被中断，请重新上传";
+// 进度广播 channel 的缓冲大小，防止无界内存增长。
 const PROGRESS_CHANNEL_CAP: usize = 64;
+// 持久化节流：至少累积多少字节或间隔多久才写入 SQLite。
 const PERSIST_BYTES_THRESHOLD: u64 = 256 * 1024;
 const PERSIST_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
+// 速度采样的最小时间间隔，避免瞬时过短导致虚高。
 const SPEED_SAMPLE_MIN_INTERVAL: std::time::Duration = std::time::Duration::from_millis(300);
 
+/// 上传管理器实例，提供队列/进度/取消等操作。
 #[derive(Clone)]
 pub struct UploadManager {
     state: Arc<Mutex<InnerState>>,
     store: Arc<dyn UploadStore>,
+    /// 速度估算缓存
     progress_meters: Arc<Mutex<HashMap<String, ProgressTick>>>,
+    /// 写库节流标记
     persist_markers: Arc<Mutex<HashMap<String, PersistMarker>>>,
+    /// 订阅者列表
     subscribers: Arc<Mutex<Vec<SyncSender<UploadProgressUpdate>>>>,
     cancel_tokens: Arc<Mutex<HashMap<String, Arc<AtomicBool>>>>,
+    /// 控制并发上传数量
     concurrency_guard: Arc<Semaphore>,
 }
 
+/// 内存态快照，避免直接暴露给 FRB。
 #[derive(Clone, Default)]
 struct InnerState {
     active: Vec<UploadTask>,
@@ -42,18 +53,21 @@ struct InnerState {
     failed: Vec<UploadTask>,
 }
 
+/// 速度计算用采样点。
 #[derive(Clone)]
 struct ProgressTick {
     bytes_uploaded: u64,
     instant: Instant,
 }
 
+/// 持久化节流标记。
 struct PersistMarker {
     bytes_uploaded: u64,
     instant: Instant,
 }
 
 impl UploadManager {
+    /// 构造全局单例，读取持久化记录并归档未完成任务。
     fn new() -> Self {
         let manager = Self {
             state: Arc::new(Mutex::new(InnerState::default())),
@@ -68,10 +82,12 @@ impl UploadManager {
         manager
     }
 
+    /// 获取可克隆的全局实例。
     pub fn shared() -> Self {
         UPLOAD_MANAGER.clone()
     }
 
+    /// 重启恢复：把未完成的上传标记为失败，避免“假活跃”。
     fn restore_from_storage(&self) {
         let records = self.store.load();
         let mut active: Vec<UploadTask> = Vec::new();
@@ -102,6 +118,7 @@ impl UploadManager {
         }
     }
 
+    /// 入队小文件上传：生成任务、持久化、启动上传线程并返回最新队列。
     pub fn enqueue_small_file(
         &self,
         parent_id: Option<String>,
@@ -168,6 +185,7 @@ impl UploadManager {
         Ok(self.snapshot())
     }
 
+    /// 上传成功：迁移到 completed，写库，推送终态进度。
     fn mark_success(&self, task_id: &str, remote_id: String) {
         let mut state = match self.state.lock() {
             Ok(guard) => guard,
@@ -195,6 +213,7 @@ impl UploadManager {
         }
     }
 
+    /// 上传失败：迁移到 failed，保留错误信息。
     fn mark_failure(&self, task_id: &str, err: String) {
         let mut state = match self.state.lock() {
             Ok(guard) => guard,
@@ -223,6 +242,7 @@ impl UploadManager {
         }
     }
 
+    /// 标记取消：上层 UI 可即时反馈，“真取消”取决于底层上传是否可中断。
     pub fn cancel(&self, task_id: &str) -> Result<UploadQueueState, String> {
         if self.signal_cancel(task_id) {
             Ok(self.snapshot())
@@ -231,6 +251,7 @@ impl UploadManager {
         }
     }
 
+    /// 移除任意状态的任务。
     pub fn remove(&self, task_id: &str) -> Result<UploadQueueState, String> {
         let _ = self.signal_cancel(task_id);
         let mut state = self.state.lock().unwrap_or_else(|p| p.into_inner());
@@ -244,6 +265,7 @@ impl UploadManager {
         Ok(snapshot.into())
     }
 
+    /// 清空历史记录（completed/failed），active 保留。
     pub fn clear_history(&self) -> Result<UploadQueueState, String> {
         let mut state = self.state.lock().unwrap_or_else(|p| p.into_inner());
         state.completed.clear();
@@ -255,6 +277,7 @@ impl UploadManager {
         Ok(snapshot.into())
     }
 
+    /// 清空 failed 任务，并删除持久化记录。
     pub fn clear_failed_tasks(&self) -> Result<UploadQueueState, String> {
         let mut state = self.state.lock().unwrap_or_else(|p| p.into_inner());
         if state.failed.is_empty() {
@@ -270,6 +293,7 @@ impl UploadManager {
         Ok(snapshot.into())
     }
 
+    /// 返回当前队列快照。
     pub fn snapshot(&self) -> UploadQueueState {
         self.state
             .lock()
@@ -278,6 +302,7 @@ impl UploadManager {
             .into()
     }
 
+    /// 进度回调：更新内存/持久化，推送进度事件。
     fn report_progress(&self, task_id: &str, bytes_uploaded: u64, total_size: Option<u64>) {
         let mut state = match self.state.lock() {
             Ok(guard) => guard,
