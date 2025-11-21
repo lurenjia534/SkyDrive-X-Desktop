@@ -7,6 +7,7 @@ import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
 import 'package:skydrivex/features/drive/settings/drive_settings_page.dart';
 import 'package:skydrivex/features/drive/widgets/quick_action_side_sheet.dart';
 import 'package:skydrivex/features/drive/services/drive_upload_service.dart';
+import 'package:skydrivex/features/drive/uploads/drive_uploads_page.dart';
 import 'package:skydrivex/src/rust/api/auth/auth.dart' as auth_api;
 
 import 'drive_home_page.dart';
@@ -37,11 +38,7 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
     _sections = [
       const DriveHomePage(),
       const DriveDownloadsPage(),
-      const _DriveSectionPlaceholder(
-        icon: Icons.favorite_border_rounded,
-        title: 'Favorites',
-        message: '你保存的收藏内容会在这里显示。',
-      ),
+      const DriveUploadsPage(),
       const DriveSettingsPage(),
     ];
   }
@@ -191,44 +188,6 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
     }
   }
 
-}
-
-class _DriveSectionPlaceholder extends StatelessWidget {
-  const _DriveSectionPlaceholder({
-    required this.icon,
-    required this.title,
-    required this.message,
-  });
-
-  final IconData icon;
-  final String title;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 64, color: colorScheme.onSurfaceVariant),
-          const SizedBox(height: 16),
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              message,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _DriveSectionStack extends StatelessWidget {

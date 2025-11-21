@@ -28,13 +28,8 @@ class _DriveNavigationRailState extends State<DriveNavigationRail> {
     _DriveRailDestination(
       label: 'Download',
       icon: Icons.cloud_download_rounded,
-      badgeCount: 0,
     ),
-    _DriveRailDestination(
-      label: 'Favorites',
-      icon: Icons.favorite_rounded,
-      showDot: true,
-    ),
+    _DriveRailDestination(label: 'Upload', icon: Icons.cloud_upload_rounded),
     _DriveRailDestination(label: 'Settings', icon: Icons.settings_rounded),
   ];
 
