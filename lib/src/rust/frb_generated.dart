@@ -9,6 +9,7 @@ import 'api/drive/download.dart';
 import 'api/drive/download_manager.dart';
 import 'api/drive/list.dart';
 import 'api/drive/models.dart';
+import 'api/drive/upload.dart';
 import 'api/settings/download_concurrency.dart';
 import 'api/settings/download_directory.dart';
 import 'api/simple.dart';
@@ -74,7 +75,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -712206332;
+  int get rustContentHash => 876171201;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -153,6 +154,13 @@ abstract class RustLibApi extends BaseApi {
 
   Future<String> crateApiSettingsDownloadDirectorySetDownloadDirectory({
     required String path,
+  });
+
+  Future<DriveItemSummary> crateApiDriveUploadUploadSmallFile({
+    String? parentId,
+    required String fileName,
+    required List<int> content,
+    required bool overwrite,
   });
 }
 
@@ -833,6 +841,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         argNames: ["path"],
       );
 
+  @override
+  Future<DriveItemSummary> crateApiDriveUploadUploadSmallFile({
+    String? parentId,
+    required String fileName,
+    required List<int> content,
+    required bool overwrite,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_opt_String(parentId, serializer);
+          sse_encode_String(fileName, serializer);
+          sse_encode_list_prim_u_8_loose(content, serializer);
+          sse_encode_bool(overwrite, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 22,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_drive_item_summary,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiDriveUploadUploadSmallFileConstMeta,
+        argValues: [parentId, fileName, content, overwrite],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDriveUploadUploadSmallFileConstMeta =>
+      const TaskConstMeta(
+        debugName: "upload_small_file",
+        argNames: ["parentId", "fileName", "content", "overwrite"],
+      );
+
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -1040,6 +1087,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<DriveItemSummary> dco_decode_list_drive_item_summary(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_drive_item_summary).toList();
+  }
+
+  @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as List<int>;
   }
 
   @protected
@@ -1374,6 +1427,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
@@ -1700,6 +1760,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     for (final item in self) {
       sse_encode_drive_item_summary(item, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_list_prim_u_8_loose(
+    List<int> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putUint8List(
+      self is Uint8List ? self : Uint8List.fromList(self),
+    );
   }
 
   @protected

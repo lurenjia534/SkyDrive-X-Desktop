@@ -6,8 +6,10 @@
 import '../../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+/// FRB 对外接口：获取当前并行下载数设置。
 Future<int> getDownloadConcurrency() => RustLib.instance.api
     .crateApiSettingsDownloadConcurrencyGetDownloadConcurrency();
 
+/// FRB 对外接口：更新并行下载数，并立即通知下载管理器生效。
 Future<int> setDownloadConcurrency({required int limit}) => RustLib.instance.api
     .crateApiSettingsDownloadConcurrencySetDownloadConcurrency(limit: limit);

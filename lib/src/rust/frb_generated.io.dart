@@ -9,6 +9,7 @@ import 'api/drive/download.dart';
 import 'api/drive/download_manager.dart';
 import 'api/drive/list.dart';
 import 'api/drive/models.dart';
+import 'api/drive/upload.dart';
 import 'api/settings/download_concurrency.dart';
 import 'api/settings/download_directory.dart';
 import 'api/simple.dart';
@@ -98,6 +99,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<DriveItemSummary> dco_decode_list_drive_item_summary(dynamic raw);
+
+  @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
@@ -220,6 +224,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<DriveItemSummary> sse_decode_list_drive_item_summary(
     SseDeserializer deserializer,
   );
+
+  @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
@@ -366,6 +373,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     List<DriveItemSummary> self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_strict(
