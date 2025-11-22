@@ -11,6 +11,7 @@ class DriveUploadsPage extends ConsumerWidget {
     final queue = ref.watch(driveUploadManagerProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
+    // 空状态：没有任何上传记录时的提示。
     if (queue.active.isEmpty && queue.completed.isEmpty && queue.failed.isEmpty) {
       return Center(
         child: Column(

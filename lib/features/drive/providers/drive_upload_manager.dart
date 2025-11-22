@@ -16,6 +16,11 @@ typedef UploadTask = drive_api.UploadTask;
 typedef UploadStatus = drive_api.UploadStatus;
 
 /// 上传队列管理：订阅 Rust 进度流、兜底拉取、维护速度缓存。
+/// 责任：
+/// - 入队/取消/移除/清理失败任务
+/// - 订阅 upload_progress_stream 及时更新 UI
+/// - 兜底轮询 upload_queue_state，防止进度流异常时状态不同步
+/// - 维护速度估算，提供给 UI 展示
 class DriveUploadManager extends Notifier<drive_api.UploadQueueState> {
   DriveUploadManager();
 
