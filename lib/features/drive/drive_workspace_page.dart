@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/features/auth/auth_controller.dart';
 import 'package:skydrivex/features/drive/downloads/drive_downloads_page.dart';
 import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
+import 'package:skydrivex/features/drive/providers/drive_upload_manager.dart';
 import 'package:skydrivex/features/drive/settings/drive_settings_page.dart';
 import 'package:skydrivex/features/drive/widgets/quick_action_side_sheet.dart';
-import 'package:skydrivex/features/drive/services/drive_upload_service.dart';
 import 'package:skydrivex/features/drive/uploads/drive_uploads_page.dart';
 import 'package:skydrivex/src/rust/api/auth/auth.dart' as auth_api;
 
@@ -29,7 +29,6 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
   int _selectedSectionIndex = 0;
   bool _isClearingCredentials = false;
   bool _isUploading = false;
-  final _uploadService = const DriveUploadService();
   late final List<Widget> _sections;
 
   @override
@@ -169,13 +168,15 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
       final breadcrumbs =
           ref.read(driveHomeControllerProvider).asData?.value.breadcrumbs ?? [];
       final parentId = breadcrumbs.isNotEmpty ? breadcrumbs.last.id : null;
-      await _uploadService.uploadSmallFile(
+      final manager = ref.read(driveUploadManagerProvider.notifier);
+      await manager.enqueue(
         parentId: parentId,
         fileName: file.name,
-        bytes: bytes,
+        localPath: file.path,
+        content: bytes,
         overwrite: false,
       );
-      _showPlaceholder('上传成功：${file.name}');
+      _showPlaceholder('已加入上传队列：${file.name}');
       await ref.read(driveHomeControllerProvider.notifier).refresh();
     } catch (err) {
       _showPlaceholder('上传失败：$err');
