@@ -6,6 +6,7 @@ import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
 import 'package:skydrivex/src/rust/api/drive/upload_manager.dart'
     as upload_manager_api;
 
+// 全局上传队列 Provider，UI 直接订阅 UploadQueueState。
 final driveUploadManagerProvider =
     NotifierProvider<DriveUploadManager, drive_api.UploadQueueState>(
   DriveUploadManager.new,
@@ -33,6 +34,7 @@ class DriveUploadManager extends Notifier<drive_api.UploadQueueState> {
 
   @override
   drive_api.UploadQueueState build() {
+    // 初始化时即启动轮询与进度订阅，防止 FRB 流偶发丢失导致 UI 不更新。
     _startPolling();
     _subscribeProgressStream();
     ref.onDispose(() {
@@ -55,6 +57,7 @@ class DriveUploadManager extends Notifier<drive_api.UploadQueueState> {
     String? parentId,
     bool overwrite = false,
   }) async {
+    // 直接调用 Rust 入队。失败时抛出给 UI 处理（例如 SnackBar）。
     try {
       final updated = await upload_manager_api.enqueueUploadTask(
         parentId: parentId,
@@ -95,6 +98,7 @@ class DriveUploadManager extends Notifier<drive_api.UploadQueueState> {
   }
 
   Future<void> cancelTask(String taskId) async {
+    // 标记取消中，防止重复点击；完成后清理状态。
     _pendingCancel.add(taskId);
     state = drive_api.UploadQueueState(
       active: state.active,
@@ -144,6 +148,7 @@ class DriveUploadManager extends Notifier<drive_api.UploadQueueState> {
   }
 
   void _handleProgressUpdate(drive_api.UploadProgressUpdate update) {
+    // 只更新命中的任务，避免无关重建。
     final updatedActive = <drive_api.UploadTask>[];
     var touched = false;
     for (final task in state.active) {
@@ -171,6 +176,7 @@ class DriveUploadManager extends Notifier<drive_api.UploadQueueState> {
     drive_api.UploadTask task,
     drive_api.UploadProgressUpdate update,
   ) {
+    // Rust 端只推进度，因此保留其他字段。
     return drive_api.UploadTask(
       taskId: task.taskId,
       fileName: task.fileName,

@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/features/drive/providers/drive_upload_manager.dart';
 
+/// 上传管理器页面：展示进行中、失败、已完成任务。
 class DriveUploadsPage extends ConsumerWidget {
   const DriveUploadsPage({super.key});
 
@@ -86,6 +87,7 @@ class _UploadSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 单个分组（上传中/失败/已完成）的列表。
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -132,6 +134,7 @@ class _UploadTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final manager = ref.read(driveUploadManagerProvider.notifier);
     final progress = task.progressRatio;
+    // 进度/速度显示的格式化值，UI 仅做展示。
     final uploadedLabel = task.bytesUploaded != null
         ? _formatFileSize(task.bytesUploaded!)
         : '0 B';
