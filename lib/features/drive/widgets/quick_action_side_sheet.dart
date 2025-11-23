@@ -8,6 +8,7 @@ Future<void> showQuickActionSideSheet(
   VoidCallback? onUploadPhoto,
   VoidCallback? onCreateFolder,
   VoidCallback? onUploadDoc,
+  VoidCallback? onUploadLarge,
 }) {
   final colorScheme = Theme.of(context).colorScheme;
   final textTheme = Theme.of(context).textTheme;
@@ -105,6 +106,16 @@ Future<void> showQuickActionSideSheet(
                               onPressed: () {
                                 Navigator.of(context).maybePop();
                                 onUploadDoc?.call();
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            _QuickActionButton(
+                              icon: Icons.cloud_upload_rounded,
+                              label: '上传大文件（分片）',
+                              description: '适合超过 250MB 的内容，使用分片上传',
+                              onPressed: () {
+                                Navigator.of(context).maybePop();
+                                onUploadLarge?.call();
                               },
                             ),
                             const SizedBox(height: 16),

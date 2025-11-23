@@ -166,10 +166,7 @@ pub(crate) fn create_upload_session(
         ));
     }
 
-    let dto: UploadSessionResponse = resp
-        .json()
-        .map_err(|e| format!("failed to parse upload session response: {e}"))?;
-    Ok(dto)
+    parse_upload_session_response(resp, "parse upload session", true)
 }
 
 /// 获取 upload session 状态（恢复/处理 416 时使用）。
@@ -189,8 +186,7 @@ pub(crate) fn get_upload_session_status(upload_url: &str) -> Result<UploadSessio
             resp.status()
         ));
     }
-    resp.json()
-        .map_err(|e| format!("failed to parse upload session status: {e}"))
+    parse_upload_session_response(resp, "parse upload session status", false)
 }
 
 /// 分片上传大文件（读取本地路径），支持取消与进度回调。
@@ -326,9 +322,12 @@ fn upload_chunk_with_retry(
                         return Ok(UploadChunkResult::Completed { item: dto.into() });
                     }
                     // 202 Accepted: 继续上传
-                    let dto: UploadSessionResponse = r
-                        .json()
-                        .map_err(|e| UploadChunkError::Fatal(format!("parse upload session status failed: {e}")))?;
+                    let dto = parse_upload_session_response(
+                        r,
+                        "parse upload session status after chunk",
+                        false,
+                    )
+                    .map_err(UploadChunkError::Fatal)?;
                     let next_offset =
                         parse_next_start(&dto.next_expected_ranges).unwrap_or(end + 1);
                     return Ok(UploadChunkResult::Continue {
@@ -394,12 +393,36 @@ fn parse_next_start(next_expected: &Option<Vec<String>>) -> Option<u64> {
     raw.parse::<u64>().ok()
 }
 
+fn parse_upload_session_response(
+    resp: reqwest::blocking::Response,
+    context: &str,
+    require_upload_url: bool,
+) -> Result<UploadSessionResponse, String> {
+    let status = resp.status();
+    let text = resp
+        .text()
+        .map_err(|e| format!("{context}: read body failed: {e} (http {status})"))?;
+    let parsed: UploadSessionResponse = serde_json::from_str::<UploadSessionResponse>(&text).map_err(|e| {
+        let snippet: String = text.chars().take(500).collect();
+        format!(
+            "{context}: parse failed ({e}) http {status}, body_snippet={snippet}"
+        )
+    })?;
+    if require_upload_url && parsed.upload_url.is_none() {
+        return Err(format!(
+            "{context}: missing uploadUrl field http {status}, body_snippet={}",
+            text.chars().take(200).collect::<String>()
+        ));
+    }
+    Ok(parsed)
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[flutter_rust_bridge::frb(ignore)]
 pub(crate) struct UploadSessionResponse {
     #[serde(rename = "uploadUrl")]
-    pub upload_url: String,
+    pub upload_url: Option<String>,
     #[serde(rename = "expirationDateTime")]
     pub expiration_date_time: Option<String>,
     #[serde(default)]

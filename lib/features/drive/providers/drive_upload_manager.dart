@@ -113,6 +113,28 @@ class DriveUploadManager extends Notifier<drive_api.UploadQueueState> {
 
   bool isCancelling(String taskId) => _pendingCancel.contains(taskId);
 
+  /// 入队大文件分片上传（避免读取文件内容到内存）。
+  Future<void> enqueueLarge({
+    required String fileName,
+    required String localPath,
+    String? parentId,
+    bool overwrite = false,
+  }) async {
+    try {
+      final updated = await upload_manager_api.enqueueLargeUploadTask(
+        parentId: parentId,
+        fileName: fileName,
+        localPath: localPath,
+        overwrite: overwrite,
+      );
+      _pruneSpeeds(updated.active);
+      state = updated;
+    } catch (err, stack) {
+      debugPrint('enqueue large upload failed: $err\n$stack');
+      rethrow;
+    }
+  }
+
   bool isActive(String taskId) {
     return state.active.any((task) => task.taskId == taskId);
   }

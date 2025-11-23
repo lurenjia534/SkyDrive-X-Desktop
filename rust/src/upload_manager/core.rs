@@ -354,7 +354,7 @@ impl UploadManager {
         };
         if upload_url.is_none() {
             let session = create_upload_session(parent_id.clone(), &file_name, overwrite)?;
-            upload_url = Some(session.upload_url.clone());
+            upload_url = session.upload_url.clone();
             self.update_task_session(task_id, &session);
         }
         let upload_url = upload_url.ok_or_else(|| "missing upload session url".to_string())?;
@@ -625,7 +625,7 @@ impl UploadManager {
         let mut state = recover_lock(&self.state);
         let mut cloned: Option<UploadTask> = None;
         if let Some(task) = state.active.iter_mut().find(|t| t.task_id == task_id) {
-            task.session_url = Some(session.upload_url.clone());
+            task.session_url = session.upload_url.clone();
             cloned = Some(task.clone());
         }
         drop(state);

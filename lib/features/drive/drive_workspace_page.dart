@@ -49,6 +49,7 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
       onUploadPhoto: _pickAndUploadSmallFile,
       onCreateFolder: () => _showPlaceholder('新建文件夹入口待接入前端逻辑'),
       onUploadDoc: _pickAndUploadSmallFile,
+      onUploadLarge: _pickAndUploadLargeFile,
     );
   }
 
@@ -177,6 +178,41 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
         overwrite: false,
       );
       _showPlaceholder('已加入上传队列：${file.name}');
+      await ref.read(driveHomeControllerProvider.notifier).refresh();
+    } catch (err) {
+      _showPlaceholder('上传失败：$err');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
+    }
+  }
+
+  /// 选择本地任意文件，走分片上传（避免一次性读入内存）。
+  Future<void> _pickAndUploadLargeFile() async {
+    if (_isUploading) return;
+    setState(() {
+      _isUploading = true;
+    });
+    try {
+      final file = await openFile();
+      if (file == null) return;
+      final fileSize = await file.length();
+      final breadcrumbs =
+          ref.read(driveHomeControllerProvider).asData?.value.breadcrumbs ?? [];
+      final parentId = breadcrumbs.isNotEmpty ? breadcrumbs.last.id : null;
+      final manager = ref.read(driveUploadManagerProvider.notifier);
+      await manager.enqueueLarge(
+        parentId: parentId,
+        fileName: file.name,
+        localPath: file.path,
+        overwrite: false,
+      );
+      _showPlaceholder(
+        '已加入分片上传队列：${file.name}（${(fileSize / (1024 * 1024)).toStringAsFixed(1)} MB）',
+      );
       await ref.read(driveHomeControllerProvider.notifier).refresh();
     } catch (err) {
       _showPlaceholder('上传失败：$err');
