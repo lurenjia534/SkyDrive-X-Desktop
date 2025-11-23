@@ -16,7 +16,7 @@ use std::thread;
 
 /// Graph 简易上传的官方上限（单请求），超出需走分片上传。
 const SIMPLE_UPLOAD_MAX_BYTES: usize = 250 * 1024 * 1024;
-// 分片上传推荐 5-10MiB，需满足 320KiB 对齐；10MiB 正好 32 * 320KiB。
+// 分片上传推荐 5-10MiB，保持 10MiB（32 * 320KiB）以平衡吞吐与开销。
 const CHUNK_SIZE_BYTES: u64 = 10 * 1024 * 1024;
 const CHUNK_ALIGNMENT: u64 = 320 * 1024;
 const MAX_RETRY: usize = 4;
