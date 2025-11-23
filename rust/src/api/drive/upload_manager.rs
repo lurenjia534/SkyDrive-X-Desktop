@@ -20,6 +20,16 @@ pub fn enqueue_upload_task(
 }
 
 #[frb]
+pub fn enqueue_large_upload_task(
+    parent_id: Option<String>,
+    file_name: String,
+    local_path: String,
+    overwrite: bool,
+) -> Result<UploadQueueState, String> {
+    UploadManager::shared().enqueue_large_file(parent_id, file_name, local_path, overwrite)
+}
+
+#[frb]
 pub fn remove_upload_task(task_id: String) -> Result<UploadQueueState, String> {
     UploadManager::shared().remove(&task_id)
 }

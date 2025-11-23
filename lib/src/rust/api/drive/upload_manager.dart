@@ -24,6 +24,18 @@ Future<UploadQueueState> enqueueUploadTask({
   overwrite: overwrite,
 );
 
+Future<UploadQueueState> enqueueLargeUploadTask({
+  String? parentId,
+  required String fileName,
+  required String localPath,
+  required bool overwrite,
+}) => RustLib.instance.api.crateApiDriveUploadManagerEnqueueLargeUploadTask(
+  parentId: parentId,
+  fileName: fileName,
+  localPath: localPath,
+  overwrite: overwrite,
+);
+
 Future<UploadQueueState> removeUploadTask({required String taskId}) => RustLib
     .instance
     .api

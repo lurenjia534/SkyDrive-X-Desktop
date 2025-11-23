@@ -2,7 +2,10 @@
 use super::storage::{SqliteUploadStore, UploadStore};
 use crate::api::drive::{
     models::{UploadProgressUpdate, UploadQueueState, UploadStatus, UploadTask},
-    upload::upload_small_file_with_hooks,
+    upload::{
+        create_upload_session, get_upload_session_status, upload_large_file_with_hooks,
+        upload_small_file_with_hooks, UploadSessionResponse,
+    },
 };
 use once_cell::sync::Lazy;
 use std::{
@@ -21,6 +24,8 @@ static UPLOAD_MANAGER: Lazy<UploadManager> = Lazy::new(UploadManager::new);
 
 // 应用异常退出后，未完成的任务会被标记为失败并附上该提示。
 const INTERRUPTED_UPLOAD_MESSAGE: &str = "应用已关闭或异常退出，上传被中断，请重新上传";
+const CANCELLED_UPLOAD_MESSAGE: &str = "上传已取消";
+const CANCELLED_ERR_FLAG: &str = "upload cancelled";
 // 进度广播 channel 的缓冲大小，防止无界内存增长。
 const PROGRESS_CHANNEL_CAP: usize = 64;
 // 持久化节流：至少累积多少字节或间隔多久才写入 SQLite。
@@ -87,22 +92,28 @@ impl UploadManager {
         UPLOAD_MANAGER.clone()
     }
 
-    /// 重启恢复：把未完成的上传标记为失败，避免“假活跃”。
+    /// 重启恢复：对有会话的未完成任务尝试恢复，否则标记为失败，避免“假活跃”。
     fn restore_from_storage(&self) {
         let records = self.store.load();
         let mut active: Vec<UploadTask> = Vec::new();
         let mut completed = Vec::new();
         let mut failed = Vec::new();
+        let mut resume_tasks = Vec::new();
         for mut task in records {
             match task.status {
                 UploadStatus::InProgress => {
-                    task.status = UploadStatus::Failed;
-                    task.completed_at = Some(current_timestamp());
-                    if task.error_message.is_none() {
-                        task.error_message = Some(INTERRUPTED_UPLOAD_MESSAGE.to_string());
+                    if task.session_url.is_some() && task.size.is_some() {
+                        resume_tasks.push(task.clone());
+                        active.push(task);
+                    } else {
+                        task.status = UploadStatus::Failed;
+                        task.completed_at = Some(current_timestamp());
+                        if task.error_message.is_none() {
+                            task.error_message = Some(INTERRUPTED_UPLOAD_MESSAGE.to_string());
+                        }
+                        self.store.upsert(&task);
+                        failed.push(task);
                     }
-                    self.store.upsert(&task);
-                    failed.push(task);
                 }
                 UploadStatus::Completed => completed.push(task),
                 UploadStatus::Failed | UploadStatus::Cancelled => failed.push(task),
@@ -115,6 +126,11 @@ impl UploadManager {
             state.active = active;
             state.completed = completed;
             state.failed = failed;
+        }
+
+        // 异步恢复仍未完成的大文件上传。
+        for task in resume_tasks {
+            self.resume_large_upload(task);
         }
     }
 
@@ -189,11 +205,197 @@ impl UploadManager {
             );
             match result {
                 Ok(summary) => manager.mark_success(&task_id, summary.id),
-                Err(err) => manager.mark_failure(&task_id, err),
+                Err(err) => {
+                    if err == CANCELLED_ERR_FLAG {
+                        manager.mark_cancelled(&task_id);
+                    } else {
+                        manager.mark_failure(&task_id, err);
+                    }
+                }
             }
         });
 
         Ok(self.snapshot())
+    }
+
+    /// 入队大文件上传（分片）：读取本地文件路径，创建 Graph 会话并上传。
+    pub fn enqueue_large_file(
+        &self,
+        parent_id: Option<String>,
+        file_name: String,
+        local_path: String,
+        overwrite: bool,
+    ) -> Result<UploadQueueState, String> {
+        if file_name.trim().is_empty() {
+            return Err("file name is required".to_string());
+        }
+        let file_meta = std::fs::metadata(&local_path)
+            .map_err(|e| format!("无法读取文件大小: {e}"))?;
+        let total_size = file_meta.len();
+        let task_id = Uuid::new_v4().to_string();
+        let mut state = self.state.lock().unwrap_or_else(|p| p.into_inner());
+        if state
+            .active
+            .iter()
+            .any(|t| t.file_name == file_name && t.parent_id == parent_id)
+        {
+            return Err("同名文件已在上传队列中".to_string());
+        }
+        state
+            .failed
+            .retain(|t| t.file_name != file_name || t.parent_id != parent_id);
+        state
+            .completed
+            .retain(|t| t.file_name != file_name || t.parent_id != parent_id);
+
+        let task = UploadTask {
+            task_id: task_id.clone(),
+            file_name: file_name.clone(),
+            local_path: local_path.clone(),
+            size: Some(total_size),
+            mime_type: None,
+            parent_id: parent_id.clone(),
+            remote_id: None,
+            status: UploadStatus::InProgress,
+            started_at: current_timestamp(),
+            completed_at: None,
+            bytes_uploaded: Some(0),
+            error_message: None,
+            session_url: None,
+        };
+        state.active.push(task.clone());
+        drop(state);
+        self.store.upsert(&task);
+
+        let cancel_token = Arc::new(AtomicBool::new(false));
+        self.register_cancel_token(&task_id, cancel_token.clone());
+
+        let manager = self.clone();
+        thread::spawn(move || {
+            let _permit = manager.concurrency_guard.acquire();
+            let result = manager.run_large_upload_task(
+                &task_id,
+                parent_id,
+                file_name,
+                local_path,
+                total_size,
+                overwrite,
+                cancel_token.clone(),
+            );
+            match result {
+                Ok(remote_id) => manager.mark_success(&task_id, remote_id),
+                Err(err) => {
+                    if err == CANCELLED_ERR_FLAG {
+                        manager.mark_cancelled(&task_id);
+                    } else {
+                        manager.mark_failure(&task_id, err);
+                    }
+                }
+            }
+        });
+
+        Ok(self.snapshot())
+    }
+
+    /// 恢复已有会话的大文件上传，在应用重启或恢复时调用。
+    fn resume_large_upload(&self, task: UploadTask) {
+        if task.size.is_none() || task.session_url.is_none() {
+            return;
+        }
+        let cancel_token = Arc::new(AtomicBool::new(false));
+        self.register_cancel_token(&task.task_id, cancel_token.clone());
+        let manager = self.clone();
+        thread::spawn(move || {
+            let _permit = manager.concurrency_guard.acquire();
+            let result = manager.run_large_upload_task(
+                &task.task_id,
+                task.parent_id.clone(),
+                task.file_name.clone(),
+                task.local_path.clone(),
+                task.size.unwrap(),
+                false, // overwrite 已体现在既有会话，不再使用
+                cancel_token.clone(),
+            );
+            match result {
+                Ok(remote_id) => manager.mark_success(&task.task_id, remote_id),
+                Err(err) => {
+                    if err == CANCELLED_ERR_FLAG {
+                        manager.mark_cancelled(&task.task_id);
+                    } else {
+                        manager.mark_failure(&task.task_id, err);
+                    }
+                }
+            }
+        });
+    }
+
+    /// 实际执行大文件分片上传，含会话创建/恢复与进度上报。
+    fn run_large_upload_task(
+        &self,
+        task_id: &str,
+        parent_id: Option<String>,
+        file_name: String,
+        local_path: String,
+        total_size: u64,
+        overwrite: bool,
+        cancel_token: Arc<AtomicBool>,
+    ) -> Result<String, String> {
+        if !std::path::Path::new(&local_path).exists() {
+            return Err("local file not found".to_string());
+        }
+        // 复用已有会话或创建新会话。
+        let mut upload_url = {
+            let state = recover_lock(&self.state);
+            state
+                .active
+                .iter()
+                .find(|t| t.task_id == task_id)
+                .and_then(|t| t.session_url.clone())
+        };
+        if upload_url.is_none() {
+            let session = create_upload_session(parent_id.clone(), &file_name, overwrite)?;
+            upload_url = Some(session.upload_url.clone());
+            self.update_task_session(task_id, &session);
+        }
+        let upload_url = upload_url.ok_or_else(|| "missing upload session url".to_string())?;
+
+        // 查询会话状态，决定续传起点。
+        let mut start_offset = {
+            let state = recover_lock(&self.state);
+            state
+                .active
+                .iter()
+                .find(|t| t.task_id == task_id)
+                .and_then(|t| t.bytes_uploaded)
+                .unwrap_or(0)
+        };
+        if let Ok(status) = get_upload_session_status(&upload_url) {
+            if let Some(next) = parse_next_start(&status.next_expected_ranges) {
+                start_offset = next;
+            }
+            // 如果服务端已返回最终 item，直接成功。
+            if let Some(item) = status.drive_item {
+                return Ok(item.id);
+            }
+        }
+
+        let progress_cb: Option<Box<dyn FnMut(u64, Option<u64>) + Send>> = Some(Box::new({
+            let manager = self.clone();
+            let task_id = task_id.to_string();
+            move |uploaded, total| {
+                manager.report_progress(&task_id, uploaded, total);
+            }
+        }));
+
+        let summary = upload_large_file_with_hooks(
+            upload_url,
+            &local_path,
+            total_size,
+            start_offset,
+            cancel_token,
+            progress_cb,
+        )?;
+        Ok(summary.id)
     }
 
     /// 上传成功：迁移到 completed，写库，推送终态进度。
@@ -253,6 +455,33 @@ impl UploadManager {
         }
     }
 
+    /// 用户取消：记录取消状态，避免展示为失败。
+    fn mark_cancelled(&self, task_id: &str) {
+        let mut state = match self.state.lock() {
+            Ok(guard) => guard,
+            Err(poison) => {
+                eprintln!("[upload-manager] state lock poisoned on cancel; recovering");
+                poison.into_inner()
+            }
+        };
+        let mut updated = None;
+        if let Some(pos) = state.active.iter().position(|t| t.task_id == task_id) {
+            let mut task = state.active.remove(pos);
+            task.status = UploadStatus::Cancelled;
+            task.completed_at = Some(current_timestamp());
+            task.error_message = Some(CANCELLED_UPLOAD_MESSAGE.to_string());
+            state.failed.insert(0, task.clone());
+            updated = Some(task);
+        }
+        drop(state);
+        if let Some(task) = updated {
+            self.store.upsert(&task);
+            self.clear_progress_meter(task_id);
+            self.emit_progress_snapshot(task_id, task.bytes_uploaded.unwrap_or(0), task.size);
+            self.clear_cancel_token(task_id);
+        }
+    }
+
     /// 标记取消：上层 UI 可即时反馈，“真取消”取决于底层上传是否可中断。
     pub fn cancel(&self, task_id: &str) -> Result<UploadQueueState, String> {
         if self.signal_cancel(task_id) {
@@ -273,6 +502,7 @@ impl UploadManager {
         drop(state);
         self.store.remove(task_id);
         self.clear_progress_meter(task_id);
+        self.clear_cancel_token(task_id);
         Ok(snapshot.into())
     }
 
@@ -391,6 +621,19 @@ impl UploadManager {
         tokens.insert(task_id.to_string(), token);
     }
 
+    fn update_task_session(&self, task_id: &str, session: &UploadSessionResponse) {
+        let mut state = recover_lock(&self.state);
+        let mut cloned: Option<UploadTask> = None;
+        if let Some(task) = state.active.iter_mut().find(|t| t.task_id == task_id) {
+            task.session_url = Some(session.upload_url.clone());
+            cloned = Some(task.clone());
+        }
+        drop(state);
+        if let Some(task) = cloned {
+            self.store.upsert(&task);
+        }
+    }
+
     fn clear_cancel_token(&self, task_id: &str) {
         let mut tokens = recover_lock(&self.cancel_tokens);
         tokens.remove(task_id);
@@ -488,6 +731,14 @@ fn recover_lock<'a, T>(mutex: &'a Mutex<T>) -> std::sync::MutexGuard<'a, T> {
         Ok(g) => g,
         Err(poison) => poison.into_inner(),
     }
+}
+
+fn parse_next_start(next_expected: &Option<Vec<String>>) -> Option<u64> {
+    let raw = next_expected.as_ref()?.first()?;
+    if let Some((start, _)) = raw.split_once('-') {
+        return start.parse::<u64>().ok();
+    }
+    raw.parse::<u64>().ok()
 }
 
 struct Semaphore {
