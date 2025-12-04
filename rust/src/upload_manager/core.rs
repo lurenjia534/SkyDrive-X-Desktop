@@ -9,7 +9,7 @@ use crate::api::drive::{
 };
 use once_cell::sync::Lazy;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::{self, Receiver, SyncSender, TrySendError},
@@ -32,7 +32,9 @@ const PROGRESS_CHANNEL_CAP: usize = 64;
 const PERSIST_BYTES_THRESHOLD: u64 = 256 * 1024;
 const PERSIST_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
 // 速度采样的最小时间间隔，避免瞬时过短导致虚高。
-const SPEED_SAMPLE_MIN_INTERVAL: std::time::Duration = std::time::Duration::from_millis(300);
+const SPEED_SAMPLE_MIN_INTERVAL: std::time::Duration = std::time::Duration::from_millis(200);
+// 速度窗口时长，用最近一段时间的累积量平滑瞬时波动。
+const SPEED_WINDOW: std::time::Duration = std::time::Duration::from_secs(5);
 
 /// 上传管理器实例，提供队列/进度/取消等操作。
 #[derive(Clone)]
@@ -58,11 +60,13 @@ struct InnerState {
     failed: Vec<UploadTask>,
 }
 
-/// 速度计算用采样点。
+/// 速度计算用采样点，包含平滑速度。
 #[derive(Clone)]
 struct ProgressTick {
     bytes_uploaded: u64,
     instant: Instant,
+    smoothed_bps: Option<f64>,
+    samples: VecDeque<(Instant, u64)>,
 }
 
 /// 持久化节流标记。
@@ -589,15 +593,53 @@ impl UploadManager {
             .or_insert_with(|| ProgressTick {
                 bytes_uploaded,
                 instant: now,
+                smoothed_bps: None,
+                samples: {
+                    let mut dq = VecDeque::new();
+                    dq.push_back((now, bytes_uploaded));
+                    dq
+                },
             });
         let delta_bytes = bytes_uploaded.saturating_sub(entry.bytes_uploaded);
         let elapsed = now.duration_since(entry.instant);
         if delta_bytes == 0 || elapsed < SPEED_SAMPLE_MIN_INTERVAL {
-            return None;
+            return entry.smoothed_bps;
         }
         entry.bytes_uploaded = bytes_uploaded;
         entry.instant = now;
-        Some(delta_bytes as f64 / elapsed.as_secs_f64())
+        entry.samples.push_back((now, bytes_uploaded));
+        // 滑动窗口：移除窗口外的采样点。
+        while let Some((ts, _)) = entry.samples.front() {
+            if now.duration_since(*ts) > SPEED_WINDOW {
+                entry.samples.pop_front();
+            } else {
+                break;
+            }
+        }
+        let window_bps = match (entry.samples.front(), entry.samples.back()) {
+            (Some((start_t, start_bytes)), Some((end_t, end_bytes))) if end_t > start_t => {
+                let span = end_t.duration_since(*start_t).as_secs_f64();
+                if span > 0.0 {
+                    let delta = end_bytes.saturating_sub(*start_bytes) as f64;
+                    Some(delta / span)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+        let inst = delta_bytes as f64 / elapsed.as_secs_f64();
+        // 组合窗口平均与即时速率，既能跟上上升也避免尖峰。
+        let candidate = match window_bps {
+            Some(avg) => avg.max(inst * 0.6),
+            None => inst,
+        };
+        let smooth = match entry.smoothed_bps {
+            Some(prev) => prev * 0.5 + candidate * 0.5,
+            None => candidate,
+        };
+        entry.smoothed_bps = Some(smooth);
+        Some(smooth)
     }
 
     fn clear_progress_meter(&self, task_id: &str) {
