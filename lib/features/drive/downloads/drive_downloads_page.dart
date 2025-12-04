@@ -241,7 +241,15 @@ class _DownloadTile extends StatelessWidget {
                   ),
                 ],
               )
-            : null,
+            : IconButton(
+                icon: const Icon(Icons.delete_outline_rounded),
+                tooltip: '移除记录',
+                onPressed: () => unawaited(
+                  ref.read(driveDownloadManagerProvider.notifier).removeTask(
+                        task.item.id,
+                      ),
+                ),
+              ),
       ),
     );
   }
