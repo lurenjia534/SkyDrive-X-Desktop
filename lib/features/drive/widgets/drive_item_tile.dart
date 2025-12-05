@@ -8,6 +8,7 @@ class DriveItemTile extends StatelessWidget {
     required this.subtitle,
     required this.colorScheme,
     required this.onTap,
+    this.onSecondaryTapDown,
     this.trailing,
   });
 
@@ -15,6 +16,7 @@ class DriveItemTile extends StatelessWidget {
   final String subtitle;
   final ColorScheme colorScheme;
   final VoidCallback onTap;
+  final GestureTapDownCallback? onSecondaryTapDown;
   final Widget? trailing;
 
   @override
@@ -34,65 +36,68 @@ class DriveItemTile extends StatelessWidget {
 
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        hoverColor: colorScheme.primary.withOpacity(0.05),
-        splashColor: colorScheme.primary.withOpacity(0.1),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 44,
-                height: 44,
-                child: hasThumbnail
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: _ThumbnailImage(
-                          url: thumbnailUrl!,
-                          itemId: item.id,
-                          fallback: _DriveTileIcon(
-                            icon: iconData,
-                            background: iconBackground,
-                            iconColor: iconColor,
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onSecondaryTapDown: onSecondaryTapDown,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          hoverColor: colorScheme.primary.withOpacity(0.05),
+          splashColor: colorScheme.primary.withOpacity(0.1),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: hasThumbnail
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: _ThumbnailImage(
+                            url: thumbnailUrl!,
+                            itemId: item.id,
+                            fallback: _DriveTileIcon(
+                              icon: iconData,
+                              background: iconBackground,
+                              iconColor: iconColor,
+                            ),
                           ),
+                        )
+                      : _DriveTileIcon(
+                          icon: iconData,
+                          background: iconBackground,
+                          iconColor: iconColor,
                         ),
-                      )
-                    : _DriveTileIcon(
-                        icon: iconData,
-                        background: iconBackground,
-                        iconColor: iconColor,
-                      ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      item.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
                 ),
-              ),
-              if (trailing != null) ...[const SizedBox(width: 12), trailing!],
-            ],
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        item.name,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                if (trailing != null) ...[const SizedBox(width: 12), trailing!],
+              ],
+            ),
           ),
         ),
       ),
