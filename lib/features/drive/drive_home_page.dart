@@ -7,6 +7,7 @@ import 'package:skydrivex/features/drive/utils/drive_item_formatters.dart';
 import 'package:skydrivex/features/drive/widgets/drive_breadcrumb_bar.dart';
 import 'package:skydrivex/features/drive/widgets/drive_download_indicator.dart';
 import 'package:skydrivex/features/drive/widgets/drive_empty_view.dart';
+import 'package:skydrivex/features/drive/widgets/drive_file_action_sheet.dart';
 import 'package:skydrivex/features/drive/widgets/drive_error_view.dart';
 import 'package:skydrivex/features/drive/widgets/drive_inline_progress_indicator.dart';
 import 'package:skydrivex/features/drive/widgets/drive_item_tile.dart';
@@ -156,10 +157,65 @@ Future<void> _handleItemTap(
     await controller.openFolder(item);
     return;
   }
-  await _handleDownload(context, ref, item);
+  await _showFileActionSheet(context, ref, item);
 }
 
-Future<void> _handleDownload(
+Future<void> _showFileActionSheet(
+  BuildContext context,
+  WidgetRef ref,
+  drive_api.DriveItemSummary item,
+) async {
+  await showGeneralDialog(
+    context: context,
+    barrierLabel: '文件操作',
+    barrierColor: Colors.black54,
+    transitionDuration: const Duration(milliseconds: 260),
+    pageBuilder: (dialogContext, animation, secondaryAnimation) {
+      final screenWidth = MediaQuery.of(dialogContext).size.width;
+      final widthFactor = screenWidth >= 1280
+          ? 0.3
+          : screenWidth >= 960
+          ? 0.38
+          : 0.6;
+      return Align(
+        alignment: Alignment.centerRight,
+        child: FractionallySizedBox(
+          widthFactor: widthFactor,
+          child: Builder(
+            builder: (sheetContext) => DriveFileActionSheet(
+              item: item,
+              onDownload: () async {
+                final started = await _handleDownload(context, ref, item);
+                if (started && sheetContext.mounted) {
+                  Navigator.of(sheetContext).pop();
+                }
+              },
+              onClose: () => Navigator.of(sheetContext).maybePop(),
+            ),
+          ),
+        ),
+      );
+    },
+    transitionBuilder: (dialogContext, animation, secondaryAnimation, child) {
+      final slideTween = Tween<Offset>(
+        begin: const Offset(0.25, 0),
+        end: Offset.zero,
+      ).chain(CurveTween(curve: Curves.easeOutCubic));
+      return SlideTransition(
+        position: animation.drive(slideTween),
+        child: FadeTransition(
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutQuad,
+          ),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
+Future<bool> _handleDownload(
   BuildContext context,
   WidgetRef ref,
   drive_api.DriveItemSummary item,
@@ -168,25 +224,26 @@ Future<void> _handleDownload(
   final queue = ref.read(driveDownloadManagerProvider);
   if (queue.isActive(item.id)) {
     _showSnack(context, '下载中：${item.name}');
-    return;
+    return false;
   }
   String targetDir;
   try {
     targetDir = await ref.read(downloadDirectoryProvider.future);
   } catch (err) {
-    if (!context.mounted) return;
+    if (!context.mounted) return false;
     _showSnack(context, '无法获取下载目录：$err');
-    return;
+    return false;
   }
   try {
     await manager.enqueue(item, targetDirectory: targetDir);
   } catch (err) {
-    if (!context.mounted) return;
+    if (!context.mounted) return false;
     _showSnack(context, '加入下载队列失败：$err');
-    return;
+    return false;
   }
-  if (!context.mounted) return;
+  if (!context.mounted) return false;
   _showSnack(context, '已加入下载队列：${item.name}');
+  return true;
 }
 
 void _showSnack(BuildContext context, String message) {
