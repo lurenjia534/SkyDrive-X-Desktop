@@ -25,7 +25,7 @@ class DriveSkeletonTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final baseColor = colorScheme.surfaceVariant.withOpacity(0.35);
+    final baseColor = colorScheme.surfaceContainerHighest.withOpacity(0.35);
     final highlightColor = colorScheme.onSurface.withOpacity(0.08);
 
     final row = Padding(
@@ -76,7 +76,7 @@ class DriveSkeletonBlock extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: colorScheme.surfaceVariant.withOpacity(0.35),
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.35),
         borderRadius: BorderRadius.circular(radius),
       ),
     );

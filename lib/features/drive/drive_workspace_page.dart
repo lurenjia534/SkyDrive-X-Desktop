@@ -55,8 +55,9 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
 
   void _showPlaceholder(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _handleNavigationSelection(int index) {
@@ -224,7 +225,6 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
       }
     }
   }
-
 }
 
 class _DriveSectionStack extends StatelessWidget {
@@ -241,8 +241,8 @@ class _DriveSectionStack extends StatelessWidget {
         for (var i = 0; i < sections.length; i++)
           _DriveSectionPanel(
             key: ValueKey('drive-section-$i'),
-            child: sections[i],
             visible: i == activeIndex,
+            child: sections[i],
           ),
       ],
     );

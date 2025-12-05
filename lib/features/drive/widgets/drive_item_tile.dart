@@ -27,7 +27,7 @@ class DriveItemTile extends StatelessWidget {
         : Icons.insert_drive_file_rounded;
     final iconBackground = isFolder
         ? colorScheme.primaryContainer.withOpacity(0.6)
-        : colorScheme.surfaceVariant.withOpacity(0.6);
+        : colorScheme.surfaceContainerHighest.withOpacity(0.6);
     final iconColor = isFolder
         ? colorScheme.onPrimaryContainer
         : colorScheme.primary;

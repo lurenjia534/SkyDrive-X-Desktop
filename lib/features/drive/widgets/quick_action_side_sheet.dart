@@ -50,8 +50,9 @@ Future<void> showQuickActionSideSheet(
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
                       child: ConstrainedBox(
-                        constraints:
-                            BoxConstraints(minHeight: constraints.maxHeight - 40),
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight - 40,
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -67,7 +68,8 @@ Future<void> showQuickActionSideSheet(
                                 IconButton(
                                   tooltip: '关闭',
                                   icon: const Icon(Icons.close_rounded),
-                                  onPressed: () => Navigator.of(context).maybePop(),
+                                  onPressed: () =>
+                                      Navigator.of(context).maybePop(),
                                 ),
                               ],
                             ),
@@ -144,8 +146,10 @@ Future<void> showQuickActionSideSheet(
         reverseCurve: Curves.easeInCubic,
       );
       return SlideTransition(
-        position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
-            .animate(curved),
+        position: Tween<Offset>(
+          begin: const Offset(1, 0),
+          end: Offset.zero,
+        ).animate(curved),
         child: FadeTransition(
           opacity: Tween<double>(begin: 0, end: 1).animate(curved),
           child: child,
@@ -177,7 +181,7 @@ class _QuickActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceVariant.withOpacity(0.5),
+          color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -198,15 +202,15 @@ class _QuickActionButton extends StatelessWidget {
                   Text(
                     label,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     description,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),

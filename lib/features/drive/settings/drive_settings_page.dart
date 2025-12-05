@@ -59,7 +59,7 @@ class _FakeToggleTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceVariant.withOpacity(0.65),
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.65),
         borderRadius: BorderRadius.circular(18),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
@@ -100,7 +100,7 @@ class _SettingsSyncTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceVariant.withOpacity(0.65),
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.65),
         borderRadius: BorderRadius.circular(18),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
@@ -151,22 +151,18 @@ class _DownloadDirectoryTile extends ConsumerWidget {
       content = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '无法获取下载路径',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text('无法获取下载路径', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           Text(
             state.error.toString(),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.error,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colorScheme.error),
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: () => ref
-                .read(downloadDirectoryProvider.notifier)
-                .refreshDirectory(),
+            onPressed: () =>
+                ref.read(downloadDirectoryProvider.notifier).refreshDirectory(),
             icon: const Icon(Icons.refresh_rounded, size: 18),
             label: const Text('重试'),
           ),
@@ -183,8 +179,8 @@ class _DownloadDirectoryTile extends ConsumerWidget {
                 child: Text(
                   '下载保存目录',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               IconButton(
@@ -200,9 +196,9 @@ class _DownloadDirectoryTile extends ConsumerWidget {
           SelectableText(
             path,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurface,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -227,7 +223,7 @@ class _DownloadDirectoryTile extends ConsumerWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceVariant.withOpacity(0.65),
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.65),
         borderRadius: BorderRadius.circular(18),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
@@ -248,9 +244,7 @@ class _DownloadDirectoryTile extends ConsumerWidget {
           title: const Text('修改下载目录'),
           content: TextField(
             controller: controller,
-            decoration: const InputDecoration(
-              labelText: '目录路径',
-            ),
+            decoration: const InputDecoration(labelText: '目录路径'),
           ),
           actions: [
             TextButton(
@@ -268,16 +262,19 @@ class _DownloadDirectoryTile extends ConsumerWidget {
     );
     if (result == null || result.isEmpty) return;
     try {
-      await ref.read(downloadDirectoryProvider.notifier).updateDirectory(result);
+      await ref
+          .read(downloadDirectoryProvider.notifier)
+          .updateDirectory(result);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('下载路径已更新')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('下载路径已更新')));
       }
     } catch (err) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('更新失败：$err')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('更新失败：$err')));
       }
     }
   }
@@ -289,15 +286,15 @@ class _DownloadDirectoryTile extends ConsumerWidget {
           .read(downloadDirectoryProvider.notifier)
           .updateDirectory(defaultPath);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已恢复默认下载路径')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('已恢复默认下载路径')));
       }
     } catch (err) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('操作失败：$err')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('操作失败：$err')));
       }
     }
   }
@@ -320,22 +317,18 @@ class _DownloadConcurrencyTile extends ConsumerWidget {
       content = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '无法获取并行下载数量',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text('无法获取并行下载数量', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           Text(
             state.error.toString(),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.error,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colorScheme.error),
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: () => ref
-                .read(downloadConcurrencyProvider.notifier)
-                .refreshLimit(),
+            onPressed: () =>
+                ref.read(downloadConcurrencyProvider.notifier).refreshLimit(),
             icon: const Icon(Icons.refresh_rounded, size: 18),
             label: const Text('重试'),
           ),
@@ -352,8 +345,8 @@ class _DownloadConcurrencyTile extends ConsumerWidget {
                 child: Text(
                   '同时下载的任务数量',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               IconButton(
@@ -369,8 +362,8 @@ class _DownloadConcurrencyTile extends ConsumerWidget {
           Text(
             '限制后台并行下载任务数，避免占满网络带宽。',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 12),
           Row(
@@ -398,9 +391,9 @@ class _DownloadConcurrencyTile extends ConsumerWidget {
               const SizedBox(width: 12),
               Text(
                 '当前：$value 个',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurface,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface),
               ),
             ],
           ),
@@ -410,7 +403,7 @@ class _DownloadConcurrencyTile extends ConsumerWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceVariant.withOpacity(0.65),
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.65),
         borderRadius: BorderRadius.circular(18),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
