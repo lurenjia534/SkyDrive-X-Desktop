@@ -30,7 +30,7 @@ class DriveDownloadIndicator extends StatelessWidget {
           : Icon(
               Icons.download_rounded,
               key: const ValueKey('download-icon'),
-              color: colorScheme.primary.withOpacity(0.85),
+              color: colorScheme.primary.withValues(alpha: 0.85),
               size: 20,
             ),
     );

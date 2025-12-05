@@ -28,8 +28,8 @@ class DriveItemTile extends StatelessWidget {
         ? Icons.folder_rounded
         : Icons.insert_drive_file_rounded;
     final iconBackground = isFolder
-        ? colorScheme.primaryContainer.withOpacity(0.6)
-        : colorScheme.surfaceContainerHighest.withOpacity(0.6);
+        ? colorScheme.primaryContainer.withValues(alpha: 0.6)
+        : colorScheme.surfaceContainerHighest.withValues(alpha: 0.6);
     final iconColor = isFolder
         ? colorScheme.onPrimaryContainer
         : colorScheme.primary;
@@ -42,8 +42,8 @@ class DriveItemTile extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: onTap,
-          hoverColor: colorScheme.primary.withOpacity(0.05),
-          splashColor: colorScheme.primary.withOpacity(0.1),
+          hoverColor: colorScheme.primary.withValues(alpha: 0.05),
+          splashColor: colorScheme.primary.withValues(alpha: 0.1),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
             child: Row(

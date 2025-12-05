@@ -65,18 +65,18 @@ class _DriveNavigationRailState extends State<DriveNavigationRail> {
     final colorScheme = theme.colorScheme;
     final borderRadius = BorderRadius.circular(30);
     final navBackground = _tonalSurface(colorScheme);
-    final indicatorColor = colorScheme.primaryContainer.withOpacity(0.95);
-    final navShadowColor = colorScheme.shadow.withOpacity(
-      theme.brightness == Brightness.light ? 0.12 : 0.4,
+    final indicatorColor = colorScheme.primaryContainer.withValues(alpha: 0.95);
+    final navShadowColor = colorScheme.shadow.withValues(
+      alpha: theme.brightness == Brightness.light ? 0.12 : 0.4,
     );
-    final quickActionBackground = colorScheme.primaryContainer.withOpacity(
-      theme.colorSchemeBrightnessBlend(),
+    final quickActionBackground = colorScheme.primaryContainer.withValues(
+      alpha: theme.colorSchemeBrightnessBlend(),
     );
     final quickActionForeground = colorScheme.onPrimaryContainer;
     final quickActionShadows = [
       BoxShadow(
-        color: colorScheme.shadow.withOpacity(
-          theme.brightness == Brightness.light ? 0.18 : 0.5,
+        color: colorScheme.shadow.withValues(
+          alpha: theme.brightness == Brightness.light ? 0.18 : 0.5,
         ),
         blurRadius: 26,
         offset: const Offset(0, 14),
@@ -115,7 +115,7 @@ class _DriveNavigationRailState extends State<DriveNavigationRail> {
             borderRadius: BorderRadius.circular(24),
           ),
           unselectedLabelTextStyle: TextStyle(
-            color: colorScheme.onSurfaceVariant.withOpacity(0.9),
+            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
             fontSize: 12,
             height: 1.1,
           ),
@@ -228,7 +228,7 @@ class _DriveNavigationRailState extends State<DriveNavigationRail> {
         )
         .fade(begin: 0.8, end: 1, duration: 240.ms, curve: Curves.easeOut)
         .tint(
-          color: colorScheme.primary.withOpacity(selected ? 0.18 : 0.0),
+          color: colorScheme.primary.withValues(alpha: selected ? 0.18 : 0.0),
           duration: 260.ms,
           curve: Curves.easeOutCubic,
         );
@@ -237,7 +237,7 @@ class _DriveNavigationRailState extends State<DriveNavigationRail> {
 
 Color _tonalSurface(ColorScheme colorScheme) {
   final surface = colorScheme.surface;
-  final tint = colorScheme.primary.withOpacity(0.08);
+  final tint = colorScheme.primary.withValues(alpha: 0.08);
   return Color.alphaBlend(tint, surface);
 }
 
@@ -251,7 +251,9 @@ class _DriveRailDestination {
   const _DriveRailDestination({
     required this.label,
     required this.icon,
+    // ignore: unused_element_parameter
     this.badgeCount,
+    // ignore: unused_element_parameter
     this.showDot = false,
   });
 

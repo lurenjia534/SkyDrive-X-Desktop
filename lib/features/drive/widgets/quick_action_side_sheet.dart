@@ -17,7 +17,7 @@ Future<void> showQuickActionSideSheet(
   return showGeneralDialog(
     context: context,
     barrierLabel: '关闭快捷操作',
-    barrierColor: Colors.black.withOpacity(0.35),
+    barrierColor: Colors.black.withValues(alpha: 0.35),
     barrierDismissible: true,
     transitionDuration: const Duration(milliseconds: 280),
     pageBuilder: (context, animation, secondary) {
@@ -39,7 +39,7 @@ Future<void> showQuickActionSideSheet(
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: colorScheme.shadow.withOpacity(0.18),
+                        color: colorScheme.shadow.withValues(alpha: 0.18),
                         blurRadius: 30,
                         offset: const Offset(-12, 12),
                       ),
@@ -181,7 +181,7 @@ class _QuickActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -189,7 +189,7 @@ class _QuickActionButton extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: colorScheme.primary.withOpacity(0.12),
+                color: colorScheme.primary.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: colorScheme.primary),

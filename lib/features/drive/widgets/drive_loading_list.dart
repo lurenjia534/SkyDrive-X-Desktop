@@ -25,8 +25,10 @@ class DriveSkeletonTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final baseColor = colorScheme.surfaceContainerHighest.withOpacity(0.35);
-    final highlightColor = colorScheme.onSurface.withOpacity(0.08);
+    final baseColor = colorScheme.surfaceContainerHighest.withValues(
+      alpha: 0.35,
+    );
+    final highlightColor = colorScheme.onSurface.withValues(alpha: 0.08);
 
     final row = Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -53,7 +55,7 @@ class DriveSkeletonTile extends StatelessWidget {
         .animate(delay: Duration(milliseconds: 60 * index))
         .fadeIn(duration: 260.ms, curve: Curves.easeOutCubic)
         .shimmer(duration: 1200.ms, color: highlightColor)
-        .tint(color: baseColor.withOpacity(0.15));
+        .tint(color: baseColor.withValues(alpha: 0.15));
   }
 }
 
@@ -76,7 +78,7 @@ class DriveSkeletonBlock extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withOpacity(0.35),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(radius),
       ),
     );

@@ -12,7 +12,7 @@ class DriveInlineProgressIndicator extends StatelessWidget {
       child: LinearProgressIndicator(
         minHeight: 3,
         color: colorScheme.primary,
-        backgroundColor: colorScheme.primary.withOpacity(0.2),
+        backgroundColor: colorScheme.primary.withValues(alpha: 0.2),
       ),
     );
     return widget.animate().fadeIn(

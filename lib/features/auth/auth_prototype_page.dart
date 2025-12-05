@@ -21,9 +21,7 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref
-          .read(authSessionCoordinatorProvider.notifier)
-          .attemptRestoreSession();
+      ref.read(authSessionCoordinatorProvider.notifier).attemptRestoreSession();
     });
     _sessionSubscription = ref.listenManual<AuthSessionState>(
       authSessionCoordinatorProvider,
@@ -81,9 +79,9 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              colorScheme.primary.withOpacity(0.14),
-              colorScheme.secondaryContainer.withOpacity(0.12),
-              colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              colorScheme.primary.withValues(alpha: 0.14),
+              colorScheme.secondaryContainer.withValues(alpha: 0.12),
+              colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -154,10 +152,7 @@ class _AuthPrototypePageState extends ConsumerState<AuthPrototypePage> {
                       ),
                       const SizedBox(height: 20),
                       if (error != null)
-                        _ErrorBanner(
-                          message: error,
-                          colorScheme: colorScheme,
-                        ),
+                        _ErrorBanner(message: error, colorScheme: colorScheme),
                     ],
                   ),
                 ),
@@ -181,7 +176,7 @@ class _AuthHeader extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 28,
-          backgroundColor: colorScheme.primary.withOpacity(0.12),
+          backgroundColor: colorScheme.primary.withValues(alpha: 0.12),
           child: Icon(
             Icons.cloud_sync_rounded,
             size: 32,
@@ -195,17 +190,16 @@ class _AuthHeader extends StatelessWidget {
             children: [
               Text(
                 '连接 Microsoft 账户',
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 '使用浏览器完成授权，以便 Skydrivex 同步 OneDrive 数据。',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -232,16 +226,10 @@ class _ErrorBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.error_outline_rounded,
-            color: colorScheme.error,
-          ),
+          Icon(Icons.error_outline_rounded, color: colorScheme.error),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              message,
-              style: TextStyle(color: colorScheme.error),
-            ),
+            child: Text(message, style: TextStyle(color: colorScheme.error)),
           ),
         ],
       ),
@@ -264,8 +252,8 @@ class _ScopeInfoCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final gradient = LinearGradient(
       colors: [
-        colorScheme.primaryContainer.withOpacity(0.4),
-        colorScheme.secondaryContainer.withOpacity(0.3),
+        colorScheme.primaryContainer.withValues(alpha: 0.4),
+        colorScheme.secondaryContainer.withValues(alpha: 0.3),
       ],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
@@ -275,10 +263,12 @@ class _ScopeInfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: gradient,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.4)),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+        ),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.shadow.withOpacity(0.08),
+            color: colorScheme.shadow.withValues(alpha: 0.08),
             blurRadius: 22,
             offset: const Offset(0, 12),
           ),
@@ -294,7 +284,7 @@ class _ScopeInfoCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: colorScheme.primary.withOpacity(0.18),
+                    color: colorScheme.primary.withValues(alpha: 0.18),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -307,8 +297,8 @@ class _ScopeInfoCard extends StatelessWidget {
                 Text(
                   '请求的作用域',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),

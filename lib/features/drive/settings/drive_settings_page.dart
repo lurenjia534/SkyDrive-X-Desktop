@@ -59,7 +59,7 @@ class _FakeToggleTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withOpacity(0.65),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.65),
         borderRadius: BorderRadius.circular(18),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
@@ -100,7 +100,7 @@ class _SettingsSyncTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withOpacity(0.65),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.65),
         borderRadius: BorderRadius.circular(18),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
@@ -223,7 +223,7 @@ class _DownloadDirectoryTile extends ConsumerWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withOpacity(0.65),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.65),
         borderRadius: BorderRadius.circular(18),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
@@ -403,7 +403,7 @@ class _DownloadConcurrencyTile extends ConsumerWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withOpacity(0.65),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.65),
         borderRadius: BorderRadius.circular(18),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),

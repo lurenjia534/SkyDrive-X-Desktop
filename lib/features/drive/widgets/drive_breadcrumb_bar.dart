@@ -60,7 +60,7 @@ class _BreadcrumbChip extends StatelessWidget {
       style: TextButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         backgroundColor: isActive
-            ? colorScheme.primary.withOpacity(0.12)
+            ? colorScheme.primary.withValues(alpha: 0.12)
             : null,
         foregroundColor: isActive
             ? colorScheme.primary
