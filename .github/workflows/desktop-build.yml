@@ -66,6 +66,10 @@ jobs:
       - name: Fetch Flutter packages
         run: flutter pub get
 
+      # 安装 cargo-expand，避免 FRB 生成时自动安装带来的重试
+      - name: Install cargo-expand
+        run: cargo install cargo-expand --locked
+
       # 安装 FRB 代码生成工具（与仓库当前版本保持一致）
       - name: Install flutter_rust_bridge_codegen
         run: cargo install flutter_rust_bridge_codegen --locked --version 2.11.1
