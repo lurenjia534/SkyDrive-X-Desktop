@@ -122,3 +122,33 @@ pub struct UploadProgressUpdate {
     pub speed_bps: Option<f64>,
     pub timestamp_millis: i64,
 }
+
+/// OneDrive 概览信息（配额、类型、所有者）。
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug)]
+pub struct DriveInfo {
+    pub id: Option<String>,
+    pub drive_type: Option<String>,
+    pub owner: Option<DriveOwner>,
+    pub quota: Option<DriveQuota>,
+}
+
+/// OneDrive 所有者基本信息。
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug)]
+pub struct DriveOwner {
+    pub display_name: Option<String>,
+    pub user_principal_name: Option<String>,
+    pub id: Option<String>,
+}
+
+/// OneDrive 配额字段，直接保留 Graph 原始值。
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug)]
+pub struct DriveQuota {
+    pub total: Option<u64>,
+    pub used: Option<u64>,
+    pub remaining: Option<u64>,
+    pub deleted: Option<u64>,
+    pub state: Option<String>,
+}

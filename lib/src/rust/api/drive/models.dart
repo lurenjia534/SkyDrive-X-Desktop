@@ -6,7 +6,7 @@
 import '../../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 /// 下载进度事件，通过 StreamSink 推送给 Flutter，供 UI 实时刷新进度与速度。
 class DownloadProgressUpdate {
@@ -155,6 +155,30 @@ class DriveDownloadResult {
           expectedSize == other.expectedSize;
 }
 
+/// OneDrive 概览信息（配额、类型、所有者）。
+class DriveInfo {
+  final String? id;
+  final String? driveType;
+  final DriveOwner? owner;
+  final DriveQuota? quota;
+
+  const DriveInfo({this.id, this.driveType, this.owner, this.quota});
+
+  @override
+  int get hashCode =>
+      id.hashCode ^ driveType.hashCode ^ owner.hashCode ^ quota.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DriveInfo &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          driveType == other.driveType &&
+          owner == other.owner &&
+          quota == other.quota;
+}
+
 /// 与 Flutter 侧共享的 OneDrive 文件/文件夹摘要结构。
 /// 字段命名保持与 Graph API 对齐，避免额外映射。
 class DriveItemSummary {
@@ -204,6 +228,28 @@ class DriveItemSummary {
           thumbnailUrl == other.thumbnailUrl;
 }
 
+/// OneDrive 所有者基本信息。
+class DriveOwner {
+  final String? displayName;
+  final String? userPrincipalName;
+  final String? id;
+
+  const DriveOwner({this.displayName, this.userPrincipalName, this.id});
+
+  @override
+  int get hashCode =>
+      displayName.hashCode ^ userPrincipalName.hashCode ^ id.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DriveOwner &&
+          runtimeType == other.runtimeType &&
+          displayName == other.displayName &&
+          userPrincipalName == other.userPrincipalName &&
+          id == other.id;
+}
+
 /// 列表接口的分页结果，包含子项与 nextLink。
 class DrivePage {
   final List<DriveItemSummary> items;
@@ -221,6 +267,42 @@ class DrivePage {
           runtimeType == other.runtimeType &&
           items == other.items &&
           nextLink == other.nextLink;
+}
+
+/// OneDrive 配额字段，直接保留 Graph 原始值。
+class DriveQuota {
+  final BigInt? total;
+  final BigInt? used;
+  final BigInt? remaining;
+  final BigInt? deleted;
+  final String? state;
+
+  const DriveQuota({
+    this.total,
+    this.used,
+    this.remaining,
+    this.deleted,
+    this.state,
+  });
+
+  @override
+  int get hashCode =>
+      total.hashCode ^
+      used.hashCode ^
+      remaining.hashCode ^
+      deleted.hashCode ^
+      state.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DriveQuota &&
+          runtimeType == other.runtimeType &&
+          total == other.total &&
+          used == other.used &&
+          remaining == other.remaining &&
+          deleted == other.deleted &&
+          state == other.state;
 }
 
 /// 上传进度事件，用于前端展示实时上传状态。

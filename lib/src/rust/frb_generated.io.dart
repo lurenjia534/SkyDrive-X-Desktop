@@ -8,6 +8,7 @@ import 'api/auth/refresh.dart';
 import 'api/drive/delete.dart';
 import 'api/drive/download.dart';
 import 'api/drive/download_manager.dart';
+import 'api/drive/info.dart';
 import 'api/drive/list.dart';
 import 'api/drive/models.dart';
 import 'api/drive/upload.dart';
@@ -56,6 +57,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   DriveItemSummary dco_decode_box_autoadd_drive_item_summary(dynamic raw);
 
   @protected
+  DriveOwner dco_decode_box_autoadd_drive_owner(dynamic raw);
+
+  @protected
+  DriveQuota dco_decode_box_autoadd_drive_quota(dynamic raw);
+
+  @protected
   double dco_decode_box_autoadd_f_64(dynamic raw);
 
   @protected
@@ -83,10 +90,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   DriveDownloadResult dco_decode_drive_download_result(dynamic raw);
 
   @protected
+  DriveInfo dco_decode_drive_info(dynamic raw);
+
+  @protected
   DriveItemSummary dco_decode_drive_item_summary(dynamic raw);
 
   @protected
+  DriveOwner dco_decode_drive_owner(dynamic raw);
+
+  @protected
   DrivePage dco_decode_drive_page(dynamic raw);
+
+  @protected
+  DriveQuota dco_decode_drive_quota(dynamic raw);
 
   @protected
   double dco_decode_f_64(dynamic raw);
@@ -117,6 +133,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  DriveOwner? dco_decode_opt_box_autoadd_drive_owner(dynamic raw);
+
+  @protected
+  DriveQuota? dco_decode_opt_box_autoadd_drive_quota(dynamic raw);
 
   @protected
   double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
@@ -190,6 +212,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  DriveOwner sse_decode_box_autoadd_drive_owner(SseDeserializer deserializer);
+
+  @protected
+  DriveQuota sse_decode_box_autoadd_drive_quota(SseDeserializer deserializer);
+
+  @protected
   double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
 
   @protected
@@ -225,10 +253,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  DriveInfo sse_decode_drive_info(SseDeserializer deserializer);
+
+  @protected
   DriveItemSummary sse_decode_drive_item_summary(SseDeserializer deserializer);
 
   @protected
+  DriveOwner sse_decode_drive_owner(SseDeserializer deserializer);
+
+  @protected
   DrivePage sse_decode_drive_page(SseDeserializer deserializer);
+
+  @protected
+  DriveQuota sse_decode_drive_quota(SseDeserializer deserializer);
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
@@ -263,6 +300,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  DriveOwner? sse_decode_opt_box_autoadd_drive_owner(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  DriveQuota? sse_decode_opt_box_autoadd_drive_quota(
+    SseDeserializer deserializer,
+  );
 
   @protected
   double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
@@ -347,6 +394,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_drive_owner(
+    DriveOwner self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_drive_quota(
+    DriveQuota self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
 
   @protected
@@ -392,13 +451,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_drive_info(DriveInfo self, SseSerializer serializer);
+
+  @protected
   void sse_encode_drive_item_summary(
     DriveItemSummary self,
     SseSerializer serializer,
   );
 
   @protected
+  void sse_encode_drive_owner(DriveOwner self, SseSerializer serializer);
+
+  @protected
   void sse_encode_drive_page(DrivePage self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_drive_quota(DriveQuota self, SseSerializer serializer);
 
   @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
@@ -441,6 +509,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_drive_owner(
+    DriveOwner? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_drive_quota(
+    DriveQuota? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
