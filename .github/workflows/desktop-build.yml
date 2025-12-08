@@ -1,0 +1,98 @@
+name: Build Desktop Releases
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  desktop:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    env:
+      CARGO_TERM_COLOR: always
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install Linux desktop dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+
+      - name: Install macOS desktop dependencies
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install cmake ninja pkg-config
+
+      - name: Install Windows desktop dependencies
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          choco install -y ninja
+
+      - name: Enable desktop targets
+        shell: bash
+        run: |
+          case "${{ matrix.os }}" in
+            ubuntu-latest) flutter config --enable-linux-desktop ;;
+            macos-latest) flutter config --enable-macos-desktop ;;
+            windows-latest) flutter config --enable-windows-desktop ;;
+          esac
+
+      - name: Fetch Flutter packages
+        run: flutter pub get
+
+      - name: Install flutter_rust_bridge_codegen
+        run: cargo install flutter_rust_bridge_codegen --locked --version 2.11.1
+
+      - name: Regenerate FRB bindings
+        run: flutter_rust_bridge_codegen generate
+
+      - name: Build Rust crate (release)
+        run: cargo build --manifest-path rust/Cargo.toml --release
+
+      - name: Build Flutter desktop app (release)
+        shell: bash
+        run: |
+          case "${{ matrix.os }}" in
+            ubuntu-latest) flutter build linux --release ;;
+            macos-latest) flutter build macos --release ;;
+            windows-latest) flutter build windows --release ;;
+          esac
+
+      - name: Upload artifact
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: skydrivex-linux
+          path: build/linux/x64/release/bundle/
+
+      - name: Upload artifact
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: skydrivex-windows
+          path: build/windows/runner/Release/
+
+      - name: Upload artifact
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: skydrivex-macos
+          path: build/macos/Build/Products/Release/*.app
