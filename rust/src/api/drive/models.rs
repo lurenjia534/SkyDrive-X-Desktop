@@ -173,3 +173,45 @@ pub struct DriveItemDetails {
     pub ctag: Option<String>,
     pub parent_path: Option<String>,
 }
+
+/// 分享链接类型（与 Graph 对齐）。
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug)]
+pub enum LinkType {
+    View,
+    Edit,
+    Embed,
+}
+
+/// 分享链接范围（与 Graph 对齐）。
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug)]
+pub enum LinkScope {
+    Anonymous,
+    Organization,
+    Users,
+}
+
+/// 当前账户可用的分享能力（基于 driveType 推断）。
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug)]
+pub struct ShareCapabilities {
+    pub drive_type: Option<String>,
+    pub can_embed_link: bool,
+    pub can_org_scope_link: bool,
+    pub can_password: bool,
+}
+
+/// 创建分享链接的结果。
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug)]
+pub struct ShareLinkResult {
+    pub link_type: LinkType,
+    pub scope: LinkScope,
+    pub web_url: Option<String>,
+    pub web_html: Option<String>,
+    pub permission_id: Option<String>,
+    pub share_id: Option<String>,
+    pub roles: Vec<String>,
+    pub password_protected: bool,
+}

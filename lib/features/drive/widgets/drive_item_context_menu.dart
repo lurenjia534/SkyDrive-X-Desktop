@@ -4,6 +4,7 @@ import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
 enum DriveContextAction {
   download('下载', Icons.download_rounded),
   delete('删除', Icons.delete_outline_rounded),
+  share('分享', Icons.share_outlined),
   properties('属性', Icons.info_outline_rounded);
 
   const DriveContextAction(this.label, this.icon);
@@ -25,6 +26,7 @@ Future<DriveContextAction?> showDriveItemContextMenu({
   final actions = <DriveContextAction>[
     if (!item.isFolder) DriveContextAction.download,
     DriveContextAction.delete,
+    DriveContextAction.share,
     DriveContextAction.properties,
   ];
 

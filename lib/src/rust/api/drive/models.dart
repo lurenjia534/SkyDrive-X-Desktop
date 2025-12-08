@@ -6,7 +6,7 @@
 import '../../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 /// 下载进度事件，通过 StreamSink 推送给 Flutter，供 UI 实时刷新进度与速度。
 class DownloadProgressUpdate {
@@ -379,6 +379,92 @@ class DriveQuota {
           remaining == other.remaining &&
           deleted == other.deleted &&
           state == other.state;
+}
+
+/// 分享链接范围（与 Graph 对齐）。
+enum LinkScope { anonymous, organization, users }
+
+/// 分享链接类型（与 Graph 对齐）。
+enum LinkType { view, edit, embed }
+
+/// 当前账户可用的分享能力（基于 driveType 推断）。
+class ShareCapabilities {
+  final String? driveType;
+  final bool canEmbedLink;
+  final bool canOrgScopeLink;
+  final bool canPassword;
+
+  const ShareCapabilities({
+    this.driveType,
+    required this.canEmbedLink,
+    required this.canOrgScopeLink,
+    required this.canPassword,
+  });
+
+  @override
+  int get hashCode =>
+      driveType.hashCode ^
+      canEmbedLink.hashCode ^
+      canOrgScopeLink.hashCode ^
+      canPassword.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ShareCapabilities &&
+          runtimeType == other.runtimeType &&
+          driveType == other.driveType &&
+          canEmbedLink == other.canEmbedLink &&
+          canOrgScopeLink == other.canOrgScopeLink &&
+          canPassword == other.canPassword;
+}
+
+/// 创建分享链接的结果。
+class ShareLinkResult {
+  final LinkType linkType;
+  final LinkScope scope;
+  final String? webUrl;
+  final String? webHtml;
+  final String? permissionId;
+  final String? shareId;
+  final List<String> roles;
+  final bool passwordProtected;
+
+  const ShareLinkResult({
+    required this.linkType,
+    required this.scope,
+    this.webUrl,
+    this.webHtml,
+    this.permissionId,
+    this.shareId,
+    required this.roles,
+    required this.passwordProtected,
+  });
+
+  @override
+  int get hashCode =>
+      linkType.hashCode ^
+      scope.hashCode ^
+      webUrl.hashCode ^
+      webHtml.hashCode ^
+      permissionId.hashCode ^
+      shareId.hashCode ^
+      roles.hashCode ^
+      passwordProtected.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ShareLinkResult &&
+          runtimeType == other.runtimeType &&
+          linkType == other.linkType &&
+          scope == other.scope &&
+          webUrl == other.webUrl &&
+          webHtml == other.webHtml &&
+          permissionId == other.permissionId &&
+          shareId == other.shareId &&
+          roles == other.roles &&
+          passwordProtected == other.passwordProtected;
 }
 
 /// 上传进度事件，用于前端展示实时上传状态。

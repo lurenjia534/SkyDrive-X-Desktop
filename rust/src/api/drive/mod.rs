@@ -6,6 +6,7 @@ pub mod details;
 pub mod info;
 pub mod list;
 pub mod models;
+pub mod share;
 pub mod upload;
 pub mod upload_manager;
 
@@ -20,9 +21,10 @@ pub use info::get_drive_overview;
 pub use list::list_drive_children;
 pub use models::{
     DownloadQueueState, DownloadStatus, DownloadTask, DriveDownloadResult, DriveInfo, DriveItemDetails,
-    DriveItemSummary, DriveOwner, DrivePage, DriveQuota, UploadProgressUpdate, UploadQueueState,
-    UploadStatus, UploadTask,
+    DriveItemSummary, DriveOwner, DrivePage, DriveQuota, LinkScope, LinkType, ShareCapabilities,
+    ShareLinkResult, UploadProgressUpdate, UploadQueueState, UploadStatus, UploadTask,
 };
+pub use share::{create_share_link, get_share_capabilities};
 pub use upload::upload_small_file;
 pub use upload_manager::{
     cancel_upload_task, clear_failed_upload_tasks, clear_upload_history, enqueue_upload_task,

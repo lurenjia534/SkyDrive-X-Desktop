@@ -15,6 +15,7 @@ import 'api/drive/download_manager.dart';
 import 'api/drive/info.dart';
 import 'api/drive/list.dart';
 import 'api/drive/models.dart';
+import 'api/drive/share.dart';
 import 'api/drive/upload.dart';
 import 'api/drive/upload_manager.dart';
 import 'api/settings/download_concurrency.dart';
@@ -55,6 +56,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AuthTokens dco_decode_box_autoadd_auth_tokens(dynamic raw);
+
+  @protected
+  bool dco_decode_box_autoadd_bool(dynamic raw);
 
   @protected
   DriveItemSummary dco_decode_box_autoadd_drive_item_summary(dynamic raw);
@@ -120,6 +124,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PlatformInt64 dco_decode_i_64(dynamic raw);
 
   @protected
+  LinkScope dco_decode_link_scope(dynamic raw);
+
+  @protected
+  LinkType dco_decode_link_type(dynamic raw);
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
@@ -141,6 +151,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
+  bool? dco_decode_opt_box_autoadd_bool(dynamic raw);
+
+  @protected
   DriveOwner? dco_decode_opt_box_autoadd_drive_owner(dynamic raw);
 
   @protected
@@ -157,6 +170,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw);
+
+  @protected
+  List<String>? dco_decode_opt_list_String(dynamic raw);
+
+  @protected
+  ShareCapabilities dco_decode_share_capabilities(dynamic raw);
+
+  @protected
+  ShareLinkResult dco_decode_share_link_result(dynamic raw);
 
   @protected
   StoredAuthState dco_decode_stored_auth_state(dynamic raw);
@@ -211,6 +233,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AuthTokens sse_decode_box_autoadd_auth_tokens(SseDeserializer deserializer);
+
+  @protected
+  bool sse_decode_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
   DriveItemSummary sse_decode_box_autoadd_drive_item_summary(
@@ -286,6 +311,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
 
   @protected
+  LinkScope sse_decode_link_scope(SseDeserializer deserializer);
+
+  @protected
+  LinkType sse_decode_link_type(SseDeserializer deserializer);
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
@@ -311,6 +342,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
+  bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer);
+
+  @protected
   DriveOwner? sse_decode_opt_box_autoadd_drive_owner(
     SseDeserializer deserializer,
   );
@@ -333,6 +367,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer);
+
+  @protected
+  List<String>? sse_decode_opt_list_String(SseDeserializer deserializer);
+
+  @protected
+  ShareCapabilities sse_decode_share_capabilities(SseDeserializer deserializer);
+
+  @protected
+  ShareLinkResult sse_decode_share_link_result(SseDeserializer deserializer);
 
   @protected
   StoredAuthState sse_decode_stored_auth_state(SseDeserializer deserializer);
@@ -395,6 +438,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     AuthTokens self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_drive_item_summary(
@@ -493,6 +539,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
 
   @protected
+  void sse_encode_link_scope(LinkScope self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_link_type(LinkType self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
@@ -526,6 +578,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_opt_box_autoadd_bool(bool? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_box_autoadd_drive_owner(
     DriveOwner? self,
     SseSerializer serializer,
@@ -554,6 +609,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_list_String(List<String>? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_share_capabilities(
+    ShareCapabilities self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_share_link_result(
+    ShareLinkResult self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_stored_auth_state(

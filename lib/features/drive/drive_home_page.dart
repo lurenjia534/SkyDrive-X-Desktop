@@ -195,6 +195,13 @@ Future<void> _handleContextMenu(
         item: item,
       );
       break;
+    case DriveContextAction.share:
+      await DriveItemActionService.showShareDialog(
+        context: context,
+        ref: ref,
+        item: item,
+      );
+      break;
     case DriveContextAction.properties:
       await DriveItemActionService.showPropertiesSheet(
         context: context,

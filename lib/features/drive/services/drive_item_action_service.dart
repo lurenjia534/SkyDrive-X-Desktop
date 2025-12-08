@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/features/drive/providers/download_directory_provider.dart';
 import 'package:skydrivex/features/drive/providers/drive_download_manager.dart';
 import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
+import 'package:skydrivex/features/drive/providers/drive_share_provider.dart';
 import 'package:skydrivex/features/drive/widgets/drive_file_action_sheet.dart';
+import 'package:skydrivex/features/drive/widgets/drive_share_dialog.dart';
 import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
 import 'package:skydrivex/src/rust/api/drive/delete.dart';
 
@@ -24,8 +26,8 @@ class DriveItemActionService {
         final widthFactor = screenWidth >= 1280
             ? 0.3
             : screenWidth >= 960
-                ? 0.38
-                : 0.6;
+            ? 0.38
+            : 0.6;
         return Align(
           alignment: Alignment.centerRight,
           child: FractionallySizedBox(
@@ -34,8 +36,7 @@ class DriveItemActionService {
               builder: (sheetContext) => DriveFileActionSheet(
                 item: item,
                 onDownload: () async {
-                  final started =
-                      await DriveItemActionService.handleDownload(
+                  final started = await DriveItemActionService.handleDownload(
                     context: context,
                     ref: ref,
                     item: item,
@@ -50,8 +51,7 @@ class DriveItemActionService {
           ),
         );
       },
-      transitionBuilder:
-          (dialogContext, animation, secondaryAnimation, child) {
+      transitionBuilder: (dialogContext, animation, secondaryAnimation, child) {
         final slideTween = Tween<Offset>(
           begin: const Offset(0.25, 0),
           end: Offset.zero,
@@ -86,17 +86,13 @@ class DriveItemActionService {
     try {
       targetDir = await ref.read(downloadDirectoryProvider.future);
     } catch (err) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('无法获取下载目录：$err')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text('无法获取下载目录：$err')));
       return false;
     }
     try {
       await manager.enqueue(item, targetDirectory: targetDir);
     } catch (err) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('加入下载队列失败：$err')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text('加入下载队列失败：$err')));
       return false;
     }
     messenger.showSnackBar(SnackBar(content: Text('已加入下载队列：${item.name}')));
@@ -141,11 +137,25 @@ class DriveItemActionService {
     try {
       await controller.refresh(showSkeleton: false);
     } catch (err) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('删除成功，但刷新失败：$err')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text('删除成功，但刷新失败：$err')));
       return;
     }
     messenger.showSnackBar(SnackBar(content: Text('已删除：${item.name}')));
+  }
+
+  static Future<void> showShareDialog({
+    required BuildContext context,
+    required WidgetRef ref,
+    required drive_api.DriveItemSummary item,
+  }) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return ProviderScope(
+          overrides: [shareTargetItemProvider.overrideWithValue(item)],
+          child: const DriveShareDialog(),
+        );
+      },
+    );
   }
 }

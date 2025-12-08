@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 211641278;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1486166701;
 
 // Section: executor
 
@@ -305,6 +305,54 @@ fn wire__crate__api__drive__upload_manager__clear_upload_history_impl(
             move |context| {
                 transform_result_sse::<_, String>((move || {
                     let output_ok = crate::api::drive::upload_manager::clear_upload_history()?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__drive__share__create_share_link_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "create_share_link",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_item_id = <String>::sse_decode(&mut deserializer);
+            let api_link_type =
+                <crate::api::drive::models::LinkType>::sse_decode(&mut deserializer);
+            let api_scope = <crate::api::drive::models::LinkScope>::sse_decode(&mut deserializer);
+            let api_password = <Option<String>>::sse_decode(&mut deserializer);
+            let api_expiration_date_time = <Option<String>>::sse_decode(&mut deserializer);
+            let api_retain_inherited_permissions = <Option<bool>>::sse_decode(&mut deserializer);
+            let api_recipients = <Option<Vec<String>>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::drive::share::create_share_link(
+                        api_item_id,
+                        api_link_type,
+                        api_scope,
+                        api_password,
+                        api_expiration_date_time,
+                        api_retain_inherited_permissions,
+                        api_recipients,
+                    )?;
                     Ok(output_ok)
                 })())
             }
@@ -747,6 +795,38 @@ fn wire__crate__api__drive__info__get_drive_overview_impl(
             move |context| {
                 transform_result_sse::<_, String>((move || {
                     let output_ok = crate::api::drive::info::get_drive_overview()?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__drive__share__get_share_capabilities_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_share_capabilities",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::drive::share::get_share_capabilities()?;
                     Ok(output_ok)
                 })())
             }
@@ -1546,6 +1626,32 @@ impl SseDecode for i64 {
     }
 }
 
+impl SseDecode for crate::api::drive::models::LinkScope {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::drive::models::LinkScope::Anonymous,
+            1 => crate::api::drive::models::LinkScope::Organization,
+            2 => crate::api::drive::models::LinkScope::Users,
+            _ => unreachable!("Invalid variant for LinkScope: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::drive::models::LinkType {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::drive::models::LinkType::View,
+            1 => crate::api::drive::models::LinkType::Edit,
+            2 => crate::api::drive::models::LinkType::Embed,
+            _ => unreachable!("Invalid variant for LinkType: {}", inner),
+        };
+    }
+}
+
 impl SseDecode for Vec<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1623,6 +1729,17 @@ impl SseDecode for Option<String> {
     }
 }
 
+impl SseDecode for Option<bool> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<bool>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::api::drive::models::DriveOwner> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1692,6 +1809,57 @@ impl SseDecode for Option<u64> {
         } else {
             return None;
         }
+    }
+}
+
+impl SseDecode for Option<Vec<String>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<Vec<String>>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for crate::api::drive::models::ShareCapabilities {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_driveType = <Option<String>>::sse_decode(deserializer);
+        let mut var_canEmbedLink = <bool>::sse_decode(deserializer);
+        let mut var_canOrgScopeLink = <bool>::sse_decode(deserializer);
+        let mut var_canPassword = <bool>::sse_decode(deserializer);
+        return crate::api::drive::models::ShareCapabilities {
+            drive_type: var_driveType,
+            can_embed_link: var_canEmbedLink,
+            can_org_scope_link: var_canOrgScopeLink,
+            can_password: var_canPassword,
+        };
+    }
+}
+
+impl SseDecode for crate::api::drive::models::ShareLinkResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_linkType = <crate::api::drive::models::LinkType>::sse_decode(deserializer);
+        let mut var_scope = <crate::api::drive::models::LinkScope>::sse_decode(deserializer);
+        let mut var_webUrl = <Option<String>>::sse_decode(deserializer);
+        let mut var_webHtml = <Option<String>>::sse_decode(deserializer);
+        let mut var_permissionId = <Option<String>>::sse_decode(deserializer);
+        let mut var_shareId = <Option<String>>::sse_decode(deserializer);
+        let mut var_roles = <Vec<String>>::sse_decode(deserializer);
+        let mut var_passwordProtected = <bool>::sse_decode(deserializer);
+        return crate::api::drive::models::ShareLinkResult {
+            link_type: var_linkType,
+            scope: var_scope,
+            web_url: var_webUrl,
+            web_html: var_webHtml,
+            permission_id: var_permissionId,
+            share_id: var_shareId,
+            roles: var_roles,
+            password_protected: var_passwordProtected,
+        };
     }
 }
 
@@ -1873,140 +2041,152 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        9 => wire__crate__api__drive__delete__delete_drive_item_impl(
+        9 => wire__crate__api__drive__share__create_share_link_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        10 => wire__crate__api__drive__download__download_drive_item_impl(
+        10 => wire__crate__api__drive__delete__delete_drive_item_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        11 => wire__crate__api__drive__download_manager__download_progress_stream_impl(
+        11 => wire__crate__api__drive__download__download_drive_item_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        12 => wire__crate__api__drive__download_manager__download_queue_state_impl(
+        12 => wire__crate__api__drive__download_manager__download_progress_stream_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        13 => wire__crate__api__drive__models__download_queue_state_default_impl(
+        13 => wire__crate__api__drive__download_manager__download_queue_state_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        14 => wire__crate__api__drive__download_manager__enqueue_download_task_impl(
+        14 => wire__crate__api__drive__models__download_queue_state_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        15 => wire__crate__api__drive__upload_manager__enqueue_large_upload_task_impl(
+        15 => wire__crate__api__drive__download_manager__enqueue_download_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        16 => wire__crate__api__drive__upload_manager__enqueue_upload_task_impl(
+        16 => wire__crate__api__drive__upload_manager__enqueue_large_upload_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        17 => wire__crate__api__settings__download_concurrency__get_download_concurrency_impl(
+        17 => wire__crate__api__drive__upload_manager__enqueue_upload_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        18 => wire__crate__api__settings__download_directory__get_download_directory_impl(
+        18 => wire__crate__api__settings__download_concurrency__get_download_concurrency_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        19 => wire__crate__api__drive__details__get_drive_item_details_impl(
+        19 => wire__crate__api__settings__download_directory__get_download_directory_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        20 => wire__crate__api__drive__info__get_drive_overview_impl(
+        20 => wire__crate__api__drive__details__get_drive_item_details_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        22 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__drive__list__list_drive_children_impl(
+        21 => wire__crate__api__drive__info__get_drive_overview_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        24 => wire__crate__api__auth__auth__load_persisted_auth_state_impl(
+        22 => wire__crate__api__drive__share__get_share_capabilities_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        25 => {
+        24 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__drive__list__list_drive_children_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        26 => wire__crate__api__auth__auth__load_persisted_auth_state_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        27 => {
             wire__crate__api__auth__auth__persist_auth_state_impl(port, ptr, rust_vec_len, data_len)
         }
-        26 => {
+        28 => {
             wire__crate__api__auth__refresh__refresh_tokens_impl(port, ptr, rust_vec_len, data_len)
         }
-        27 => wire__crate__api__drive__download_manager__remove_download_task_impl(
+        29 => wire__crate__api__drive__download_manager__remove_download_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        28 => wire__crate__api__drive__upload_manager__remove_upload_task_impl(
+        30 => wire__crate__api__drive__upload_manager__remove_upload_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        29 => wire__crate__api__settings__download_concurrency__set_download_concurrency_impl(
+        31 => wire__crate__api__settings__download_concurrency__set_download_concurrency_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        30 => wire__crate__api__settings__download_directory__set_download_directory_impl(
+        32 => wire__crate__api__settings__download_directory__set_download_directory_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        31 => wire__crate__api__drive__upload_manager__upload_progress_stream_impl(
+        33 => wire__crate__api__drive__upload_manager__upload_progress_stream_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        32 => wire__crate__api__drive__upload_manager__upload_queue_state_impl(
+        34 => wire__crate__api__drive__upload_manager__upload_queue_state_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        33 => wire__crate__api__drive__models__upload_queue_state_default_impl(
+        35 => wire__crate__api__drive__models__upload_queue_state_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        34 => wire__crate__api__drive__upload__upload_small_file_impl(
+        36 => wire__crate__api__drive__upload__upload_small_file_impl(
             port,
             ptr,
             rust_vec_len,
@@ -2024,7 +2204,7 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        21 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -2322,6 +2502,100 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::drive::models::DriveQuota>
     for crate::api::drive::models::DriveQuota
 {
     fn into_into_dart(self) -> crate::api::drive::models::DriveQuota {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::drive::models::LinkScope {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Anonymous => 0.into_dart(),
+            Self::Organization => 1.into_dart(),
+            Self::Users => 2.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::drive::models::LinkScope
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::drive::models::LinkScope>
+    for crate::api::drive::models::LinkScope
+{
+    fn into_into_dart(self) -> crate::api::drive::models::LinkScope {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::drive::models::LinkType {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::View => 0.into_dart(),
+            Self::Edit => 1.into_dart(),
+            Self::Embed => 2.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::drive::models::LinkType
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::drive::models::LinkType>
+    for crate::api::drive::models::LinkType
+{
+    fn into_into_dart(self) -> crate::api::drive::models::LinkType {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::drive::models::ShareCapabilities {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.drive_type.into_into_dart().into_dart(),
+            self.can_embed_link.into_into_dart().into_dart(),
+            self.can_org_scope_link.into_into_dart().into_dart(),
+            self.can_password.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::drive::models::ShareCapabilities
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::drive::models::ShareCapabilities>
+    for crate::api::drive::models::ShareCapabilities
+{
+    fn into_into_dart(self) -> crate::api::drive::models::ShareCapabilities {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::drive::models::ShareLinkResult {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.link_type.into_into_dart().into_dart(),
+            self.scope.into_into_dart().into_dart(),
+            self.web_url.into_into_dart().into_dart(),
+            self.web_html.into_into_dart().into_dart(),
+            self.permission_id.into_into_dart().into_dart(),
+            self.share_id.into_into_dart().into_dart(),
+            self.roles.into_into_dart().into_dart(),
+            self.password_protected.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::drive::models::ShareLinkResult
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::drive::models::ShareLinkResult>
+    for crate::api::drive::models::ShareLinkResult
+{
+    fn into_into_dart(self) -> crate::api::drive::models::ShareLinkResult {
         self
     }
 }
@@ -2661,6 +2935,40 @@ impl SseEncode for i64 {
     }
 }
 
+impl SseEncode for crate::api::drive::models::LinkScope {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::drive::models::LinkScope::Anonymous => 0,
+                crate::api::drive::models::LinkScope::Organization => 1,
+                crate::api::drive::models::LinkScope::Users => 2,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::drive::models::LinkType {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::drive::models::LinkType::View => 0,
+                crate::api::drive::models::LinkType::Edit => 1,
+                crate::api::drive::models::LinkType::Embed => 2,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
 impl SseEncode for Vec<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2717,6 +3025,16 @@ impl SseEncode for Option<String> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <String>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<bool> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <bool>::sse_encode(value, serializer);
         }
     }
 }
@@ -2778,6 +3096,40 @@ impl SseEncode for Option<u64> {
         if let Some(value) = self {
             <u64>::sse_encode(value, serializer);
         }
+    }
+}
+
+impl SseEncode for Option<Vec<String>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <Vec<String>>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for crate::api::drive::models::ShareCapabilities {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Option<String>>::sse_encode(self.drive_type, serializer);
+        <bool>::sse_encode(self.can_embed_link, serializer);
+        <bool>::sse_encode(self.can_org_scope_link, serializer);
+        <bool>::sse_encode(self.can_password, serializer);
+    }
+}
+
+impl SseEncode for crate::api::drive::models::ShareLinkResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::drive::models::LinkType>::sse_encode(self.link_type, serializer);
+        <crate::api::drive::models::LinkScope>::sse_encode(self.scope, serializer);
+        <Option<String>>::sse_encode(self.web_url, serializer);
+        <Option<String>>::sse_encode(self.web_html, serializer);
+        <Option<String>>::sse_encode(self.permission_id, serializer);
+        <Option<String>>::sse_encode(self.share_id, serializer);
+        <Vec<String>>::sse_encode(self.roles, serializer);
+        <bool>::sse_encode(self.password_protected, serializer);
     }
 }
 
