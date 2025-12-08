@@ -6,7 +6,7 @@
 import '../../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 /// 下载进度事件，通过 StreamSink 推送给 Flutter，供 UI 实时刷新进度与速度。
 class DownloadProgressUpdate {
@@ -177,6 +177,82 @@ class DriveInfo {
           driveType == other.driveType &&
           owner == other.owner &&
           quota == other.quota;
+}
+
+/// drive item 详情，供属性面板使用。
+class DriveItemDetails {
+  final String id;
+  final String name;
+  final BigInt? size;
+  final String? mimeType;
+  final bool isFolder;
+  final PlatformInt64? childCount;
+  final String? createdAt;
+  final String? lastModifiedAt;
+  final String? fileSystemCreatedAt;
+  final String? fileSystemModifiedAt;
+  final String? webUrl;
+  final String? downloadUrl;
+  final String? etag;
+  final String? ctag;
+  final String? parentPath;
+
+  const DriveItemDetails({
+    required this.id,
+    required this.name,
+    this.size,
+    this.mimeType,
+    required this.isFolder,
+    this.childCount,
+    this.createdAt,
+    this.lastModifiedAt,
+    this.fileSystemCreatedAt,
+    this.fileSystemModifiedAt,
+    this.webUrl,
+    this.downloadUrl,
+    this.etag,
+    this.ctag,
+    this.parentPath,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      name.hashCode ^
+      size.hashCode ^
+      mimeType.hashCode ^
+      isFolder.hashCode ^
+      childCount.hashCode ^
+      createdAt.hashCode ^
+      lastModifiedAt.hashCode ^
+      fileSystemCreatedAt.hashCode ^
+      fileSystemModifiedAt.hashCode ^
+      webUrl.hashCode ^
+      downloadUrl.hashCode ^
+      etag.hashCode ^
+      ctag.hashCode ^
+      parentPath.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DriveItemDetails &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          size == other.size &&
+          mimeType == other.mimeType &&
+          isFolder == other.isFolder &&
+          childCount == other.childCount &&
+          createdAt == other.createdAt &&
+          lastModifiedAt == other.lastModifiedAt &&
+          fileSystemCreatedAt == other.fileSystemCreatedAt &&
+          fileSystemModifiedAt == other.fileSystemModifiedAt &&
+          webUrl == other.webUrl &&
+          downloadUrl == other.downloadUrl &&
+          etag == other.etag &&
+          ctag == other.ctag &&
+          parentPath == other.parentPath;
 }
 
 /// 与 Flutter 侧共享的 OneDrive 文件/文件夹摘要结构。

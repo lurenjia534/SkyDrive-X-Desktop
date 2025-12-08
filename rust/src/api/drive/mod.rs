@@ -2,6 +2,7 @@ mod client;
 pub mod download;
 pub mod download_manager;
 pub mod delete;
+pub mod details;
 pub mod info;
 pub mod list;
 pub mod models;
@@ -14,11 +15,12 @@ pub use download_manager::{
     clear_download_history, download_progress_stream, download_queue_state, enqueue_download_task,
     remove_download_task,
 };
+pub use details::get_drive_item_details;
 pub use info::get_drive_overview;
 pub use list::list_drive_children;
 pub use models::{
-    DownloadQueueState, DownloadStatus, DownloadTask, DriveDownloadResult, DriveItemSummary,
-    DrivePage, DriveInfo, DriveOwner, DriveQuota, UploadProgressUpdate, UploadQueueState,
+    DownloadQueueState, DownloadStatus, DownloadTask, DriveDownloadResult, DriveInfo, DriveItemDetails,
+    DriveItemSummary, DriveOwner, DrivePage, DriveQuota, UploadProgressUpdate, UploadQueueState,
     UploadStatus, UploadTask,
 };
 pub use upload::upload_small_file;

@@ -6,6 +6,7 @@
 import 'api/auth/auth.dart';
 import 'api/auth/refresh.dart';
 import 'api/drive/delete.dart';
+import 'api/drive/details.dart';
 import 'api/drive/download.dart';
 import 'api/drive/download_manager.dart';
 import 'api/drive/info.dart';
@@ -78,7 +79,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -1472070265;
+  int get rustContentHash => 211641278;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -156,6 +157,10 @@ abstract class RustLibApi extends BaseApi {
   Future<int> crateApiSettingsDownloadConcurrencyGetDownloadConcurrency();
 
   Future<String> crateApiSettingsDownloadDirectoryGetDownloadDirectory();
+
+  Future<DriveItemDetails> crateApiDriveDetailsGetDriveItemDetails({
+    required String itemId,
+  });
 
   Future<DriveInfo> crateApiDriveInfoGetDriveOverview();
 
@@ -813,6 +818,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "get_download_directory", argNames: []);
 
   @override
+  Future<DriveItemDetails> crateApiDriveDetailsGetDriveItemDetails({
+    required String itemId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(itemId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 19,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_drive_item_details,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiDriveDetailsGetDriveItemDetailsConstMeta,
+        argValues: [itemId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDriveDetailsGetDriveItemDetailsConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_drive_item_details",
+        argNames: ["itemId"],
+      );
+
+  @override
   Future<DriveInfo> crateApiDriveInfoGetDriveOverview() {
     return handler.executeNormal(
       NormalTask(
@@ -821,7 +859,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 20,
             port: port_,
           );
         },
@@ -846,7 +884,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(name, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -871,7 +909,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 22,
             port: port_,
           );
         },
@@ -905,7 +943,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 23,
             port: port_,
           );
         },
@@ -935,7 +973,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 23,
+            funcId: 24,
             port: port_,
           );
         },
@@ -967,7 +1005,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 24,
+            funcId: 25,
             port: port_,
           );
         },
@@ -997,7 +1035,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 25,
+            funcId: 26,
             port: port_,
           );
         },
@@ -1027,7 +1065,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 26,
+            funcId: 27,
             port: port_,
           );
         },
@@ -1060,7 +1098,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 27,
+            funcId: 28,
             port: port_,
           );
         },
@@ -1093,7 +1131,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 28,
+            funcId: 29,
             port: port_,
           );
         },
@@ -1128,7 +1166,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 29,
+            funcId: 30,
             port: port_,
           );
         },
@@ -1167,7 +1205,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 30,
+              funcId: 31,
               port: port_,
             );
           },
@@ -1199,7 +1237,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 31,
+            funcId: 32,
             port: port_,
           );
         },
@@ -1226,7 +1264,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 32,
+            funcId: 33,
             port: port_,
           );
         },
@@ -1265,7 +1303,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 33,
+            funcId: 34,
             port: port_,
           );
         },
@@ -1459,6 +1497,31 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       driveType: dco_decode_opt_String(arr[1]),
       owner: dco_decode_opt_box_autoadd_drive_owner(arr[2]),
       quota: dco_decode_opt_box_autoadd_drive_quota(arr[3]),
+    );
+  }
+
+  @protected
+  DriveItemDetails dco_decode_drive_item_details(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 15)
+      throw Exception('unexpected arr length: expect 15 but see ${arr.length}');
+    return DriveItemDetails(
+      id: dco_decode_String(arr[0]),
+      name: dco_decode_String(arr[1]),
+      size: dco_decode_opt_box_autoadd_u_64(arr[2]),
+      mimeType: dco_decode_opt_String(arr[3]),
+      isFolder: dco_decode_bool(arr[4]),
+      childCount: dco_decode_opt_box_autoadd_i_64(arr[5]),
+      createdAt: dco_decode_opt_String(arr[6]),
+      lastModifiedAt: dco_decode_opt_String(arr[7]),
+      fileSystemCreatedAt: dco_decode_opt_String(arr[8]),
+      fileSystemModifiedAt: dco_decode_opt_String(arr[9]),
+      webUrl: dco_decode_opt_String(arr[10]),
+      downloadUrl: dco_decode_opt_String(arr[11]),
+      etag: dco_decode_opt_String(arr[12]),
+      ctag: dco_decode_opt_String(arr[13]),
+      parentPath: dco_decode_opt_String(arr[14]),
     );
   }
 
@@ -1912,6 +1975,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       driveType: var_driveType,
       owner: var_owner,
       quota: var_quota,
+    );
+  }
+
+  @protected
+  DriveItemDetails sse_decode_drive_item_details(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_size = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_mimeType = sse_decode_opt_String(deserializer);
+    var var_isFolder = sse_decode_bool(deserializer);
+    var var_childCount = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_createdAt = sse_decode_opt_String(deserializer);
+    var var_lastModifiedAt = sse_decode_opt_String(deserializer);
+    var var_fileSystemCreatedAt = sse_decode_opt_String(deserializer);
+    var var_fileSystemModifiedAt = sse_decode_opt_String(deserializer);
+    var var_webUrl = sse_decode_opt_String(deserializer);
+    var var_downloadUrl = sse_decode_opt_String(deserializer);
+    var var_etag = sse_decode_opt_String(deserializer);
+    var var_ctag = sse_decode_opt_String(deserializer);
+    var var_parentPath = sse_decode_opt_String(deserializer);
+    return DriveItemDetails(
+      id: var_id,
+      name: var_name,
+      size: var_size,
+      mimeType: var_mimeType,
+      isFolder: var_isFolder,
+      childCount: var_childCount,
+      createdAt: var_createdAt,
+      lastModifiedAt: var_lastModifiedAt,
+      fileSystemCreatedAt: var_fileSystemCreatedAt,
+      fileSystemModifiedAt: var_fileSystemModifiedAt,
+      webUrl: var_webUrl,
+      downloadUrl: var_downloadUrl,
+      etag: var_etag,
+      ctag: var_ctag,
+      parentPath: var_parentPath,
     );
   }
 
@@ -2448,6 +2548,29 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_String(self.driveType, serializer);
     sse_encode_opt_box_autoadd_drive_owner(self.owner, serializer);
     sse_encode_opt_box_autoadd_drive_quota(self.quota, serializer);
+  }
+
+  @protected
+  void sse_encode_drive_item_details(
+    DriveItemDetails self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.size, serializer);
+    sse_encode_opt_String(self.mimeType, serializer);
+    sse_encode_bool(self.isFolder, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.childCount, serializer);
+    sse_encode_opt_String(self.createdAt, serializer);
+    sse_encode_opt_String(self.lastModifiedAt, serializer);
+    sse_encode_opt_String(self.fileSystemCreatedAt, serializer);
+    sse_encode_opt_String(self.fileSystemModifiedAt, serializer);
+    sse_encode_opt_String(self.webUrl, serializer);
+    sse_encode_opt_String(self.downloadUrl, serializer);
+    sse_encode_opt_String(self.etag, serializer);
+    sse_encode_opt_String(self.ctag, serializer);
+    sse_encode_opt_String(self.parentPath, serializer);
   }
 
   @protected

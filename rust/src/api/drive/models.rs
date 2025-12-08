@@ -152,3 +152,24 @@ pub struct DriveQuota {
     pub deleted: Option<u64>,
     pub state: Option<String>,
 }
+
+/// drive item 详情，供属性面板使用。
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug)]
+pub struct DriveItemDetails {
+    pub id: String,
+    pub name: String,
+    pub size: Option<u64>,
+    pub mime_type: Option<String>,
+    pub is_folder: bool,
+    pub child_count: Option<i64>,
+    pub created_at: Option<String>,
+    pub last_modified_at: Option<String>,
+    pub file_system_created_at: Option<String>,
+    pub file_system_modified_at: Option<String>,
+    pub web_url: Option<String>,
+    pub download_url: Option<String>,
+    pub etag: Option<String>,
+    pub ctag: Option<String>,
+    pub parent_path: Option<String>,
+}

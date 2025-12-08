@@ -9,6 +9,7 @@
 import 'api/auth/auth.dart';
 import 'api/auth/refresh.dart';
 import 'api/drive/delete.dart';
+import 'api/drive/details.dart';
 import 'api/drive/download.dart';
 import 'api/drive/download_manager.dart';
 import 'api/drive/info.dart';
@@ -93,6 +94,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   DriveInfo dco_decode_drive_info(dynamic raw);
+
+  @protected
+  DriveItemDetails dco_decode_drive_item_details(dynamic raw);
 
   @protected
   DriveItemSummary dco_decode_drive_item_summary(dynamic raw);
@@ -256,6 +260,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   DriveInfo sse_decode_drive_info(SseDeserializer deserializer);
+
+  @protected
+  DriveItemDetails sse_decode_drive_item_details(SseDeserializer deserializer);
 
   @protected
   DriveItemSummary sse_decode_drive_item_summary(SseDeserializer deserializer);
@@ -454,6 +461,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_drive_info(DriveInfo self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_drive_item_details(
+    DriveItemDetails self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_drive_item_summary(
