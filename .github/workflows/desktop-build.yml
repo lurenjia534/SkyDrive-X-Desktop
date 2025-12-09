@@ -87,9 +87,9 @@ jobs:
         shell: bash
         run: |
           case "${{ matrix.os }}" in
-            ubuntu-latest) flutter build linux --release ;;
-            macos-latest) flutter build macos --release ;;
-            windows-latest) flutter build windows --release ;;
+            ubuntu-latest) flutter build linux --release --build-name 1.0.0 --build-number ${{ github.run_number }} ;;
+            macos-latest) flutter build macos --release --build-name 1.0.0 --build-number ${{ github.run_number }} ;;
+            windows-latest) flutter build windows --release --build-name 1.0.0 --build-number ${{ github.run_number }} ;;
           esac
 
       # 上传 Linux 构建工件
@@ -107,6 +107,7 @@ jobs:
         with:
           name: skydrivex-windows
           path: build/windows/**/runner/Release/**/*
+          if-no-files-found: warn
 
       # 上传 macOS 构建工件
       - name: Upload artifact
