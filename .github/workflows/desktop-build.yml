@@ -106,7 +106,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: skydrivex-windows
-          path: build/windows/runner/Release/**/*
+          path: build/windows/**/runner/Release/**/*
 
       # 上传 macOS 构建工件
       - name: Upload artifact
