@@ -5,6 +5,7 @@ enum DriveContextAction {
   download('下载', Icons.download_rounded),
   delete('删除', Icons.delete_outline_rounded),
   share('分享', Icons.share_outlined),
+  move('移动', Icons.drive_file_move_outline),
   properties('属性', Icons.info_outline_rounded);
 
   const DriveContextAction(this.label, this.icon);
@@ -27,6 +28,7 @@ Future<DriveContextAction?> showDriveItemContextMenu({
     if (!item.isFolder) DriveContextAction.download,
     DriveContextAction.delete,
     DriveContextAction.share,
+    DriveContextAction.move,
     DriveContextAction.properties,
   ];
 

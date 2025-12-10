@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/features/drive/providers/download_directory_provider.dart';
 import 'package:skydrivex/features/drive/providers/drive_download_manager.dart';
 import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
+import 'package:skydrivex/features/drive/widgets/drive_move_sheet.dart';
 import 'package:skydrivex/features/drive/providers/drive_share_provider.dart';
 import 'package:skydrivex/features/drive/widgets/drive_file_action_sheet.dart';
 import 'package:skydrivex/features/drive/widgets/drive_share_dialog.dart';
 import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
 import 'package:skydrivex/src/rust/api/drive/delete.dart';
+import 'package:skydrivex/src/rust/api/drive/move_item.dart';
 
 /// 封装文件/文件夹相关的常用操作，降低页面耦合。
 class DriveItemActionService {
@@ -154,6 +156,73 @@ class DriveItemActionService {
         return ProviderScope(
           overrides: [shareTargetItemProvider.overrideWithValue(item)],
           child: const DriveShareDialog(),
+        );
+      },
+    );
+  }
+
+  static Future<void> showMoveSheet({
+    required BuildContext context,
+    required WidgetRef ref,
+    required drive_api.DriveItemSummary item,
+  }) async {
+    await showGeneralDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      barrierDismissible: true,
+      barrierLabel: '关闭移动侧栏',
+      transitionDuration: const Duration(milliseconds: 280),
+      pageBuilder: (dialogContext, animation, secondaryAnimation) {
+        return Align(
+          alignment: Alignment.centerRight,
+          child: FractionallySizedBox(
+            widthFactor: 0.34,
+            child: DriveMoveSheet(
+              item: item,
+              onMove: (targetFolderId) async {
+                try {
+                  await moveDriveItem(
+                    itemId: item.id,
+                    newParentId: targetFolderId,
+                    newName: null,
+                    ifMatch: null,
+                  );
+                  if (dialogContext.mounted) {
+                    Navigator.of(dialogContext).pop();
+                    ScaffoldMessenger.of(
+                      dialogContext,
+                    ).showSnackBar(const SnackBar(content: Text('移动成功')));
+                    // 移动完成后刷新列表，但避免在对话框关闭前触发界面跳转。
+                    await ref
+                        .read(driveHomeControllerProvider.notifier)
+                        .refresh(showSkeleton: true);
+                  }
+                } catch (err) {
+                  if (dialogContext.mounted) {
+                    ScaffoldMessenger.of(
+                      dialogContext,
+                    ).showSnackBar(SnackBar(content: Text('移动失败：$err')));
+                  }
+                }
+              },
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (dialogContext, animation, secondaryAnimation, child) {
+        final slideTween = Tween<Offset>(
+          begin: const Offset(0.25, 0),
+          end: Offset.zero,
+        ).chain(CurveTween(curve: Curves.easeOutCubic));
+        return SlideTransition(
+          position: animation.drive(slideTween),
+          child: FadeTransition(
+            opacity: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutQuad,
+            ),
+            child: child,
+          ),
         );
       },
     );

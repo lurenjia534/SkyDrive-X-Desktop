@@ -5,6 +5,7 @@ pub mod delete;
 pub mod details;
 pub mod info;
 pub mod list;
+pub mod move_item;
 pub mod models;
 pub mod share;
 pub mod upload;
@@ -19,6 +20,7 @@ pub use download_manager::{
 pub use details::get_drive_item_details;
 pub use info::get_drive_overview;
 pub use list::list_drive_children;
+pub use move_item::move_drive_item;
 pub use models::{
     DownloadQueueState, DownloadStatus, DownloadTask, DriveDownloadResult, DriveInfo, DriveItemDetails,
     DriveItemSummary, DriveOwner, DrivePage, DriveQuota, LinkScope, LinkType, ShareCapabilities,

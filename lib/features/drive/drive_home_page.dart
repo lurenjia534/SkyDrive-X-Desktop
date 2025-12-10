@@ -202,6 +202,13 @@ Future<void> _handleContextMenu(
         item: item,
       );
       break;
+    case DriveContextAction.move:
+      await DriveItemActionService.showMoveSheet(
+        context: context,
+        ref: ref,
+        item: item,
+      );
+      break;
     case DriveContextAction.properties:
       await DriveItemActionService.showPropertiesSheet(
         context: context,

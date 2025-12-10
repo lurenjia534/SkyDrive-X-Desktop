@@ -15,6 +15,7 @@ import 'api/drive/download_manager.dart';
 import 'api/drive/info.dart';
 import 'api/drive/list.dart';
 import 'api/drive/models.dart';
+import 'api/drive/move_item.dart';
 import 'api/drive/share.dart';
 import 'api/drive/upload.dart';
 import 'api/drive/upload_manager.dart';
