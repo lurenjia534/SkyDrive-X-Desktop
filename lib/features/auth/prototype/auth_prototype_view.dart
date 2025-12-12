@@ -28,16 +28,16 @@ class AuthPrototypeView extends StatefulWidget {
 }
 
 class _AuthPrototypeViewState extends State<AuthPrototypeView> {
-  final TextEditingController _userIdController = TextEditingController();
+  final TextEditingController _clientIdController = TextEditingController();
 
   @override
   void dispose() {
-    _userIdController.dispose();
+    _clientIdController.dispose();
     super.dispose();
   }
 
   Future<void> _handleSignIn() async {
-    await widget.onSignIn(_userIdController.text);
+    await widget.onSignIn(_clientIdController.text);
   }
 
   @override
@@ -117,7 +117,7 @@ class _AuthPrototypeViewState extends State<AuthPrototypeView> {
                                       colors: colors,
                                       isAuthenticating: isAuthenticating,
                                       error: error,
-                                      userIdController: _userIdController,
+                                      clientIdController: _clientIdController,
                                       onSignIn: _handleSignIn,
                                     ),
                                   ),
@@ -137,7 +137,7 @@ class _AuthPrototypeViewState extends State<AuthPrototypeView> {
                                   colors: colors,
                                   isAuthenticating: isAuthenticating,
                                   error: error,
-                                  userIdController: _userIdController,
+                                  clientIdController: _clientIdController,
                                   onSignIn: _handleSignIn,
                                 ),
                               ],

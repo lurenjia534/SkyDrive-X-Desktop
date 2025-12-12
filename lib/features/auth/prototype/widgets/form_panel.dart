@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:forui/forui.dart';
 
 class AuthFormPanel extends StatelessWidget {
@@ -8,7 +9,7 @@ class AuthFormPanel extends StatelessWidget {
     required this.colors,
     required this.isAuthenticating,
     required this.error,
-    required this.userIdController,
+    required this.clientIdController,
     required this.onSignIn,
   });
 
@@ -16,11 +17,22 @@ class AuthFormPanel extends StatelessWidget {
   final FColors colors;
   final bool isAuthenticating;
   final String? error;
-  final TextEditingController userIdController;
+  final TextEditingController clientIdController;
   final VoidCallback onSignIn;
 
   @override
   Widget build(BuildContext context) {
+    Future<void> pasteClientId() async {
+      if (isAuthenticating) return;
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final text = data?.text;
+      if (text == null) return;
+      clientIdController.text = text.trim();
+      clientIdController.selection = TextSelection.collapsed(
+        offset: clientIdController.text.length,
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
       child: Column(
@@ -31,22 +43,91 @@ class AuthFormPanel extends StatelessWidget {
             const FProgress(),
             const SizedBox(height: 20),
           ],
-          // USER ID label and input
+          // Client ID label and input
           FTextField(
-            controller: userIdController,
+            controller: clientIdController,
             label: Text(
-              'USER ID',
+              'CLIENT ID',
               style: typography.xs.copyWith(
                 color: colors.mutedForeground,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1.0,
               ),
             ),
-            hint: 'name@company.com',
-            prefixBuilder: (_, __, ___) => Icon(
-              Icons.person_outline_rounded,
-              color: colors.mutedForeground,
-              size: 20,
+            description: Text(
+              'Azure App Registration → Application (client) ID',
+              style: typography.xs.copyWith(
+                color: colors.mutedForeground.withValues(alpha: 0.9),
+                height: 1.4,
+              ),
+            ),
+            hint: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+            enabled: !isAuthenticating,
+            keyboardType: TextInputType.text,
+            textInputAction: TextInputAction.done,
+            textCapitalization: TextCapitalization.none,
+            autocorrect: false,
+            enableSuggestions: false,
+            prefixBuilder: (_, __, ___) => Padding(
+              padding: const EdgeInsets.only(left: 14, right: 10),
+              child: Icon(
+                Icons.badge_outlined,
+                color: colors.mutedForeground,
+                size: 20,
+              ),
+            ),
+            suffixBuilder: (context, style, states) => Padding(
+              padding: const EdgeInsetsDirectional.only(end: 4),
+              child: FButton.icon(
+                style: style.clearButtonStyle.call,
+                onPress: states.contains(WidgetState.disabled)
+                    ? null
+                    : pasteClientId,
+                child: const Icon(Icons.content_paste_rounded),
+              ),
+            ),
+            clearable: (value) => value.text.trim().isNotEmpty,
+            style: (style) => style.copyWith(
+              filled: true,
+              fillColor: colors.secondary.withValues(alpha: 0.25),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 14,
+              ),
+              border: FWidgetStateMap({
+                WidgetState.error: OutlineInputBorder(
+                  borderSide: BorderSide(color: colors.error, width: 1.2),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                WidgetState.disabled: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: colors.border.withValues(alpha: 0.5),
+                    width: 1.2,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                WidgetState.focused: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: colors.primary.withValues(alpha: 0.85),
+                    width: 1.2,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                WidgetState.hovered: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: colors.border.withValues(alpha: 0.9),
+                    width: 1.2,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                WidgetState.any: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: colors.border.withValues(alpha: 0.85),
+                    width: 1.2,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              }),
             ),
             onSubmit: (_) {
               if (isAuthenticating) return;
@@ -114,7 +195,9 @@ class AuthFormPanel extends StatelessWidget {
             FAlert(
               style: (_) => context.theme.alertStyles.destructive,
               title: Text(error!),
-              subtitle: const Text('Please check your User ID and try again.'),
+              subtitle: const Text(
+                'Please check your Client ID and try again.',
+              ),
               icon: const Icon(FIcons.circleAlert),
             ),
           ],

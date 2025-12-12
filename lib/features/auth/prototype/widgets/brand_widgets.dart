@@ -29,7 +29,7 @@ class BrandHeader extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          'Enter your User ID to securely connect\nto your Microsoft services.',
+          'Enter your Client ID to securely connect\nto your Microsoft services.',
           textAlign: TextAlign.center,
           style: typography.sm.copyWith(
             color: colors.mutedForeground,
@@ -82,7 +82,7 @@ class BrandPanel extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               Text(
-                'Enter your User ID to securely connect\nto your Microsoft services.',
+                'Enter your Client ID to securely connect\nto your Microsoft services.',
                 textAlign: TextAlign.center,
                 style: typography.sm.copyWith(
                   color: colors.mutedForeground,
