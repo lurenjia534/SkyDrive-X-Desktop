@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:skydrivex/features/auth/auth_prototype_page.dart';
+import 'package:skydrivex/features/drive/drive_workspace_page.dart';
 import 'package:skydrivex/src/rust/frb_generated.dart';
 import 'package:skydrivex/theme/theme.dart';
 
@@ -20,12 +21,15 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       supportedLocales: FLocalizations.supportedLocales,
       localizationsDelegates: const [...FLocalizations.localizationsDelegates],
-      builder: (_, child) => FAnimatedTheme(
-        data: theme,
-        child: child!,
-      ),
+      builder: (_, child) => FAnimatedTheme(data: theme, child: child!),
       theme: theme.toApproximateMaterialTheme(),
-      home: const AuthPrototypePage(),
+      initialRoute: '/auth',
+      routes: {
+        '/auth': (_) => const AuthPrototypePage(),
+        '/drive': (_) => DriveWorkspacePage(
+          authPageBuilder: (_) => const AuthPrototypePage(),
+        ),
+      },
     );
   }
 }
