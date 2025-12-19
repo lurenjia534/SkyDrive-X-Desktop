@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:forui/forui.dart';
 
 class DriveNavigationRail extends StatefulWidget {
   const DriveNavigationRail({
@@ -61,112 +62,70 @@ class _DriveNavigationRailState extends State<DriveNavigationRail> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final theme = context.theme;
+    final colors = theme.colors;
+    final typography = theme.typography;
     final borderRadius = BorderRadius.circular(30);
-    final navBackground = _tonalSurface(colorScheme);
-    final indicatorColor = colorScheme.primaryContainer.withValues(alpha: 0.95);
-    final navShadowColor = colorScheme.shadow.withValues(
-      alpha: theme.brightness == Brightness.light ? 0.12 : 0.4,
-    );
-    final quickActionBackground = colorScheme.primaryContainer.withValues(
-      alpha: theme.colorSchemeBrightnessBlend(),
-    );
-    final quickActionForeground = colorScheme.onPrimaryContainer;
-    final quickActionShadows = [
-      BoxShadow(
-        color: colorScheme.shadow.withValues(
-          alpha: theme.brightness == Brightness.light ? 0.18 : 0.5,
-        ),
-        blurRadius: 26,
-        offset: const Offset(0, 14),
-      ),
-    ];
+    final navShadowColor = colors.barrier.withValues(alpha: 0.12);
+    final width = _isExtended ? 252.0 : 88.0;
 
     final railContainer = AnimatedContainer(
       duration: _animationDuration,
       curve: Curves.easeOutCubic,
+      width: width,
       decoration: BoxDecoration(
-        color: navBackground,
+        color: colors.background,
         borderRadius: borderRadius,
+        border: Border.all(color: colors.border.withValues(alpha: 0.7)),
         boxShadow: [
           BoxShadow(
             color: navShadowColor,
-            blurRadius: 30,
-            offset: const Offset(0, 18),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
           ),
         ],
       ),
       child: ClipRRect(
         borderRadius: borderRadius,
-        child: NavigationRail(
-          backgroundColor: Colors.transparent,
-          extended: _isExtended,
-          minWidth: 72,
-          minExtendedWidth: 236,
-          groupAlignment: -0.8,
-          labelType: _isExtended
-              ? NavigationRailLabelType.none
-              : NavigationRailLabelType.all,
-          selectedIndex: _selectedIndex,
-          useIndicator: true,
-          indicatorColor: indicatorColor,
-          indicatorShape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          unselectedLabelTextStyle: TextStyle(
-            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
-            fontSize: 12,
-            height: 1.1,
-          ),
-          selectedLabelTextStyle: TextStyle(
-            color: colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
-            height: 1.1,
-          ),
-          onDestinationSelected: _handleDestinationTap,
-          leading: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 16, 12, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: IconButton(
-                    tooltip: _isExtended ? '收起导航' : '展开导航',
-                    icon: Icon(
-                      _isExtended
-                          ? Icons.menu_open_rounded
-                          : Icons.menu_rounded,
-                    ),
-                    onPressed: _toggleExtended,
-                  ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 16, 14, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _DriveRailToggle(
+                extended: _isExtended,
+                onPressed: _toggleExtended,
+                colors: colors,
+                typography: typography,
+              ),
+              const SizedBox(height: 18),
+              _DriveRailQuickAction(
+                extended: _isExtended,
+                onPressed: widget.onQuickAction,
+                colors: colors,
+                typography: typography,
+              ),
+              const SizedBox(height: 22),
+              Expanded(
+                child: ListView.separated(
+                  padding: EdgeInsets.zero,
+                  itemCount: _destinations.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final destination = _destinations[index];
+                    return _DriveRailItem(
+                      destination: destination,
+                      extended: _isExtended,
+                      selected: _selectedIndex == index,
+                      onTap: () => _handleDestinationTap(index),
+                      colors: colors,
+                      typography: typography,
+                    );
+                  },
                 ),
-                const SizedBox(height: 20),
-                _DriveRailQuickAction(
-                  extended: _isExtended,
-                  onPressed: widget.onQuickAction,
-                  backgroundColor: quickActionBackground,
-                  foregroundColor: quickActionForeground,
-                  shadows: quickActionShadows,
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          destinations: _destinations
-              .map(
-                (destination) => NavigationRailDestination(
-                  icon: _buildDestinationIcon(destination, colorScheme, false),
-                  selectedIcon: _buildDestinationIcon(
-                    destination,
-                    colorScheme,
-                    true,
-                  ),
-                  label: Text(destination.label),
-                ),
-              )
-              .toList(),
         ),
       ),
     );
@@ -190,61 +149,6 @@ class _DriveNavigationRailState extends State<DriveNavigationRail> {
           ),
     );
   }
-
-  Widget _buildDestinationIcon(
-    _DriveRailDestination destination,
-    ColorScheme colorScheme,
-    bool selected,
-  ) {
-    final iconColor = selected
-        ? colorScheme.primary
-        : colorScheme.onSurfaceVariant;
-    Widget iconWidget = Icon(destination.icon, color: iconColor);
-    if (destination.badgeCount != null || destination.showDot) {
-      iconWidget = Stack(
-        clipBehavior: Clip.none,
-        children: [
-          iconWidget,
-          Positioned(
-            right: -8,
-            top: -4,
-            child: _DriveRailBadge(
-              key: ValueKey(destination.badgeCount ?? destination.showDot),
-              label: destination.badgeCount?.toString(),
-              color: colorScheme.error,
-              isDot: destination.badgeCount == null,
-            ),
-          ),
-        ],
-      );
-    }
-    return iconWidget
-        .animate(target: selected ? 1 : 0)
-        .scaleXY(
-          begin: 0.92,
-          end: 1,
-          duration: 280.ms,
-          curve: Curves.easeOutQuad,
-        )
-        .fade(begin: 0.8, end: 1, duration: 240.ms, curve: Curves.easeOut)
-        .tint(
-          color: colorScheme.primary.withValues(alpha: selected ? 0.18 : 0.0),
-          duration: 260.ms,
-          curve: Curves.easeOutCubic,
-        );
-  }
-}
-
-Color _tonalSurface(ColorScheme colorScheme) {
-  final surface = colorScheme.surface;
-  final tint = colorScheme.primary.withValues(alpha: 0.08);
-  return Color.alphaBlend(tint, surface);
-}
-
-extension on ThemeData {
-  double colorSchemeBrightnessBlend() {
-    return brightness == Brightness.light ? 0.95 : 0.85;
-  }
 }
 
 class _DriveRailDestination {
@@ -267,16 +171,14 @@ class _DriveRailQuickAction extends StatelessWidget {
   const _DriveRailQuickAction({
     required this.extended,
     required this.onPressed,
-    required this.backgroundColor,
-    required this.foregroundColor,
-    required this.shadows,
+    required this.colors,
+    required this.typography,
   });
 
   final bool extended;
   final VoidCallback? onPressed;
-  final Color backgroundColor;
-  final Color foregroundColor;
-  final List<BoxShadow> shadows;
+  final FColors colors;
+  final FTypography typography;
 
   @override
   Widget build(BuildContext context) {
@@ -284,12 +186,18 @@ class _DriveRailQuickAction extends StatelessWidget {
       key: ValueKey<bool>(extended),
       duration: const Duration(milliseconds: 320),
       curve: Curves.easeInOut,
-      width: extended ? 196 : 64,
-      height: 64,
+      width: extended ? 204 : 64,
+      height: 58,
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: colors.primary,
         borderRadius: BorderRadius.circular(22),
-        boxShadow: shadows,
+        boxShadow: [
+          BoxShadow(
+            color: colors.barrier.withValues(alpha: 0.2),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -303,13 +211,17 @@ class _DriveRailQuickAction extends StatelessWidget {
                   ? MainAxisAlignment.start
                   : MainAxisAlignment.center,
               children: [
-                Icon(Icons.add_rounded, color: foregroundColor, size: 22),
+                Icon(
+                  Icons.add_rounded,
+                  color: colors.primaryForeground,
+                  size: 22,
+                ),
                 if (extended) ...[
                   const SizedBox(width: 12),
                   Text(
                     'Add',
-                    style: TextStyle(
-                      color: foregroundColor,
+                    style: typography.base.copyWith(
+                      color: colors.primaryForeground,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -349,53 +261,123 @@ class _DriveRailQuickAction extends StatelessWidget {
   }
 }
 
-class _DriveRailBadge extends StatelessWidget {
-  const _DriveRailBadge({
-    super.key,
-    this.label,
-    required this.color,
-    required this.isDot,
+class _DriveRailToggle extends StatelessWidget {
+  const _DriveRailToggle({
+    required this.extended,
+    required this.onPressed,
+    required this.colors,
+    required this.typography,
   });
 
-  final String? label;
-  final Color color;
-  final bool isDot;
+  final bool extended;
+  final VoidCallback onPressed;
+  final FColors colors;
+  final FTypography typography;
 
   @override
   Widget build(BuildContext context) {
-    Widget badge;
-    if (isDot) {
-      badge = Container(
-        width: 10,
-        height: 10,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      );
-    } else {
-      badge = Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          label ?? '',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
+    final label = extended ? '收起导航' : '展开导航';
+    return Row(
+      children: [
+        Tooltip(
+          message: label,
+          child: Material(
+            color: colors.secondary.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(14),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: onPressed,
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Icon(
+                  extended ? Icons.menu_open_rounded : Icons.menu_rounded,
+                  color: colors.foreground,
+                  size: 20,
+                ),
+              ),
+            ),
           ),
         ),
-      );
-    }
-    return badge
-        .animate()
-        .fadeIn(duration: 160.ms, curve: Curves.easeOutQuad)
-        .moveY(begin: -4, end: 0, duration: 260.ms, curve: Curves.easeOutCubic)
-        .scaleXY(
-          begin: 0.8,
-          end: 1,
-          duration: 260.ms,
-          curve: Curves.easeOutBack,
-        );
+        if (extended) ...[
+          const SizedBox(width: 10),
+          Text(
+            '收起导航',
+            style: typography.sm.copyWith(
+              color: colors.mutedForeground,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _DriveRailItem extends StatelessWidget {
+  const _DriveRailItem({
+    required this.destination,
+    required this.extended,
+    required this.selected,
+    required this.onTap,
+    required this.colors,
+    required this.typography,
+  });
+
+  final _DriveRailDestination destination;
+  final bool extended;
+  final bool selected;
+  final VoidCallback onTap;
+  final FColors colors;
+  final FTypography typography;
+
+  @override
+  Widget build(BuildContext context) {
+    final iconColor =
+        selected ? colors.primaryForeground : colors.mutedForeground;
+    final textStyle = selected
+        ? typography.sm.copyWith(
+            color: colors.primaryForeground,
+            fontWeight: FontWeight.w600,
+          )
+        : typography.sm.copyWith(
+            color: colors.foreground.withValues(alpha: 0.85),
+            fontWeight: FontWeight.w500,
+          );
+
+    final item = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsets.symmetric(
+            horizontal: extended ? 14 : 0,
+            vertical: 10,
+          ),
+          decoration: BoxDecoration(
+            color: selected
+                ? colors.primary
+                : colors.secondary.withValues(alpha: 0.0),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Row(
+            mainAxisAlignment:
+                extended ? MainAxisAlignment.start : MainAxisAlignment.center,
+            children: [
+              Icon(destination.icon, color: iconColor, size: 20),
+              if (extended) ...[
+                const SizedBox(width: 12),
+                Expanded(child: Text(destination.label, style: textStyle)),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (extended) return item;
+    return Tooltip(message: destination.label, child: item);
   }
 }
