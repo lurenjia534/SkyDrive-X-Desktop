@@ -8,7 +8,8 @@ import 'auth_session_coordinator.dart';
 /// 目标：
 /// - 解耦页面与认证/副作用协调逻辑：页面只关心 UI 状态与事件回调。
 /// - 将 `AuthController` + `AuthSessionCoordinator` 组合为页面所需的最小状态。
-/// - 负责页面首次可用时触发一次 Session 恢复（避免页面里写生命周期副作用）。
+/// - Session 恢复由 `AuthSessionCoordinator` 在首次监听时触发。
+///   这样 build 保持纯净，避免触发 Riverpod debugNotifyDidBuild 的同帧重建保护。
 final authPrototypeViewModelProvider =
     NotifierProvider.autoDispose<AuthPrototypeViewModel, AuthPrototypeUiState>(
       AuthPrototypeViewModel.new,
@@ -34,25 +35,10 @@ class AuthPrototypeUiState {
 }
 
 class AuthPrototypeViewModel extends Notifier<AuthPrototypeUiState> {
-  /// 保证 `attemptRestoreSession()` 仅在当前 provider 生命周期内触发一次。
-  ///
-  /// 使用 `autoDispose` 时，当页面退出后 provider 会被释放；下次进入页面会重新恢复一次。
-  bool _hasAttemptedRestore = false;
-
   @override
   AuthPrototypeUiState build() {
     final authState = ref.watch(authControllerProvider);
     final sessionState = ref.watch(authSessionCoordinatorProvider);
-
-    if (!_hasAttemptedRestore) {
-      _hasAttemptedRestore = true;
-      // 避免在 build 同步阶段触发副作用/状态写入，使用 microtask 延后执行。
-      Future.microtask(() {
-        ref
-            .read(authSessionCoordinatorProvider.notifier)
-            .attemptRestoreSession();
-      });
-    }
 
     return AuthPrototypeUiState(
       isAuthenticating: authState.isAuthenticating,

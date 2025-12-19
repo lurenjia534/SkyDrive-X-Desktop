@@ -1,3 +1,4 @@
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/src/rust/api/auth/auth.dart' as auth_api;
 import 'package:skydrivex/src/rust/api/auth/refresh.dart' as auth_refresh;
@@ -41,6 +42,12 @@ class AuthState {
 
 /// 认证控制器：负责调用 Rust API、刷新 token，并根据情况更新状态。
 class AuthController extends Notifier<AuthState> {
+  // 将刷新相关的状态更新合并到下一帧，避免同一帧内多次写 state。
+  AuthState? _pendingRefreshState;
+  bool _pendingRefreshScheduled = false;
+  // 每次认证/刷新递增，用于丢弃过期的延迟更新。
+  int _refreshGeneration = 0;
+
   @override
   AuthState build() => const AuthState();
 
@@ -57,6 +64,8 @@ class AuthController extends Notifier<AuthState> {
     required String clientId,
     required List<String> scopes,
   }) async {
+    _refreshGeneration++;
+    _pendingRefreshState = null;
     state = state.copyWith(
       isAuthenticating: true,
       clearError: true,
@@ -103,20 +112,53 @@ class AuthController extends Notifier<AuthState> {
 
   /// 通用刷新逻辑：可选显示 Loading，刷新失败时会清空 token。
   Future<bool> _refreshTokens({required bool showLoading}) async {
+    final refreshGeneration = ++_refreshGeneration;
     if (showLoading) {
       state = state.copyWith(isAuthenticating: true, clearError: true);
     }
     try {
       final updatedState = await auth_refresh.refreshTokens();
-      state = state.copyWith(tokens: updatedState.tokens, clearError: true);
+      final nextState = state.copyWith(
+        tokens: updatedState.tokens,
+        clearError: true,
+        isAuthenticating: showLoading ? false : state.isAuthenticating,
+      );
+      if (showLoading) {
+        // 延迟到下一帧提交最终状态，避免触发 Riverpod Scheduler
+        // debugNotifyDidBuild 的同帧多次重建保护。
+        _scheduleRefreshState(nextState, refreshGeneration);
+      } else {
+        state = nextState;
+      }
       return true;
     } catch (err) {
-      state = state.copyWith(error: err.toString(), clearTokens: true);
-      return false;
-    } finally {
+      final nextState = state.copyWith(
+        error: err.toString(),
+        clearTokens: true,
+        isAuthenticating: showLoading ? false : state.isAuthenticating,
+      );
       if (showLoading) {
-        state = state.copyWith(isAuthenticating: false);
+        // 延迟错误状态，避免恢复流程中同帧连写导致重建冲突。
+        _scheduleRefreshState(nextState, refreshGeneration);
+      } else {
+        state = nextState;
       }
+      return false;
     }
+  }
+
+  void _scheduleRefreshState(AuthState nextState, int refreshGeneration) {
+    _pendingRefreshState = nextState;
+    if (_pendingRefreshScheduled) return;
+    _pendingRefreshScheduled = true;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _pendingRefreshScheduled = false;
+      if (!ref.mounted || refreshGeneration != _refreshGeneration) return;
+      final pending = _pendingRefreshState;
+      _pendingRefreshState = null;
+      if (pending != null) {
+        state = pending;
+      }
+    });
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'auth_controller.dart';
@@ -27,6 +28,10 @@ class AuthSessionState {
 class AuthSessionCoordinator extends Notifier<AuthSessionState> {
   static const _refreshInterval = Duration(minutes: 50);
   Timer? _refreshTimer;
+  bool _hasAttemptedRestore = false;
+  // 延迟状态提交到下一帧，避免触发 Riverpod 同帧多次重建保护。
+  AuthSessionState? _pendingState;
+  bool _pendingStateScheduled = false;
 
   @override
   AuthSessionState build() {
@@ -39,6 +44,14 @@ class AuthSessionCoordinator extends Notifier<AuthSessionState> {
     ref.onDispose(() {
       _refreshTimer?.cancel();
     });
+    if (!_hasAttemptedRestore) {
+      _hasAttemptedRestore = true;
+      // 首帧后再恢复 Session，保持 build 纯净，避免触发 Scheduler 的同帧重建检查。
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (!ref.mounted) return;
+        unawaited(attemptRestoreSession());
+      });
+    }
     return const AuthSessionState();
   }
 
@@ -62,7 +75,8 @@ class AuthSessionCoordinator extends Notifier<AuthSessionState> {
   /// 页面完成导航后，调用此方法重置状态。
   void clearNavigationIntent() {
     if (state.shouldNavigateToDrive) {
-      state = state.copyWith(shouldNavigateToDrive: false);
+      // 导航意图延迟提交，避免同一帧内多次写入导致重建冲突。
+      _scheduleState(state.copyWith(shouldNavigateToDrive: false));
     }
   }
 
@@ -72,7 +86,8 @@ class AuthSessionCoordinator extends Notifier<AuthSessionState> {
     final hasTokens = next.tokens != null;
     if (!hadTokens && hasTokens) {
       _startRefreshTimer();
-      state = state.copyWith(shouldNavigateToDrive: true);
+      // 导航信号延迟提交，避免同帧内多次重建。
+      _scheduleState(state.copyWith(shouldNavigateToDrive: true));
     } else if (hadTokens && !hasTokens) {
       _stopRefreshTimer();
     }
@@ -90,5 +105,20 @@ class AuthSessionCoordinator extends Notifier<AuthSessionState> {
   void _stopRefreshTimer() {
     _refreshTimer?.cancel();
     _refreshTimer = null;
+  }
+
+  void _scheduleState(AuthSessionState nextState) {
+    _pendingState = nextState;
+    if (_pendingStateScheduled) return;
+    _pendingStateScheduled = true;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _pendingStateScheduled = false;
+      if (!ref.mounted) return;
+      final pending = _pendingState;
+      _pendingState = null;
+      if (pending != null) {
+        state = pending;
+      }
+    });
   }
 }
