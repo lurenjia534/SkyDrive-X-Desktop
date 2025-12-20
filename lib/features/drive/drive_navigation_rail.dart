@@ -25,13 +25,13 @@ class DriveNavigationRail extends StatefulWidget {
 class _DriveNavigationRailState extends State<DriveNavigationRail> {
   static const _animationDuration = Duration(milliseconds: 320);
   static const List<_DriveRailDestination> _destinations = [
-    _DriveRailDestination(label: 'Files', icon: Icons.folder_rounded),
+    _DriveRailDestination(label: 'Files', icon: FIcons.folder),
     _DriveRailDestination(
       label: 'Download',
-      icon: Icons.cloud_download_rounded,
+      icon: FIcons.cloudDownload,
     ),
-    _DriveRailDestination(label: 'Upload', icon: Icons.cloud_upload_rounded),
-    _DriveRailDestination(label: 'Settings', icon: Icons.settings_rounded),
+    _DriveRailDestination(label: 'Upload', icon: FIcons.cloudUpload),
+    _DriveRailDestination(label: 'Settings', icon: FIcons.settings),
   ];
 
   late bool _isExtended = widget.initialExtended;
@@ -212,7 +212,7 @@ class _DriveRailQuickAction extends StatelessWidget {
                   : MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.add_rounded,
+                  FIcons.plus,
                   color: colors.primaryForeground,
                   size: 22,
                 ),
@@ -290,7 +290,7 @@ class _DriveRailToggle extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(10),
                 child: Icon(
-                  extended ? Icons.menu_open_rounded : Icons.menu_rounded,
+                  extended ? FIcons.panelLeftClose : FIcons.panelLeftOpen,
                   color: colors.foreground,
                   size: 20,
                 ),

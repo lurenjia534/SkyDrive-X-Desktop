@@ -99,6 +99,8 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
   @override
   Widget build(BuildContext context) {
     final colors = context.theme.colors;
+    final typography = context.theme.typography;
+    final baseStyle = context.theme.style;
     final logoutIcon = _isClearingCredentials
         ? SizedBox(
             width: 18,
@@ -117,6 +119,18 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
     return FScaffold(
       childPad: false,
       header: FHeader(
+        style: (style) => style.copyWith(
+          titleTextStyle: typography.xl2.copyWith(
+            color: colors.foreground,
+            fontWeight: FontWeight.w700,
+            height: 1,
+          ),
+          actionStyle: (_) => FHeaderActionStyle.inherit(
+            colors: colors,
+            style: baseStyle,
+            size: 20,
+          ),
+        ),
         title: const Text('OneDrive 文件'),
         suffixes: [
           FHeaderAction(
