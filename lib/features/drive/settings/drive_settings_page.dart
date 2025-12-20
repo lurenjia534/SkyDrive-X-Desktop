@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:forui/forui.dart';
 import 'package:skydrivex/features/drive/providers/download_concurrency_provider.dart';
 import 'package:skydrivex/features/drive/providers/download_directory_provider.dart';
 import 'package:skydrivex/features/drive/providers/drive_info_provider.dart';
@@ -91,7 +92,7 @@ class _FakeToggleTile extends StatelessWidget {
               ],
             ),
           ),
-          const Switch(value: true, onChanged: null),
+          const FSwitch(value: true, enabled: false),
         ],
       ),
     );
@@ -595,27 +596,25 @@ class _DownloadConcurrencyTile extends ConsumerWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              DropdownButton<int>(
-                value: value,
-                items: _options
-                    .map(
-                      (option) => DropdownMenuItem<int>(
-                        value: option,
-                        child: Text('$option 个任务'),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (selected) {
-                  if (selected != null && selected != value) {
-                    unawaited(
-                      ref
-                          .read(downloadConcurrencyProvider.notifier)
-                          .updateLimit(selected),
-                    );
-                  }
-                },
+              Expanded(
+                child: FSelect<int>(
+                  items: {
+                    for (final option in _options) '$option 个任务': option,
+                  },
+                  initialValue: value,
+                  hint: '选择任务数量',
+                  onChange: (selected) {
+                    if (selected != null && selected != value) {
+                      unawaited(
+                        ref
+                            .read(downloadConcurrencyProvider.notifier)
+                            .updateLimit(selected),
+                      );
+                    }
+                  },
+                ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 16),
               Text(
                 '当前：$value 个',
                 style: Theme.of(
