@@ -53,7 +53,7 @@ class DriveDownloadsPage extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(22),
                     ),
                     child: Icon(
-                      Icons.cloud_download_rounded,
+                      FIcons.cloudDownload,
                       size: 34,
                       color: colors.foreground,
                     ),
@@ -170,7 +170,7 @@ class _DownloadSection extends StatelessWidget {
                 onPress: () => unawaited(onClear!()),
                 style: FButtonStyle.ghost(),
                 mainAxisSize: MainAxisSize.min,
-                prefix: const Icon(Icons.delete_sweep_rounded, size: 16),
+                prefix: const Icon(FIcons.trash2, size: 16),
                 child: Text(
                   '清除失败',
                   style: typography.sm.copyWith(fontWeight: FontWeight.w600),
@@ -335,10 +335,10 @@ class _DownloadTile extends StatelessWidget {
     final isInProgress = task.status == DownloadStatus.inProgress;
     final leadingColor = isFailed ? colors.error : colors.primary;
     final leadingIcon = isFailed
-        ? Icons.error_outline_rounded
+        ? FIcons.circleAlert
         : (isInProgress
-            ? Icons.cloud_download_rounded
-            : Icons.download_done_rounded);
+            ? FIcons.cloudDownload
+            : FIcons.download);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
@@ -464,7 +464,7 @@ class _DownloadAction extends StatelessWidget {
                     ),
             style: FButtonStyle.outline(),
             child: Icon(
-              cancelling ? Icons.hourglass_top_rounded : Icons.close_rounded,
+              cancelling ? FIcons.hourglass : FIcons.x,
               size: 16,
             ),
           ),
@@ -476,7 +476,7 @@ class _DownloadAction extends StatelessWidget {
         ref.read(driveDownloadManagerProvider.notifier).removeTask(task.item.id),
       ),
       style: FButtonStyle.outline(),
-      child: const Icon(Icons.delete_outline_rounded, size: 16),
+      child: const Icon(FIcons.trash2, size: 16),
     );
   }
 }

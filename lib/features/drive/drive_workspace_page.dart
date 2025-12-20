@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:forui/forui.dart';
 import 'package:skydrivex/features/auth/auth_controller.dart';
 import 'package:skydrivex/features/drive/downloads/drive_downloads_page.dart';
 import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
@@ -97,33 +98,42 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
+    final colors = context.theme.colors;
+    final logoutIcon = _isClearingCredentials
+        ? SizedBox(
+            width: 18,
+            height: 18,
+            child: FCircularProgress.loader(
+              style: (style) => style.copyWith(
+                iconStyle: IconThemeData(
+                  color: colors.mutedForeground,
+                  size: 18,
+                ),
+              ),
+            ),
+          )
+        : const Icon(FIcons.logOut);
+
+    return FScaffold(
+      childPad: false,
+      header: FHeader(
         title: const Text('OneDrive 文件'),
-        actions: [
-          IconButton(
-            tooltip: '刷新',
-            icon: const Icon(Icons.refresh),
-            onPressed: _selectedSectionIndex == 0
+        suffixes: [
+          FHeaderAction(
+            icon: const Icon(FIcons.refreshCcw),
+            onPress: _selectedSectionIndex == 0
                 ? () => ref
                       .read(driveHomeControllerProvider.notifier)
                       .refresh(showSkeleton: true)
                 : null,
           ),
-          IconButton(
-            tooltip: '注销',
-            icon: _isClearingCredentials
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.logout),
-            onPressed: _isClearingCredentials ? null : _clearCredentials,
+          FHeaderAction(
+            icon: logoutIcon,
+            onPress: _isClearingCredentials ? null : _clearCredentials,
           ),
         ],
       ),
-      body: LayoutBuilder(
+      child: LayoutBuilder(
         builder: (context, constraints) {
           final showRail = constraints.maxWidth >= _railBreakpoint;
           final body = _DriveSectionStack(
