@@ -399,11 +399,6 @@ class _DriveRailItem extends StatelessWidget {
               ? BoxDecoration(
                   shape: BoxShape.circle,
                   color: selected ? colors.primary : colors.background,
-                  border: selected
-                      ? null
-                      : Border.all(
-                          color: colors.border.withValues(alpha: 0.8),
-                        ),
                 )
               : BoxDecoration(
                   color: selected
