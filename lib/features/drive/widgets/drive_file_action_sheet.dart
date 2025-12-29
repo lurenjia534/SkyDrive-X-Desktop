@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:forui/forui.dart';
 import 'package:skydrivex/features/drive/providers/drive_item_details_provider.dart';
 import 'package:skydrivex/features/drive/utils/drive_item_formatters.dart';
 import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
@@ -18,100 +19,174 @@ class DriveFileActionSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final theme = context.theme;
+    final colors = theme.colors;
+    final typography = theme.typography;
     final sizeLabel = item.size != null
         ? formatFileSize(item.size!.toInt())
         : '未知大小';
     final typeLabel = item.mimeType ?? '未知类型';
     final modifiedLabel = item.lastModified ?? '未提供';
+    final actionTextStyle = typography.sm.copyWith(
+      fontWeight: FontWeight.w600,
+      height: 1,
+    );
+    const actionPadding = EdgeInsets.symmetric(horizontal: 16, vertical: 12);
+    final actionRadius = BorderRadius.circular(14);
 
     return SafeArea(
       child: SizedBox(
         height: double.infinity,
-        child: Material(
-          color: colorScheme.surface,
-          elevation: 12,
-          borderRadius: const BorderRadius.horizontal(
-            left: Radius.circular(24),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: 20,
-              right: 20,
-              top: 16,
-              bottom: 20 + MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      '文件详情',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      tooltip: '关闭',
-                      onPressed:
-                          onClose ?? () => Navigator.of(context).maybePop(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                _DetailsLoadBanner(itemId: item.id),
-                Text(
-                  item.name,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  buildDriveSubtitle(item),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: _DetailsSection(
-                    baseSizeLabel: sizeLabel,
-                    baseTypeLabel: typeLabel,
-                    baseModifiedLabel: modifiedLabel,
-                    item: item,
-                  ),
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed:
-                            onClose ?? () => Navigator.of(context).maybePop(),
-                        icon: const Icon(Icons.arrow_back_rounded),
-                        label: const Text('关闭'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: onDownload,
-                        icon: const Icon(Icons.download_rounded),
-                        label: const Text('下载到默认目录'),
-                      ),
-                    ),
-                  ],
+        child: FCard.raw(
+          style: (style) => style.copyWith(
+            decoration: BoxDecoration(
+              color: colors.background,
+              borderRadius: const BorderRadius.horizontal(
+                left: Radius.circular(24),
+              ),
+              border: Border.all(
+                color: colors.border.withValues(alpha: 0.7),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: colors.barrier.withValues(alpha: 0.12),
+                  blurRadius: 28,
+                  offset: const Offset(0, 16),
                 ),
               ],
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.horizontal(
+              left: Radius.circular(24),
+            ),
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 16,
+                bottom: 20 + MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        '文件详情',
+                        style: typography.lg.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: colors.foreground,
+                        ),
+                      ),
+                      const Spacer(),
+                      FButton.icon(
+                        onPress:
+                            onClose ?? () => Navigator.of(context).maybePop(),
+                        style: FButtonStyle.ghost(),
+                        child: const Icon(FIcons.x, size: 16),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  _DetailsLoadBanner(itemId: item.id),
+                  Text(
+                    item.name,
+                    style: typography.xl.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: colors.foreground,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    buildDriveSubtitle(item),
+                    style: typography.sm.copyWith(
+                      color: colors.mutedForeground,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: _DetailsSection(
+                      baseSizeLabel: sizeLabel,
+                      baseTypeLabel: typeLabel,
+                      baseModifiedLabel: modifiedLabel,
+                      item: item,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FButton(
+                          onPress: onClose ??
+                              () => Navigator.of(context).maybePop(),
+                          style: FButtonStyle.outline(
+                            (style) => style.copyWith(
+                              decoration: style.decoration.map(
+                                (decoration) =>
+                                    decoration.copyWith(borderRadius: actionRadius),
+                              ),
+                              contentStyle: (contentStyle) =>
+                                  contentStyle.copyWith(
+                                textStyle: FWidgetStateMap.all(
+                                  actionTextStyle.copyWith(
+                                    color: colors.foreground,
+                                  ),
+                                ),
+                                iconStyle: FWidgetStateMap.all(
+                                  IconThemeData(
+                                    size: 16,
+                                    color: colors.foreground,
+                                  ),
+                                ),
+                                padding: actionPadding,
+                                spacing: 8,
+                              ),
+                            ),
+                          ),
+                          prefix: const Icon(FIcons.arrowLeft, size: 16),
+                          child: const Text('关闭'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FButton(
+                          onPress: onDownload,
+                          style: FButtonStyle.primary(
+                            (style) => style.copyWith(
+                              decoration: style.decoration.map(
+                                (decoration) =>
+                                    decoration.copyWith(borderRadius: actionRadius),
+                              ),
+                              contentStyle: (contentStyle) =>
+                                  contentStyle.copyWith(
+                                textStyle: FWidgetStateMap.all(
+                                  actionTextStyle.copyWith(
+                                    color: colors.primaryForeground,
+                                  ),
+                                ),
+                                iconStyle: FWidgetStateMap.all(
+                                  IconThemeData(
+                                    size: 16,
+                                    color: colors.primaryForeground,
+                                  ),
+                                ),
+                                padding: actionPadding,
+                                spacing: 8,
+                              ),
+                            ),
+                          ),
+                          prefix: const Icon(FIcons.download, size: 16),
+                          child: const Text('下载到默认目录'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -137,14 +212,24 @@ class _DetailsLoadBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(driveItemDetailsProvider(itemId));
-    final theme = Theme.of(context);
+    final theme = context.theme;
+    final colors = theme.colors;
+    final typography = theme.typography;
     if (state.isLoading) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 6),
-        child: LinearProgressIndicator(
-          minHeight: 3,
-          backgroundColor:
-              theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        child: FProgress(
+          style: (style) => style.copyWith(
+            constraints: const BoxConstraints.tightFor(height: 3),
+            trackDecoration: BoxDecoration(
+              color: colors.secondary.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            fillDecoration: BoxDecoration(
+              color: colors.primary,
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
         ),
       );
     }
@@ -153,22 +238,23 @@ class _DetailsLoadBanner extends ConsumerWidget {
         padding: const EdgeInsets.only(bottom: 6),
         child: Row(
           children: [
-            Icon(Icons.error_outline_rounded,
-                color: theme.colorScheme.error, size: 18),
+            Icon(FIcons.circleAlert, color: colors.error, size: 18),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
                 '属性加载失败',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.error,
-                ),
+                style: typography.sm.copyWith(color: colors.error),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            TextButton(
-              onPressed: () =>
-                  ref.refresh(driveItemDetailsProvider(itemId)),
-              child: const Text('重试'),
+            FButton(
+              onPress: () => ref.refresh(driveItemDetailsProvider(itemId)),
+              style: FButtonStyle.ghost(),
+              mainAxisSize: MainAxisSize.min,
+              child: Text(
+                '重试',
+                style: typography.sm.copyWith(fontWeight: FontWeight.w600),
+              ),
             ),
           ],
         ),
@@ -195,6 +281,9 @@ class _DetailsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detailsAsync = ref.watch(driveItemDetailsProvider(item.id));
     final details = detailsAsync.asData?.value;
+    final theme = context.theme;
+    final colors = theme.colors;
+    final typography = theme.typography;
 
     final sizeLabel = details?.size != null
         ? formatFileSize(_bigIntToSafeInt(details!.size!))
@@ -211,7 +300,7 @@ class _DetailsSection extends ConsumerWidget {
     final parentPath = details?.parentPath ?? '未知';
     final childCount = details?.childCount?.toInt();
 
-    final rows = <Widget>[
+    final rows = <FItemMixin>[
       _InfoRow(
         icon: Icons.description_outlined,
         label: '文件类型',
@@ -273,16 +362,66 @@ class _DetailsSection extends ConsumerWidget {
     ];
 
     if (detailsAsync.isLoading && details == null) {
-      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+      return Center(
+        child: FCircularProgress.loader(
+          style: (style) => style.copyWith(
+            iconStyle: IconThemeData(color: colors.primary, size: 20),
+          ),
+        ),
+      );
     }
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Column(children: rows),
+      child: FItemGroup(
+        divider: FItemDivider.full,
+        style: (style) => style.copyWith(
+          decoration: BoxDecoration(
+            color: colors.background,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: colors.border.withValues(alpha: 0.6)),
+          ),
+          dividerColor: FWidgetStateMap.all(
+            colors.border.withValues(alpha: 0.6),
+          ),
+          itemStyle: (itemStyle) => itemStyle.copyWith(
+            margin: EdgeInsets.zero,
+            decoration: FWidgetStateMap({
+              WidgetState.hovered | WidgetState.pressed: BoxDecoration(
+                color: colors.secondary.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              WidgetState.any: BoxDecoration(
+                color: colors.background,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            }),
+            contentStyle: (contentStyle) => contentStyle.copyWith(
+              padding: const EdgeInsetsDirectional.fromSTEB(12, 10, 12, 10),
+              prefixIconStyle: FWidgetStateMap.all(
+                IconThemeData(color: colors.foreground, size: 18),
+              ),
+              titleTextStyle: FWidgetStateMap.all(
+                typography.sm.copyWith(
+                  color: colors.mutedForeground,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitleTextStyle: FWidgetStateMap.all(
+                typography.base.copyWith(
+                  color: colors.foreground,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ),
+        children: rows,
+      ),
     );
   }
 }
 
-class _InfoRow extends StatelessWidget {
+class _InfoRow extends StatelessWidget with FItemMixin {
   const _InfoRow({
     required this.icon,
     required this.label,
@@ -297,49 +436,20 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, size: 18, color: colorScheme.onPrimaryContainer),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    value,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+    final colors = context.theme.colors;
+    return FItem(
+      onPress: onTap,
+      prefix: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: colors.secondary.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(10),
         ),
+        child: Icon(icon, size: 18),
       ),
+      title: Text(label),
+      subtitle: Text(value),
     );
   }
 }

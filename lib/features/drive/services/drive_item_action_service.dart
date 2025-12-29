@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:forui/forui.dart';
 import 'package:skydrivex/features/drive/providers/download_directory_provider.dart';
 import 'package:skydrivex/features/drive/providers/drive_download_manager.dart';
 import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
@@ -18,57 +19,34 @@ class DriveItemActionService {
     required WidgetRef ref,
     required drive_api.DriveItemSummary item,
   }) async {
-    await showGeneralDialog(
+    final screenWidth = MediaQuery.of(context).size.width;
+    final widthFactor = screenWidth >= 1280
+        ? 0.3
+        : screenWidth >= 960
+        ? 0.38
+        : 0.6;
+    await showFSheet(
       context: context,
+      side: FLayout.rtl,
+      useRootNavigator: true,
       barrierLabel: '文件属性',
-      barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 260),
-      pageBuilder: (dialogContext, animation, secondaryAnimation) {
-        final screenWidth = MediaQuery.of(dialogContext).size.width;
-        final widthFactor = screenWidth >= 1280
-            ? 0.3
-            : screenWidth >= 960
-            ? 0.38
-            : 0.6;
-        return Align(
-          alignment: Alignment.centerRight,
-          child: FractionallySizedBox(
-            widthFactor: widthFactor,
-            child: Builder(
-              builder: (sheetContext) => DriveFileActionSheet(
-                item: item,
-                onDownload: () async {
-                  final started = await DriveItemActionService.handleDownload(
-                    context: context,
-                    ref: ref,
-                    item: item,
-                  );
-                  if (started && sheetContext.mounted) {
-                    Navigator.of(sheetContext).pop();
-                  }
-                },
-                onClose: () => Navigator.of(sheetContext).maybePop(),
-              ),
-            ),
-          ),
-        );
-      },
-      transitionBuilder: (dialogContext, animation, secondaryAnimation, child) {
-        final slideTween = Tween<Offset>(
-          begin: const Offset(0.25, 0),
-          end: Offset.zero,
-        ).chain(CurveTween(curve: Curves.easeOutCubic));
-        return SlideTransition(
-          position: animation.drive(slideTween),
-          child: FadeTransition(
-            opacity: CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutQuad,
-            ),
-            child: child,
-          ),
-        );
-      },
+      barrierDismissible: true,
+      draggable: false,
+      mainAxisMaxRatio: widthFactor,
+      builder: (sheetContext) => DriveFileActionSheet(
+        item: item,
+        onDownload: () async {
+          final started = await DriveItemActionService.handleDownload(
+            context: context,
+            ref: ref,
+            item: item,
+          );
+          if (started && sheetContext.mounted) {
+            Navigator.of(sheetContext).pop();
+          }
+        },
+        onClose: () => Navigator.of(sheetContext).maybePop(),
+      ),
     );
   }
 
