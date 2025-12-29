@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
 import 'package:skydrivex/features/drive/models/drive_breadcrumb.dart';
 
 class DriveBreadcrumbBar extends StatelessWidget {
@@ -15,64 +16,103 @@ class DriveBreadcrumbBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final widgets = <Widget>[
-      _BreadcrumbChip(
-        label: '所有文件',
-        isActive: segments.isEmpty,
-        onTap: onRootTap,
-      ),
+    final theme = context.theme;
+    final colors = theme.colors;
+    final typography = theme.typography;
+    final divider = Icon(
+      FIcons.chevronRight,
+      size: 14,
+      color: colors.mutedForeground,
+    );
+
+    final items = <FBreadcrumbItem>[
+      if (segments.isEmpty)
+        FBreadcrumbItem(
+          current: true,
+          child: Text(
+            '所有文件',
+            style: typography.sm.copyWith(
+              fontWeight: FontWeight.w600,
+              color: colors.foreground,
+            ),
+          ),
+        )
+      else
+        FBreadcrumbItem(
+          onPress: onRootTap,
+          child: Text(
+            '所有文件',
+            style: typography.sm.copyWith(
+              fontWeight: FontWeight.w600,
+              color: colors.mutedForeground,
+            ),
+          ),
+        ),
     ];
-    for (var i = 0; i < segments.length; i++) {
-      widgets.add(const Icon(Icons.chevron_right_rounded, size: 18));
-      widgets.add(
-        _BreadcrumbChip(
-          label: segments[i].name,
-          isActive: i == segments.length - 1,
-          onTap: () => onSegmentTap(i),
+
+    if (segments.length > 2) {
+      final collapsedItems = <FItem>[
+        for (var i = 0; i < segments.length - 2; i++)
+          FItem(
+            title: Text(segments[i].name),
+            onPress: () => onSegmentTap(i),
+          ),
+      ];
+      items.add(
+        FBreadcrumbItem.collapsed(
+          menu: [
+            FItemGroup(children: collapsedItems),
+          ],
+          offset: Offset.zero,
+          traversalEdgeBehavior: TraversalEdgeBehavior.closedLoop,
         ),
       );
-    }
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: widgets,
-    );
-  }
-}
-
-class _BreadcrumbChip extends StatelessWidget {
-  const _BreadcrumbChip({
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return TextButton(
-      onPressed: isActive ? null : onTap,
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        backgroundColor: isActive
-            ? colorScheme.primary.withValues(alpha: 0.12)
-            : null,
-        foregroundColor: isActive
-            ? colorScheme.primary
-            : colorScheme.onSurfaceVariant,
-        shape: const StadiumBorder(),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+      items.add(
+        FBreadcrumbItem(
+          onPress: () => onSegmentTap(segments.length - 2),
+          child: Text(
+            segments[segments.length - 2].name,
+            style: typography.sm.copyWith(
+              fontWeight: FontWeight.w600,
+              color: colors.mutedForeground,
+            ),
+          ),
         ),
-      ),
+      );
+      items.add(
+        FBreadcrumbItem(
+          current: true,
+          child: Text(
+            segments.last.name,
+            style: typography.sm.copyWith(
+              fontWeight: FontWeight.w700,
+              color: colors.foreground,
+            ),
+          ),
+        ),
+      );
+    } else {
+      for (var i = 0; i < segments.length; i++) {
+        final isCurrent = i == segments.length - 1;
+        items.add(
+          FBreadcrumbItem(
+            current: isCurrent,
+            onPress: isCurrent ? null : () => onSegmentTap(i),
+            child: Text(
+              segments[i].name,
+              style: typography.sm.copyWith(
+                fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w600,
+                color: isCurrent ? colors.foreground : colors.mutedForeground,
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    return FBreadcrumb(
+      divider: divider,
+      children: items,
     );
   }
 }
