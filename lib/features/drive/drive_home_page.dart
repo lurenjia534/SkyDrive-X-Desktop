@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:forui/forui.dart';
 import 'package:skydrivex/features/drive/providers/drive_download_manager.dart';
 import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
 import 'package:skydrivex/features/drive/services/drive_item_action_service.dart';
@@ -103,6 +104,12 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
     if (selected == null) return;
     if (!context.mounted) return;
     switch (selected) {
+      case DriveContextAction.createFolder:
+        await DriveItemActionService.promptCreateFolder(
+          context: context,
+          ref: ref,
+        );
+        break;
       case DriveContextAction.download:
         await DriveItemActionService.handleDownload(
           context: context,
@@ -178,10 +185,26 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-          child: DriveBreadcrumbBar(
-            segments: viewState.breadcrumbs,
-            onRootTap: () => controller.tapBreadcrumb(null),
-            onSegmentTap: controller.tapBreadcrumb,
+          child: Row(
+            children: [
+              Expanded(
+                child: DriveBreadcrumbBar(
+                  segments: viewState.breadcrumbs,
+                  onRootTap: () => controller.tapBreadcrumb(null),
+                  onSegmentTap: controller.tapBreadcrumb,
+                ),
+              ),
+              const SizedBox(width: 12),
+              FButton(
+                onPress: () => DriveItemActionService.promptCreateFolder(
+                  context: context,
+                  ref: ref,
+                ),
+                style: FButtonStyle.outline(),
+                prefix: const Icon(FIcons.folderPlus, size: 16),
+                child: const Text('新建文件夹'),
+              ),
+            ],
           ),
         ),
         Expanded(

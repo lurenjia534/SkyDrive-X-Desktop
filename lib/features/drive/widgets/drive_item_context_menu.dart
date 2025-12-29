@@ -4,6 +4,7 @@ import 'package:forui/forui.dart';
 import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
 
 enum DriveContextAction {
+  createFolder('新建文件夹', FIcons.folderPlus),
   download('下载', Icons.download_rounded),
   delete('删除', Icons.delete_outline_rounded),
   share('分享', Icons.share_outlined),
@@ -33,6 +34,7 @@ Future<DriveContextAction?> showDriveItemContextMenu({
     unawaited(_activeMenu!._close());
   }
   final actions = <DriveContextAction>[
+    DriveContextAction.createFolder,
     if (!item.isFolder) DriveContextAction.download,
     DriveContextAction.delete,
     DriveContextAction.share,

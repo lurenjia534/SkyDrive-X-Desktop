@@ -54,14 +54,11 @@ class DriveItemActionService {
     required BuildContext context,
     required WidgetRef ref,
   }) async {
-    final messenger = ScaffoldMessenger.of(context);
     final controller = TextEditingController(text: '新建文件夹');
     controller.selection = TextSelection(
       baseOffset: 0,
       extentOffset: controller.text.length,
     );
-    final focusNode = FocusNode();
-
     final result = await showFDialog<String>(
       context: context,
       barrierLabel: '新建文件夹',
@@ -91,7 +88,6 @@ class DriveItemActionService {
               const SizedBox(height: 12),
               FTextField(
                 controller: controller,
-                focusNode: focusNode,
                 autofocus: true,
                 textInputAction: TextInputAction.done,
                 onSubmit: (_) =>
@@ -117,13 +113,12 @@ class DriveItemActionService {
       },
     );
 
-    focusNode.dispose();
     controller.dispose();
 
     if (result == null) return;
     final name = result.trim();
     if (name.isEmpty) {
-      messenger.showSnackBar(const SnackBar(content: Text('名称不能为空')));
+      _showToast(context, '名称不能为空');
       return;
     }
 
@@ -131,12 +126,10 @@ class DriveItemActionService {
     try {
       final created = await homeController.createFolder(name);
       if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('已创建文件夹：${created.name}')),
-      );
+      _showToast(context, '已创建文件夹：${created.name}');
     } catch (err) {
       if (!context.mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text('新建文件夹失败：$err')));
+      _showToast(context, '新建文件夹失败：$err');
     }
   }
 
@@ -145,27 +138,26 @@ class DriveItemActionService {
     required WidgetRef ref,
     required drive_api.DriveItemSummary item,
   }) async {
-    final messenger = ScaffoldMessenger.of(context);
     final manager = ref.read(driveDownloadManagerProvider.notifier);
     final queue = ref.read(driveDownloadManagerProvider);
     if (queue.isActive(item.id)) {
-      messenger.showSnackBar(SnackBar(content: Text('下载中：${item.name}')));
+      _showToast(context, '下载中：${item.name}');
       return false;
     }
     String targetDir;
     try {
       targetDir = await ref.read(downloadDirectoryProvider.future);
     } catch (err) {
-      messenger.showSnackBar(SnackBar(content: Text('无法获取下载目录：$err')));
+      _showToast(context, '无法获取下载目录：$err');
       return false;
     }
     try {
       await manager.enqueue(item, targetDirectory: targetDir);
     } catch (err) {
-      messenger.showSnackBar(SnackBar(content: Text('加入下载队列失败：$err')));
+      _showToast(context, '加入下载队列失败：$err');
       return false;
     }
-    messenger.showSnackBar(SnackBar(content: Text('已加入下载队列：${item.name}')));
+    _showToast(context, '已加入下载队列：${item.name}');
     return true;
   }
 
@@ -174,7 +166,6 @@ class DriveItemActionService {
     required WidgetRef ref,
     required drive_api.DriveItemSummary item,
   }) async {
-    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -199,7 +190,7 @@ class DriveItemActionService {
     try {
       await deleteDriveItem(itemId: item.id, ifMatch: null, bypassLocks: false);
     } catch (err) {
-      messenger.showSnackBar(SnackBar(content: Text('删除失败：$err')));
+      _showToast(context, '删除失败：$err');
       return;
     }
 
@@ -207,10 +198,10 @@ class DriveItemActionService {
     try {
       await controller.refresh(showSkeleton: false);
     } catch (err) {
-      messenger.showSnackBar(SnackBar(content: Text('删除成功，但刷新失败：$err')));
+      _showToast(context, '删除成功，但刷新失败：$err');
       return;
     }
-    messenger.showSnackBar(SnackBar(content: Text('已删除：${item.name}')));
+    _showToast(context, '已删除：${item.name}');
   }
 
   static Future<void> showShareDialog({
@@ -257,9 +248,7 @@ class DriveItemActionService {
                   );
                   if (dialogContext.mounted) {
                     Navigator.of(dialogContext).pop();
-                    ScaffoldMessenger.of(
-                      dialogContext,
-                    ).showSnackBar(const SnackBar(content: Text('移动成功')));
+                    _showToast(dialogContext, '移动成功');
                     // 移动完成后刷新列表，但避免在对话框关闭前触发界面跳转。
                     await ref
                         .read(driveHomeControllerProvider.notifier)
@@ -267,9 +256,7 @@ class DriveItemActionService {
                   }
                 } catch (err) {
                   if (dialogContext.mounted) {
-                    ScaffoldMessenger.of(
-                      dialogContext,
-                    ).showSnackBar(SnackBar(content: Text('移动失败：$err')));
+                    _showToast(dialogContext, '移动失败：$err');
                   }
                 }
               },
@@ -294,5 +281,14 @@ class DriveItemActionService {
         );
       },
     );
+  }
+
+  static void _showToast(BuildContext context, String message) {
+    if (context.findAncestorStateOfType<FToasterState>() != null) {
+      showFToast(context: context, title: Text(message));
+      return;
+    }
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.showSnackBar(SnackBar(content: Text(message)));
   }
 }
