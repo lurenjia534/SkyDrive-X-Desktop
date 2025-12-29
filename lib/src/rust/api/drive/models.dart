@@ -6,7 +6,7 @@
 import '../../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_receiver_is_total_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 /// 下载进度事件，通过 StreamSink 推送给 Flutter，供 UI 实时刷新进度与速度。
 class DownloadProgressUpdate {
@@ -73,7 +73,7 @@ class DownloadQueueState {
 }
 
 /// 下载任务状态，迁移至 Rust 端统一管理。
-enum DownloadStatus { inProgress, completed, failed }
+enum DownloadStatus { inProgress, paused, completed, failed }
 
 /// 单条下载任务详情，供 Flutter 展示进度与历史。
 class DownloadTask {
@@ -81,9 +81,14 @@ class DownloadTask {
   final DownloadStatus status;
   final PlatformInt64 startedAt;
   final PlatformInt64? completedAt;
+  final String targetDir;
+  final String fileName;
+  final bool overwrite;
   final String? savedPath;
   final BigInt? sizeLabel;
   final BigInt? bytesDownloaded;
+  final String? etag;
+  final bool canResume;
   final String? errorMessage;
 
   const DownloadTask({
@@ -91,9 +96,14 @@ class DownloadTask {
     required this.status,
     required this.startedAt,
     this.completedAt,
+    required this.targetDir,
+    required this.fileName,
+    required this.overwrite,
     this.savedPath,
     this.sizeLabel,
     this.bytesDownloaded,
+    this.etag,
+    required this.canResume,
     this.errorMessage,
   });
 
@@ -103,9 +113,14 @@ class DownloadTask {
       status.hashCode ^
       startedAt.hashCode ^
       completedAt.hashCode ^
+      targetDir.hashCode ^
+      fileName.hashCode ^
+      overwrite.hashCode ^
       savedPath.hashCode ^
       sizeLabel.hashCode ^
       bytesDownloaded.hashCode ^
+      etag.hashCode ^
+      canResume.hashCode ^
       errorMessage.hashCode;
 
   @override
@@ -117,9 +132,14 @@ class DownloadTask {
           status == other.status &&
           startedAt == other.startedAt &&
           completedAt == other.completedAt &&
+          targetDir == other.targetDir &&
+          fileName == other.fileName &&
+          overwrite == other.overwrite &&
           savedPath == other.savedPath &&
           sizeLabel == other.sizeLabel &&
           bytesDownloaded == other.bytesDownloaded &&
+          etag == other.etag &&
+          canResume == other.canResume &&
           errorMessage == other.errorMessage;
 }
 

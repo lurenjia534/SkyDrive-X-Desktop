@@ -18,9 +18,14 @@ CREATE TABLE IF NOT EXISTS download_tasks (
     status INTEGER NOT NULL,
     started_at INTEGER NOT NULL,
     completed_at INTEGER,
+    target_dir TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    overwrite INTEGER NOT NULL,
     saved_path TEXT,
     size_label INTEGER,
     bytes_downloaded INTEGER,
+    etag TEXT,
+    can_resume INTEGER NOT NULL DEFAULT 0,
     error_message TEXT,
     updated_at_millis INTEGER NOT NULL
 );";
@@ -38,9 +43,14 @@ pub struct DownloadTaskRecord {
     pub status: i64,
     pub started_at: i64,
     pub completed_at: Option<i64>,
+    pub target_dir: String,
+    pub file_name: String,
+    pub overwrite: bool,
     pub saved_path: Option<String>,
     pub size_label: Option<i64>,
     pub bytes_downloaded: Option<i64>,
+    pub etag: Option<String>,
+    pub can_resume: bool,
     pub error_message: Option<String>,
     pub updated_at_millis: i64,
 }
@@ -60,13 +70,18 @@ pub fn upsert_download_task(record: &DownloadTaskRecord) -> StorageResult<()> {
                 status,
                 started_at,
                 completed_at,
+                target_dir,
+                file_name,
+                overwrite,
                 saved_path,
                 size_label,
                 bytes_downloaded,
+                etag,
+                can_resume,
                 error_message,
                 updated_at_millis
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(item_id) DO UPDATE SET
                 item_name = excluded.item_name,
                 size = excluded.size,
@@ -78,9 +93,14 @@ pub fn upsert_download_task(record: &DownloadTaskRecord) -> StorageResult<()> {
                 status = excluded.status,
                 started_at = excluded.started_at,
                 completed_at = excluded.completed_at,
+                target_dir = excluded.target_dir,
+                file_name = excluded.file_name,
+                overwrite = excluded.overwrite,
                 saved_path = excluded.saved_path,
                 size_label = excluded.size_label,
                 bytes_downloaded = excluded.bytes_downloaded,
+                etag = excluded.etag,
+                can_resume = excluded.can_resume,
                 error_message = excluded.error_message,
                 updated_at_millis = excluded.updated_at_millis",
             params![
@@ -95,9 +115,14 @@ pub fn upsert_download_task(record: &DownloadTaskRecord) -> StorageResult<()> {
                 record.status,
                 record.started_at,
                 record.completed_at,
+                record.target_dir,
+                record.file_name,
+                record.overwrite as i64,
                 record.saved_path,
                 record.size_label,
                 record.bytes_downloaded,
+                record.etag,
+                record.can_resume as i64,
                 record.error_message,
                 record.updated_at_millis,
             ],
@@ -123,9 +148,14 @@ pub fn load_download_tasks() -> StorageResult<Vec<DownloadTaskRecord>> {
                     status,
                     started_at,
                     completed_at,
+                    target_dir,
+                    file_name,
+                    overwrite,
                     saved_path,
                     size_label,
                     bytes_downloaded,
+                    etag,
+                    can_resume,
                     error_message,
                     updated_at_millis
                 FROM download_tasks
@@ -152,11 +182,11 @@ pub fn delete_download_task(item_id: &str) -> StorageResult<()> {
     })
 }
 
-pub fn clear_finished_download_tasks(active_status: i64) -> StorageResult<()> {
+pub fn clear_finished_download_tasks(active_status: i64, paused_status: i64) -> StorageResult<()> {
     with_connection(|conn| {
         conn.execute(
-            "DELETE FROM download_tasks WHERE status != ?",
-            params![active_status],
+            "DELETE FROM download_tasks WHERE status != ? AND status != ?",
+            params![active_status, paused_status],
         )
         .map_err(|e| format!("failed to clear download history: {e}"))?;
         Ok(())
@@ -176,10 +206,21 @@ fn map_download_task(row: &Row) -> rusqlite::Result<DownloadTaskRecord> {
         status: row.get(8)?,
         started_at: row.get(9)?,
         completed_at: row.get(10)?,
-        saved_path: row.get(11)?,
-        size_label: row.get(12)?,
-        bytes_downloaded: row.get(13)?,
-        error_message: row.get(14)?,
-        updated_at_millis: row.get(15)?,
+        target_dir: row.get::<_, Option<String>>(11)?.unwrap_or_default(),
+        file_name: row.get::<_, Option<String>>(12)?.unwrap_or_default(),
+        overwrite: row
+            .get::<_, Option<i64>>(13)?
+            .unwrap_or(0)
+            != 0,
+        saved_path: row.get(14)?,
+        size_label: row.get(15)?,
+        bytes_downloaded: row.get(16)?,
+        etag: row.get(17)?,
+        can_resume: row
+            .get::<_, Option<i64>>(18)?
+            .unwrap_or(0)
+            != 0,
+        error_message: row.get(19)?,
+        updated_at_millis: row.get(20)?,
     })
 }

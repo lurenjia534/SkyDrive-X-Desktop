@@ -1,10 +1,15 @@
 use super::storage::{DownloadStore, SqliteDownloadStore};
 use crate::api::drive::{
-    download::download_drive_item_with_progress,
+    download::{
+        fetch_download_metadata, prepare_destination, sanitize_file_name, stream_download,
+        DownloadError, CONTROL_FLAG_CANCEL, CONTROL_FLAG_NONE, CONTROL_FLAG_PAUSE,
+    },
     models::{
         DownloadProgressUpdate, DownloadQueueState, DownloadStatus, DownloadTask,
         DriveDownloadResult, DriveItemSummary,
     },
+    current_access_token,
+    GRAPH_BASE,
 };
 use crate::settings::download_concurrency::{
     default_download_concurrency, get_download_concurrency,
@@ -12,8 +17,10 @@ use crate::settings::download_concurrency::{
 use once_cell::sync::Lazy;
 use std::{
     collections::{HashMap, HashSet},
+    fs,
+    path::Path,
     sync::{
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicU8, Ordering},
         mpsc::{self, Receiver, SyncSender, TrySendError},
         Arc, Condvar, Mutex, MutexGuard,
     },
@@ -32,7 +39,6 @@ const PROGRESS_PERSIST_INTERVAL: Duration = Duration::from_secs(1);
 /// 速度采样的最小时间间隔，避免因为瞬时回调过于密集而产生虚高速率。
 const SPEED_SAMPLE_MIN_INTERVAL: Duration = Duration::from_millis(300);
 
-const INTERRUPTED_DOWNLOAD_MESSAGE: &str = "应用已关闭或异常退出，下载被中断，请重新下载";
 
 /// 核心状态机：负责调度、下载线程管理、速度计算与事件广播。
 #[derive(Clone)]
@@ -45,8 +51,8 @@ pub struct DownloadManager {
     persist_markers: Arc<Mutex<HashMap<String, PersistMarker>>>,
     /// 订阅者列表，需要保护避免在 send 阶段被并发修改
     subscribers: Arc<Mutex<Vec<SyncSender<DownloadProgressUpdate>>>>,
-    /// 每个任务的取消令牌
-    cancel_tokens: Arc<Mutex<HashMap<String, Arc<AtomicBool>>>>,
+    /// 每个任务的控制令牌（暂停/取消）
+    control_tokens: Arc<Mutex<HashMap<String, Arc<AtomicU8>>>>,
     /// 控制同时进行的下载数量，避免无限制创建线程
     concurrency_guard: Arc<Semaphore>,
 }
@@ -86,7 +92,7 @@ impl DownloadManager {
             progress_meters: Arc::new(Mutex::new(HashMap::new())),
             persist_markers: Arc::new(Mutex::new(HashMap::new())),
             subscribers: Arc::new(Mutex::new(Vec::new())),
-            cancel_tokens: Arc::new(Mutex::new(HashMap::new())),
+            control_tokens: Arc::new(Mutex::new(HashMap::new())),
             concurrency_guard: Arc::new(Semaphore::new(max_concurrency)),
         };
         manager.restore_from_storage();
@@ -103,17 +109,26 @@ impl DownloadManager {
         let mut active: Vec<DownloadTask> = Vec::new();
         let mut completed = Vec::new();
         let mut failed = Vec::new();
+        let mut resume_tasks: Vec<DownloadTask> = Vec::new();
         for mut task in records {
             match task.status {
                 DownloadStatus::InProgress => {
-                    task.status = DownloadStatus::Failed;
-                    task.completed_at = Some(current_timestamp());
-                    if task.error_message.is_none() {
-                        task.error_message = Some(INTERRUPTED_DOWNLOAD_MESSAGE.to_string());
+                    if task.target_dir.trim().is_empty() || task.file_name.trim().is_empty() {
+                        task.status = DownloadStatus::Failed;
+                        task.completed_at = Some(current_timestamp());
+                        task.error_message =
+                            Some("无法恢复下载任务：缺少目标路径或文件名".to_string());
+                        task.can_resume = false;
+                        self.store.upsert(&task);
+                        failed.push(task);
+                    } else {
+                        task.error_message = None;
+                        task.can_resume = false;
+                        active.push(task.clone());
+                        resume_tasks.push(task);
                     }
-                    self.store.upsert(&task);
-                    failed.push(task);
                 }
+                DownloadStatus::Paused => active.push(task),
                 DownloadStatus::Completed => completed.push(task),
                 DownloadStatus::Failed => failed.push(task),
             }
@@ -125,6 +140,10 @@ impl DownloadManager {
             state.active = active;
             state.completed = completed;
             state.failed = failed;
+        }
+        for task in resume_tasks {
+            let resume_from = task.bytes_downloaded.unwrap_or(0);
+            self.spawn_download(task, Some(resume_from));
         }
     }
 
@@ -149,48 +168,217 @@ impl DownloadManager {
         state.completed.retain(|task| task.item.id != item.id);
         state.failed.retain(|task| task.item.id != item.id);
 
+        let file_name = sanitize_file_name(&item.name);
         let task = DownloadTask {
             item: item.clone(),
             status: DownloadStatus::InProgress,
             started_at: current_timestamp(),
             completed_at: None,
+            target_dir: target_dir.clone(),
+            file_name,
+            overwrite,
             saved_path: None,
             size_label: item.size,
             bytes_downloaded: Some(0),
+            etag: None,
+            can_resume: false,
             error_message: None,
         };
         state.active.push(task.clone());
         drop(state);
         self.store.upsert(&task);
+        self.spawn_download(task, None);
 
-        let cancel_token = Arc::new(AtomicBool::new(false));
-        self.register_cancel_token(&item.id, cancel_token.clone());
+        Ok(self.snapshot())
+    }
+
+    fn spawn_download(&self, task: DownloadTask, resume_from: Option<u64>) {
+        let control_token = Arc::new(AtomicU8::new(CONTROL_FLAG_NONE));
+        self.register_control_token(&task.item.id, control_token.clone());
 
         let manager = self.clone();
-        let item_id = item.id.clone();
+        let item_id = task.item.id.clone();
         thread::spawn(move || {
-            // 获取并发许可，超限时会阻塞在此，避免无限制创建线程
             let _permit = manager.concurrency_guard.acquire();
             let progress_manager = manager.clone();
             let progress_item_id = item_id.clone();
-            let progress_callback: Option<Box<dyn FnMut(u64, Option<u64>) + Send>> =
+            let mut progress_callback: Option<Box<dyn FnMut(u64, Option<u64>) + Send>> =
                 Some(Box::new(move |downloaded: u64, expected: Option<u64>| {
                     progress_manager.report_progress(&progress_item_id, downloaded, expected);
                 }));
-            let result = download_drive_item_with_progress(
-                item_id.clone(),
-                target_dir,
-                overwrite,
-                progress_callback,
-                Some(cancel_token.clone()),
-            );
+            let result = manager.execute_download(&task, resume_from, &mut progress_callback, control_token.clone());
             match result {
                 Ok(done) => manager.mark_success(&item_id, done),
-                Err(err) => manager.mark_failure(&item_id, err),
+                Err(DownloadError::Paused) => manager.mark_paused(&item_id),
+                Err(DownloadError::Cancelled(message)) => {
+                    manager.mark_failure(&item_id, message, false)
+                }
+                Err(err) => {
+                    let bytes = manager.current_bytes_downloaded(&item_id);
+                    let can_resume = err.is_recoverable() && bytes > 0;
+                    manager.mark_failure(&item_id, err.message(), can_resume);
+                }
             }
         });
+    }
 
-        Ok(self.snapshot())
+    fn execute_download(
+        &self,
+        task: &DownloadTask,
+        resume_from: Option<u64>,
+        progress_callback: &mut Option<Box<dyn FnMut(u64, Option<u64>) + Send>>,
+        control_token: Arc<AtomicU8>,
+    ) -> Result<DriveDownloadResult, DownloadError> {
+        let access_token = current_access_token().map_err(|message| DownloadError::Failed {
+            message,
+            recoverable: false,
+        })?;
+        let metadata = fetch_download_metadata(&task.item.id, &access_token)?;
+        if metadata.file.is_none() {
+            return Err(DownloadError::Failed {
+                message: "选中的项目不是可下载的文件".to_string(),
+                recoverable: false,
+            });
+        }
+
+        let mut file_name = task.file_name.clone();
+        let resume_bytes = resume_from.unwrap_or(0);
+        if resume_bytes > 0 {
+            if let (Some(stored), Some(current)) = (task.etag.as_ref(), metadata.etag.as_ref()) {
+                if stored != current {
+                    return Err(DownloadError::Failed {
+                        message: "文件已更新，无法继续续传。请重新下载。".to_string(),
+                        recoverable: false,
+                    });
+                }
+            }
+        }
+
+        if file_name.trim().is_empty() {
+            file_name = metadata
+                .name
+                .as_deref()
+                .map(sanitize_file_name)
+                .unwrap_or_else(|| "download.bin".to_string());
+            self.update_task_metadata(
+                &task.item.id,
+                metadata.size,
+                metadata.etag.clone(),
+                Some(file_name.clone()),
+            );
+        } else {
+            self.update_task_metadata(
+                &task.item.id,
+                metadata.size,
+                metadata.etag.clone(),
+                None,
+            );
+        }
+
+        let (download_endpoint, bearer_token) = match metadata.download_url.as_ref() {
+            Some(url) => (url.clone(), None),
+            None => (
+                format!(
+                    "{GRAPH_BASE}/me/drive/items/{item_id}/content",
+                    item_id = task.item.id
+                ),
+                Some(access_token.as_str()),
+            ),
+        };
+
+        let raw_destination = Path::new(&task.target_dir).join(&file_name);
+        if let Some(expected) = metadata.size {
+            if raw_destination.exists() {
+                if let Ok(meta) = fs::metadata(&raw_destination) {
+                    if meta.len() == expected {
+                        let temp_path = Path::new(&task.target_dir)
+                            .join(format!("{}.part", file_name));
+                        let _ = fs::remove_file(&temp_path);
+                        let saved_path = raw_destination
+                            .canonicalize()
+                            .unwrap_or(raw_destination)
+                            .to_string_lossy()
+                            .into_owned();
+                        return Ok(DriveDownloadResult {
+                            file_name,
+                            saved_path,
+                            bytes_downloaded: expected,
+                            expected_size: metadata.size,
+                        });
+                    }
+                }
+            }
+        }
+
+        let destination = prepare_destination(&task.target_dir, &file_name, task.overwrite)?;
+        let mut progress_ref = progress_callback
+            .as_mut()
+            .map(|cb| cb.as_mut() as &mut (dyn FnMut(u64, Option<u64>) + Send));
+        let bytes_downloaded = stream_download(
+            &download_endpoint,
+            bearer_token,
+            &destination,
+            metadata.size,
+            resume_from,
+            progress_ref.as_deref_mut(),
+            Some(&control_token),
+        )?;
+        let saved_path = destination
+            .canonicalize()
+            .unwrap_or(destination)
+            .to_string_lossy()
+            .into_owned();
+
+        Ok(DriveDownloadResult {
+            file_name,
+            saved_path,
+            bytes_downloaded,
+            expected_size: metadata.size,
+        })
+    }
+
+    fn update_task_metadata(
+        &self,
+        item_id: &str,
+        expected_size: Option<u64>,
+        etag: Option<String>,
+        file_name: Option<String>,
+    ) {
+        let mut state = match self.state.lock() {
+            Ok(guard) => guard,
+            Err(poison) => {
+                eprintln!("[download-manager] state lock poisoned on metadata update; recovering");
+                poison.into_inner()
+            }
+        };
+
+        let mut updated_task = None;
+        if let Some(task) = state.active.iter_mut().find(|t| t.item.id == item_id) {
+            if expected_size.is_some() {
+                task.size_label = expected_size;
+            }
+            if etag.is_some() {
+                task.etag = etag.clone();
+            }
+            if let Some(name) = file_name {
+                task.file_name = name;
+            }
+            updated_task = Some(task.clone());
+        }
+        drop(state);
+        if let Some(task) = updated_task {
+            self.store.upsert(&task);
+        }
+    }
+
+    fn current_bytes_downloaded(&self, item_id: &str) -> u64 {
+        let state = self.state.lock().unwrap_or_else(|p| p.into_inner());
+        state
+            .active
+            .iter()
+            .find(|task| task.item.id == item_id)
+            .and_then(|task| task.bytes_downloaded)
+            .unwrap_or(0)
     }
 
     /// 下载成功后迁移任务到 completed，并更新存储/推送终态事件。
@@ -211,6 +399,7 @@ impl DownloadManager {
             task.saved_path = Some(result.saved_path.clone());
             task.size_label = task.size_label.or(result.expected_size);
             task.bytes_downloaded = Some(result.bytes_downloaded);
+            task.can_resume = false;
             task.error_message = None;
             state.completed.insert(0, task.clone());
             updated_task = Some(task);
@@ -224,12 +413,12 @@ impl DownloadManager {
                 task.bytes_downloaded.unwrap_or(result.bytes_downloaded),
                 task.size_label.or(result.expected_size),
             );
-            self.clear_cancel_token(item_id);
+            self.clear_control_token(item_id);
         }
     }
 
     /// 下载失败时迁移任务到 failed，并保留错误信息。
-    fn mark_failure(&self, item_id: &str, err_msg: String) {
+    fn mark_failure(&self, item_id: &str, err_msg: String, can_resume: bool) {
         let mut state = match self.state.lock() {
             Ok(guard) => guard,
             Err(poison) => {
@@ -243,6 +432,7 @@ impl DownloadManager {
             let mut task = state.active.remove(position);
             task.status = DownloadStatus::Failed;
             task.completed_at = Some(current_timestamp());
+            task.can_resume = can_resume;
             task.error_message = Some(err_msg.clone());
             state.failed.insert(0, task.clone());
             updated_task = Some(task);
@@ -258,7 +448,37 @@ impl DownloadManager {
                 task.bytes_downloaded.unwrap_or(0),
                 task.size_label,
             );
-            self.clear_cancel_token(item_id);
+            self.clear_control_token(item_id);
+        }
+    }
+
+    fn mark_paused(&self, item_id: &str) {
+        let mut state = match self.state.lock() {
+            Ok(guard) => guard,
+            Err(poison) => {
+                eprintln!("[download-manager] state lock poisoned on pause; recovering");
+                poison.into_inner()
+            }
+        };
+
+        let mut updated_task = None;
+        if let Some(task) = state.active.iter_mut().find(|t| t.item.id == item_id) {
+            task.status = DownloadStatus::Paused;
+            task.completed_at = None;
+            task.error_message = None;
+            task.can_resume = false;
+            updated_task = Some(task.clone());
+        }
+        drop(state);
+        if let Some(task) = updated_task {
+            self.store.upsert(&task);
+            self.clear_progress_meter(item_id);
+            self.emit_progress_snapshot(
+                item_id,
+                task.bytes_downloaded.unwrap_or(0),
+                task.size_label,
+            );
+            self.clear_control_token(item_id);
         }
     }
 
@@ -273,6 +493,7 @@ impl DownloadManager {
         drop(state);
         self.store.remove(item_id);
         self.clear_progress_meter(item_id);
+        self.clear_control_token(item_id);
         Ok(snapshot.into())
     }
 
@@ -300,6 +521,103 @@ impl DownloadManager {
         } else {
             Err("未找到对应的下载任务或任务已结束".to_string())
         }
+    }
+
+    /// 暂停指定任务，暂停后可继续下载。
+    pub fn pause(&self, item_id: &str) -> Result<DownloadQueueState, String> {
+        if self.signal_pause(item_id) {
+            return Ok(self.snapshot());
+        }
+        let state = self.state.lock().unwrap_or_else(|p| p.into_inner());
+        if state
+            .active
+            .iter()
+            .any(|task| task.item.id == item_id && task.status == DownloadStatus::Paused)
+        {
+            return Ok((*state).clone().into());
+        }
+        Err("未找到对应的下载任务或任务已结束".to_string())
+    }
+
+    /// 继续下载任务，必要时可重置为重新下载。
+    pub fn resume(&self, item_id: &str, restart: bool) -> Result<DownloadQueueState, String> {
+        let mut task_to_resume: Option<DownloadTask> = None;
+        let mut resume_from: Option<u64> = None;
+
+        let mut state = self.state.lock().unwrap_or_else(|p| p.into_inner());
+        if let Some(position) = state
+            .active
+            .iter()
+            .position(|task| task.item.id == item_id)
+        {
+            let mut task = state.active[position].clone();
+            if task.status != DownloadStatus::Paused {
+                return Err("任务当前无法继续下载".to_string());
+            }
+            if task.target_dir.trim().is_empty() || task.file_name.trim().is_empty() {
+                return Err("无法恢复下载任务：缺少目标路径或文件名".to_string());
+            }
+            task.status = DownloadStatus::InProgress;
+            task.completed_at = None;
+            task.error_message = None;
+            task.can_resume = false;
+            state.active[position] = task.clone();
+            resume_from = Some(task.bytes_downloaded.unwrap_or(0));
+            task_to_resume = Some(task);
+        } else if let Some(position) = state
+            .failed
+            .iter()
+            .position(|task| task.item.id == item_id)
+        {
+            let mut task = state.failed.remove(position);
+            if !restart && !task.can_resume {
+                return Err("任务不支持继续，请重新下载".to_string());
+            }
+            if task.target_dir.trim().is_empty() || task.file_name.trim().is_empty() {
+                return Err("无法恢复下载任务：缺少目标路径或文件名".to_string());
+            }
+            if restart {
+                task.bytes_downloaded = Some(0);
+                task.etag = None;
+            }
+            task.status = DownloadStatus::InProgress;
+            task.completed_at = None;
+            task.error_message = None;
+            task.can_resume = false;
+            state.active.insert(0, task.clone());
+            resume_from = if restart {
+                None
+            } else {
+                Some(task.bytes_downloaded.unwrap_or(0))
+            };
+            task_to_resume = Some(task);
+        }
+        let snapshot = (*state).clone();
+        drop(state);
+
+        if let Some(task) = task_to_resume {
+            self.store.upsert(&task);
+            if restart {
+                let _ = self.remove_temp_file(&task);
+            }
+            self.spawn_download(task, resume_from);
+            return Ok(snapshot.into());
+        }
+
+        Err("未找到对应的下载任务或任务已结束".to_string())
+    }
+
+    fn remove_temp_file(&self, task: &DownloadTask) -> Result<(), String> {
+        if task.target_dir.trim().is_empty() || task.file_name.trim().is_empty() {
+            return Ok(());
+        }
+        let temp_path = Path::new(&task.target_dir)
+            .join(format!("{}.part", task.file_name));
+        if !temp_path.exists() {
+            return Ok(());
+        }
+        fs::remove_file(&temp_path)
+            .map_err(|e| format!("failed to remove temp file {}: {e}", temp_path.to_string_lossy()))
     }
 
     /// 仅清理失败任务，保留 active/completed 队列，方便 UI 一键清扫失败记录。
@@ -413,20 +731,29 @@ impl DownloadManager {
         markers.retain(|id, _| active_ids.contains(id));
     }
 
-    fn register_cancel_token(&self, item_id: &str, token: Arc<AtomicBool>) {
-        let mut tokens = recover_lock(&self.cancel_tokens);
+    fn register_control_token(&self, item_id: &str, token: Arc<AtomicU8>) {
+        let mut tokens = recover_lock(&self.control_tokens);
         tokens.insert(item_id.to_string(), token);
     }
 
-    fn clear_cancel_token(&self, item_id: &str) {
-        let mut tokens = recover_lock(&self.cancel_tokens);
+    fn clear_control_token(&self, item_id: &str) {
+        let mut tokens = recover_lock(&self.control_tokens);
         tokens.remove(item_id);
     }
 
-    fn signal_cancel(&self, item_id: &str) -> bool {
-        let tokens = recover_lock(&self.cancel_tokens);
+    fn signal_pause(&self, item_id: &str) -> bool {
+        let tokens = recover_lock(&self.control_tokens);
         if let Some(token) = tokens.get(item_id) {
-            token.store(true, Ordering::Relaxed);
+            token.store(CONTROL_FLAG_PAUSE, Ordering::Relaxed);
+            return true;
+        }
+        false
+    }
+
+    fn signal_cancel(&self, item_id: &str) -> bool {
+        let tokens = recover_lock(&self.control_tokens);
+        if let Some(token) = tokens.get(item_id) {
+            token.store(CONTROL_FLAG_CANCEL, Ordering::Relaxed);
             return true;
         }
         false
@@ -608,6 +935,14 @@ pub fn remove_download_task(item_id: &str) -> Result<DownloadQueueState, String>
 
 pub fn cancel_download_task(item_id: &str) -> Result<DownloadQueueState, String> {
     DownloadManager::shared().cancel(item_id)
+}
+
+pub fn pause_download_task(item_id: &str) -> Result<DownloadQueueState, String> {
+    DownloadManager::shared().pause(item_id)
+}
+
+pub fn resume_download_task(item_id: &str, restart: bool) -> Result<DownloadQueueState, String> {
+    DownloadManager::shared().resume(item_id, restart)
 }
 
 pub fn clear_download_history() -> Result<DownloadQueueState, String> {

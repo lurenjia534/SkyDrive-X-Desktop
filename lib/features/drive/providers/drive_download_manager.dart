@@ -29,6 +29,8 @@ class DriveDownloadManager extends Notifier<drive_api.DownloadQueueState> {
 
   /// 正在等待 Rust 确认取消的任务列表，用于给 UI 提供“取消中”的即时反馈。
   final Set<String> _pendingCancel = {};
+  final Set<String> _pendingPause = {};
+  final Set<String> _pendingResume = {};
 
   @override
   drive_api.DownloadQueueState build() {
@@ -98,6 +100,35 @@ class DriveDownloadManager extends Notifier<drive_api.DownloadQueueState> {
 
   /// 查询指定任务是否处于“等待取消确认”状态。
   bool isCancelling(String itemId) => _pendingCancel.contains(itemId);
+
+  Future<void> pauseTask(String itemId) async {
+    _pendingPause.add(itemId);
+    state = drive_api.DownloadQueueState(
+      active: state.active,
+      completed: state.completed,
+      failed: state.failed,
+    );
+    final updated = await _service.pauseTask(itemId);
+    _pruneSpeeds(updated.active);
+    state = updated;
+    _pendingPause.remove(itemId);
+  }
+
+  Future<void> resumeTask(String itemId, {bool restart = false}) async {
+    _pendingResume.add(itemId);
+    state = drive_api.DownloadQueueState(
+      active: state.active,
+      completed: state.completed,
+      failed: state.failed,
+    );
+    final updated = await _service.resumeTask(itemId, restart: restart);
+    _pruneSpeeds(updated.active);
+    state = updated;
+    _pendingResume.remove(itemId);
+  }
+
+  bool isPausing(String itemId) => _pendingPause.contains(itemId);
+  bool isResuming(String itemId) => _pendingResume.contains(itemId);
 
   /// 一键清理所有失败记录，由 Rust 批量执行删除操作。
   Future<void> clearFailedTasks() async {
@@ -184,9 +215,14 @@ class DriveDownloadManager extends Notifier<drive_api.DownloadQueueState> {
       status: task.status,
       startedAt: task.startedAt,
       completedAt: task.completedAt,
+      targetDir: task.targetDir,
+      fileName: task.fileName,
+      overwrite: task.overwrite,
       savedPath: task.savedPath,
       sizeLabel: update.expectedSize ?? task.sizeLabel,
       bytesDownloaded: update.bytesDownloaded,
+      etag: task.etag,
+      canResume: task.canResume,
       errorMessage: task.errorMessage,
     );
   }

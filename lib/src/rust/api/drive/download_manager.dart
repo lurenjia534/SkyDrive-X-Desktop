@@ -30,6 +30,19 @@ Future<DownloadQueueState> cancelDownloadTask({required String itemId}) =>
       itemId: itemId,
     );
 
+Future<DownloadQueueState> pauseDownloadTask({required String itemId}) =>
+    RustLib.instance.api.crateApiDriveDownloadManagerPauseDownloadTask(
+      itemId: itemId,
+    );
+
+Future<DownloadQueueState> resumeDownloadTask({
+  required String itemId,
+  required bool restart,
+}) => RustLib.instance.api.crateApiDriveDownloadManagerResumeDownloadTask(
+  itemId: itemId,
+  restart: restart,
+);
+
 Future<DownloadQueueState> clearFailedDownloadTasks() =>
     RustLib.instance.api.crateApiDriveDownloadManagerClearFailedDownloadTasks();
 

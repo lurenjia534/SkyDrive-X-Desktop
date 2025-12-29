@@ -38,6 +38,20 @@ class DriveDownloadService {
     return drive_manager_api.cancelDownloadTask(itemId: itemId);
   }
 
+  Future<drive_api.DownloadQueueState> pauseTask(String itemId) {
+    return drive_manager_api.pauseDownloadTask(itemId: itemId);
+  }
+
+  Future<drive_api.DownloadQueueState> resumeTask(
+    String itemId, {
+    bool restart = false,
+  }) {
+    return drive_manager_api.resumeDownloadTask(
+      itemId: itemId,
+      restart: restart,
+    );
+  }
+
   Stream<drive_api.DownloadProgressUpdate> progressStream() {
     return drive_manager_api.downloadProgressStream();
   }

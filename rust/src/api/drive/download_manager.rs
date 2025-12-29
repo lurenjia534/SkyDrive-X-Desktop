@@ -4,7 +4,8 @@ use crate::{
     download_manager::{
         cancel_download_task as core_cancel, clear_download_history as core_clear_history,
         clear_failed_download_tasks as core_clear_failed, download_queue_state as core_queue_state,
-        enqueue_download_task as core_enqueue, remove_download_task as core_remove,
+        enqueue_download_task as core_enqueue, pause_download_task as core_pause,
+        remove_download_task as core_remove, resume_download_task as core_resume,
         subscribe_progress as core_subscribe_progress,
     },
 };
@@ -32,6 +33,19 @@ pub fn remove_download_task(item_id: String) -> Result<DownloadQueueState, Strin
 #[flutter_rust_bridge::frb]
 pub fn cancel_download_task(item_id: String) -> Result<DownloadQueueState, String> {
     core_cancel(&item_id)
+}
+
+#[flutter_rust_bridge::frb]
+pub fn pause_download_task(item_id: String) -> Result<DownloadQueueState, String> {
+    core_pause(&item_id)
+}
+
+#[flutter_rust_bridge::frb]
+pub fn resume_download_task(
+    item_id: String,
+    restart: bool,
+) -> Result<DownloadQueueState, String> {
+    core_resume(&item_id, restart)
 }
 
 #[flutter_rust_bridge::frb]

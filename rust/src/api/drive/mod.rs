@@ -15,7 +15,7 @@ pub use download::download_drive_item;
 pub use delete::delete_drive_item;
 pub use download_manager::{
     clear_download_history, download_progress_stream, download_queue_state, enqueue_download_task,
-    remove_download_task,
+    pause_download_task, remove_download_task, resume_download_task,
 };
 pub use details::get_drive_item_details;
 pub use info::get_drive_overview;
@@ -32,6 +32,8 @@ pub use upload_manager::{
     cancel_upload_task, clear_failed_upload_tasks, clear_upload_history, enqueue_upload_task,
     remove_upload_task, upload_progress_stream, upload_queue_state,
 };
+
+pub(crate) use client::current_access_token;
 
 /// Graph v1 端点常量，集中声明方便今后切换区域或版本。
 pub(crate) const GRAPH_BASE: &str = "https://graph.microsoft.com/v1.0";

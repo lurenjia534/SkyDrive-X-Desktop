@@ -55,7 +55,11 @@ impl DownloadStore for SqliteDownloadStore {
 
     /// 清理历史记录，保留 active 船票给上层状态机使用。
     fn clear_history(&self) {
-        if let Err(err) = clear_finished_download_tasks(DownloadStatus::InProgress as i64) {
+        if let Err(err) = clear_finished_download_tasks(
+            status_to_i64(&DownloadStatus::InProgress),
+            status_to_i64(&DownloadStatus::Paused),
+        )
+        {
             eprintln!("[download-store] failed to clear download history: {err}");
         }
     }
@@ -75,9 +79,14 @@ fn record_from_task(task: &DownloadTask) -> DownloadTaskRecord {
         status: status_to_i64(&task.status),
         started_at: task.started_at,
         completed_at: task.completed_at,
+        target_dir: task.target_dir.clone(),
+        file_name: task.file_name.clone(),
+        overwrite: task.overwrite,
         saved_path: task.saved_path.clone(),
         size_label: task.size_label.and_then(|v| v.try_into().ok()),
         bytes_downloaded: task.bytes_downloaded.and_then(|v| v.try_into().ok()),
+        etag: task.etag.clone(),
+        can_resume: task.can_resume,
         error_message: task.error_message.clone(),
         updated_at_millis: crate::db::current_timestamp_millis(),
     }
@@ -100,6 +109,9 @@ fn task_from_record(record: DownloadTaskRecord) -> DownloadTask {
         status: status_from_i64(record.status),
         started_at: record.started_at,
         completed_at: record.completed_at,
+        target_dir: record.target_dir,
+        file_name: record.file_name,
+        overwrite: record.overwrite,
         saved_path: record.saved_path,
         size_label: record
             .size_label
@@ -111,6 +123,8 @@ fn task_from_record(record: DownloadTaskRecord) -> DownloadTask {
                 None
             }
         }),
+        etag: record.etag,
+        can_resume: record.can_resume,
         error_message: record.error_message,
     }
 }
@@ -120,6 +134,7 @@ fn status_to_i64(status: &DownloadStatus) -> i64 {
         DownloadStatus::InProgress => 0,
         DownloadStatus::Completed => 1,
         DownloadStatus::Failed => 2,
+        DownloadStatus::Paused => 3,
     }
 }
 
@@ -127,6 +142,7 @@ fn status_from_i64(value: i64) -> DownloadStatus {
     match value {
         1 => DownloadStatus::Completed,
         2 => DownloadStatus::Failed,
+        3 => DownloadStatus::Paused,
         _ => DownloadStatus::InProgress,
     }
 }

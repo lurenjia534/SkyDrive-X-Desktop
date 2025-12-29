@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1430268093;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1027660054;
 
 // Section: executor
 
@@ -1009,6 +1009,40 @@ fn wire__crate__api__drive__move_item__move_drive_item_impl(
         },
     )
 }
+fn wire__crate__api__drive__download_manager__pause_download_task_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "pause_download_task",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_item_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::drive::download_manager::pause_download_task(api_item_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__auth__auth__persist_auth_state_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1138,6 +1172,43 @@ fn wire__crate__api__drive__upload_manager__remove_upload_task_impl(
                 transform_result_sse::<_, String>((move || {
                     let output_ok =
                         crate::api::drive::upload_manager::remove_upload_task(api_task_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__drive__download_manager__resume_download_task_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "resume_download_task",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_item_id = <String>::sse_decode(&mut deserializer);
+            let api_restart = <bool>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::drive::download_manager::resume_download_task(
+                        api_item_id,
+                        api_restart,
+                    )?;
                     Ok(output_ok)
                 })())
             }
@@ -1474,8 +1545,9 @@ impl SseDecode for crate::api::drive::models::DownloadStatus {
         let mut inner = <i32>::sse_decode(deserializer);
         return match inner {
             0 => crate::api::drive::models::DownloadStatus::InProgress,
-            1 => crate::api::drive::models::DownloadStatus::Completed,
-            2 => crate::api::drive::models::DownloadStatus::Failed,
+            1 => crate::api::drive::models::DownloadStatus::Paused,
+            2 => crate::api::drive::models::DownloadStatus::Completed,
+            3 => crate::api::drive::models::DownloadStatus::Failed,
             _ => unreachable!("Invalid variant for DownloadStatus: {}", inner),
         };
     }
@@ -1488,18 +1560,28 @@ impl SseDecode for crate::api::drive::models::DownloadTask {
         let mut var_status = <crate::api::drive::models::DownloadStatus>::sse_decode(deserializer);
         let mut var_startedAt = <i64>::sse_decode(deserializer);
         let mut var_completedAt = <Option<i64>>::sse_decode(deserializer);
+        let mut var_targetDir = <String>::sse_decode(deserializer);
+        let mut var_fileName = <String>::sse_decode(deserializer);
+        let mut var_overwrite = <bool>::sse_decode(deserializer);
         let mut var_savedPath = <Option<String>>::sse_decode(deserializer);
         let mut var_sizeLabel = <Option<u64>>::sse_decode(deserializer);
         let mut var_bytesDownloaded = <Option<u64>>::sse_decode(deserializer);
+        let mut var_etag = <Option<String>>::sse_decode(deserializer);
+        let mut var_canResume = <bool>::sse_decode(deserializer);
         let mut var_errorMessage = <Option<String>>::sse_decode(deserializer);
         return crate::api::drive::models::DownloadTask {
             item: var_item,
             status: var_status,
             started_at: var_startedAt,
             completed_at: var_completedAt,
+            target_dir: var_targetDir,
+            file_name: var_fileName,
+            overwrite: var_overwrite,
             saved_path: var_savedPath,
             size_label: var_sizeLabel,
             bytes_downloaded: var_bytesDownloaded,
+            etag: var_etag,
+            can_resume: var_canResume,
             error_message: var_errorMessage,
         };
     }
@@ -2185,55 +2267,67 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        28 => {
+        28 => wire__crate__api__drive__download_manager__pause_download_task_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        29 => {
             wire__crate__api__auth__auth__persist_auth_state_impl(port, ptr, rust_vec_len, data_len)
         }
-        29 => {
+        30 => {
             wire__crate__api__auth__refresh__refresh_tokens_impl(port, ptr, rust_vec_len, data_len)
         }
-        30 => wire__crate__api__drive__download_manager__remove_download_task_impl(
+        31 => wire__crate__api__drive__download_manager__remove_download_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        31 => wire__crate__api__drive__upload_manager__remove_upload_task_impl(
+        32 => wire__crate__api__drive__upload_manager__remove_upload_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        32 => wire__crate__api__settings__download_concurrency__set_download_concurrency_impl(
+        33 => wire__crate__api__drive__download_manager__resume_download_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        33 => wire__crate__api__settings__download_directory__set_download_directory_impl(
+        34 => wire__crate__api__settings__download_concurrency__set_download_concurrency_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        34 => wire__crate__api__drive__upload_manager__upload_progress_stream_impl(
+        35 => wire__crate__api__settings__download_directory__set_download_directory_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        35 => wire__crate__api__drive__upload_manager__upload_queue_state_impl(
+        36 => wire__crate__api__drive__upload_manager__upload_progress_stream_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        36 => wire__crate__api__drive__models__upload_queue_state_default_impl(
+        37 => wire__crate__api__drive__upload_manager__upload_queue_state_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        37 => wire__crate__api__drive__upload__upload_small_file_impl(
+        38 => wire__crate__api__drive__models__upload_queue_state_default_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        39 => wire__crate__api__drive__upload__upload_small_file_impl(
             port,
             ptr,
             rust_vec_len,
@@ -2334,8 +2428,9 @@ impl flutter_rust_bridge::IntoDart for crate::api::drive::models::DownloadStatus
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
             Self::InProgress => 0.into_dart(),
-            Self::Completed => 1.into_dart(),
-            Self::Failed => 2.into_dart(),
+            Self::Paused => 1.into_dart(),
+            Self::Completed => 2.into_dart(),
+            Self::Failed => 3.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -2359,9 +2454,14 @@ impl flutter_rust_bridge::IntoDart for crate::api::drive::models::DownloadTask {
             self.status.into_into_dart().into_dart(),
             self.started_at.into_into_dart().into_dart(),
             self.completed_at.into_into_dart().into_dart(),
+            self.target_dir.into_into_dart().into_dart(),
+            self.file_name.into_into_dart().into_dart(),
+            self.overwrite.into_into_dart().into_dart(),
             self.saved_path.into_into_dart().into_dart(),
             self.size_label.into_into_dart().into_dart(),
             self.bytes_downloaded.into_into_dart().into_dart(),
+            self.etag.into_into_dart().into_dart(),
+            self.can_resume.into_into_dart().into_dart(),
             self.error_message.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -2853,8 +2953,9 @@ impl SseEncode for crate::api::drive::models::DownloadStatus {
         <i32>::sse_encode(
             match self {
                 crate::api::drive::models::DownloadStatus::InProgress => 0,
-                crate::api::drive::models::DownloadStatus::Completed => 1,
-                crate::api::drive::models::DownloadStatus::Failed => 2,
+                crate::api::drive::models::DownloadStatus::Paused => 1,
+                crate::api::drive::models::DownloadStatus::Completed => 2,
+                crate::api::drive::models::DownloadStatus::Failed => 3,
                 _ => {
                     unimplemented!("");
                 }
@@ -2871,9 +2972,14 @@ impl SseEncode for crate::api::drive::models::DownloadTask {
         <crate::api::drive::models::DownloadStatus>::sse_encode(self.status, serializer);
         <i64>::sse_encode(self.started_at, serializer);
         <Option<i64>>::sse_encode(self.completed_at, serializer);
+        <String>::sse_encode(self.target_dir, serializer);
+        <String>::sse_encode(self.file_name, serializer);
+        <bool>::sse_encode(self.overwrite, serializer);
         <Option<String>>::sse_encode(self.saved_path, serializer);
         <Option<u64>>::sse_encode(self.size_label, serializer);
         <Option<u64>>::sse_encode(self.bytes_downloaded, serializer);
+        <Option<String>>::sse_encode(self.etag, serializer);
+        <bool>::sse_encode(self.can_resume, serializer);
         <Option<String>>::sse_encode(self.error_message, serializer);
     }
 }

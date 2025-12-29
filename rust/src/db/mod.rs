@@ -76,6 +76,11 @@ fn apply_migrations(conn: &Connection) -> StorageResult<()> {
     conn.execute_batch(settings::SETTINGS_TABLE_SCHEMA)
         .map_err(|e| format!("failed to initialize settings schema: {e}"))?;
     ensure_column(conn, "download_tasks", "bytes_downloaded", "INTEGER")?;
+    ensure_column(conn, "download_tasks", "target_dir", "TEXT")?;
+    ensure_column(conn, "download_tasks", "file_name", "TEXT")?;
+    ensure_column(conn, "download_tasks", "overwrite", "INTEGER")?;
+    ensure_column(conn, "download_tasks", "etag", "TEXT")?;
+    ensure_column(conn, "download_tasks", "can_resume", "INTEGER DEFAULT 0")?;
     Ok(())
 }
 

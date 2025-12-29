@@ -33,9 +33,10 @@ pub struct DriveDownloadResult {
 
 /// 下载任务状态，迁移至 Rust 端统一管理。
 #[flutter_rust_bridge::frb]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DownloadStatus {
     InProgress,
+    Paused,
     Completed,
     Failed,
 }
@@ -58,9 +59,14 @@ pub struct DownloadTask {
     pub status: DownloadStatus,
     pub started_at: i64,
     pub completed_at: Option<i64>,
+    pub target_dir: String,
+    pub file_name: String,
+    pub overwrite: bool,
     pub saved_path: Option<String>,
     pub size_label: Option<u64>,
     pub bytes_downloaded: Option<u64>,
+    pub etag: Option<String>,
+    pub can_resume: bool,
     pub error_message: Option<String>,
 }
 
