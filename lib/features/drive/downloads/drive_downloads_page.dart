@@ -466,19 +466,29 @@ class _DownloadAction extends StatelessWidget {
 
     if (isInProgress) {
       final pausing = manager.isPausing(task.item.id);
+      final cancelling = manager.isCancelling(task.item.id);
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: 18,
-            height: 18,
-            child: FCircularProgress.loader(
-              style: (style) => style.copyWith(
-                iconStyle: IconThemeData(
-                  color: colors.primary,
-                  size: 18,
+          FButton.icon(
+            onPress: cancelling
+                ? null
+                : () => unawaited(manager.cancelTask(task.item.id)),
+            style: FButtonStyle.outline(
+              (style) => style.copyWith(
+                contentStyle: (contentStyle) => contentStyle.copyWith(
+                  iconStyle: FWidgetStateMap.all(
+                    IconThemeData(
+                      color: colors.foreground,
+                      size: 16,
+                    ),
+                  ),
                 ),
               ),
+            ),
+            child: Icon(
+              cancelling ? FIcons.hourglass : FIcons.x,
+              size: 16,
             ),
           ),
           const SizedBox(width: 8),
