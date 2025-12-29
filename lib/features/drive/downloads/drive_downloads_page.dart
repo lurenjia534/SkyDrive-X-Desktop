@@ -16,6 +16,15 @@ class DriveDownloadsPage extends ConsumerWidget {
     final theme = context.theme;
     final colors = theme.colors;
     final typography = theme.typography;
+    final inProgressTasks = <DownloadTask>[];
+    final pausedTasks = <DownloadTask>[];
+    for (final task in queue.active) {
+      if (task.status == DownloadStatus.paused) {
+        pausedTasks.add(task);
+      } else {
+        inProgressTasks.add(task);
+      }
+    }
 
     if (queue.active.isEmpty &&
         queue.completed.isEmpty &&
@@ -86,10 +95,18 @@ class DriveDownloadsPage extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
       children: [
-        if (queue.active.isNotEmpty)
+        if (inProgressTasks.isNotEmpty)
           _DownloadSection(
             title: '下载中',
-            tasks: queue.active,
+            tasks: inProgressTasks,
+            ref: ref,
+            colors: colors,
+            typography: typography,
+          ),
+        if (pausedTasks.isNotEmpty)
+          _DownloadSection(
+            title: '已暂停',
+            tasks: pausedTasks,
             ref: ref,
             colors: colors,
             typography: typography,
@@ -243,6 +260,8 @@ class _DownloadTile extends StatelessWidget {
       switch (task.status) {
         case DownloadStatus.inProgress:
           return '下载中';
+        case DownloadStatus.paused:
+          return '已暂停';
         case DownloadStatus.completed:
           return '已完成';
         case DownloadStatus.failed:
@@ -282,7 +301,10 @@ class _DownloadTile extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         );
       }
-      if (task.status != DownloadStatus.inProgress) {
+      final isActive =
+          task.status == DownloadStatus.inProgress ||
+          task.status == DownloadStatus.paused;
+      if (!isActive) {
         final sizeInfo = task.sizeLabel != null ? '大小 $totalLabel' : '大小未知';
         return Text('$statusLabel · $sizeInfo', style: subtitleStyle);
       }
@@ -290,7 +312,8 @@ class _DownloadTile extends StatelessWidget {
         if (progress != null)
           '${(progress * 100).clamp(0, 100).toStringAsFixed(0)}%',
         '$downloadedLabel / $totalLabel',
-        if (speedLabel != null) speedLabel,
+        if (task.status == DownloadStatus.inProgress && speedLabel != null)
+          speedLabel,
       ].where((element) => element.isNotEmpty).join(' · ');
 
       return Column(
@@ -333,12 +356,15 @@ class _DownloadTile extends StatelessWidget {
 
     final isFailed = task.status == DownloadStatus.failed;
     final isInProgress = task.status == DownloadStatus.inProgress;
-    final leadingColor = isFailed ? colors.error : colors.primary;
+    final isPaused = task.status == DownloadStatus.paused;
+    final leadingColor = isFailed
+        ? colors.error
+        : (isPaused ? colors.mutedForeground : colors.primary);
     final leadingIcon = isFailed
         ? FIcons.circleAlert
         : (isInProgress
             ? FIcons.cloudDownload
-            : FIcons.download);
+            : (isPaused ? Icons.pause_rounded : FIcons.download));
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
@@ -378,7 +404,7 @@ class _DownloadTile extends StatelessWidget {
               task: task,
               ref: ref,
               colors: colors,
-              isInProgress: isInProgress,
+              typography: typography,
             ),
           ),
         ],
@@ -423,21 +449,23 @@ class _DownloadAction extends StatelessWidget {
     required this.task,
     required this.ref,
     required this.colors,
-    required this.isInProgress,
+    required this.typography,
   });
 
   final DownloadTask task;
   final WidgetRef ref;
   final FColors colors;
-  final bool isInProgress;
+  final FTypography typography;
 
   @override
   Widget build(BuildContext context) {
+    final manager = ref.watch(driveDownloadManagerProvider.notifier);
+    final isInProgress = task.status == DownloadStatus.inProgress;
+    final isPaused = task.status == DownloadStatus.paused;
+    final isFailed = task.status == DownloadStatus.failed;
+
     if (isInProgress) {
-      final cancelling =
-          ref.watch(driveDownloadManagerProvider.notifier).isCancelling(
-                task.item.id,
-              );
+      final pausing = manager.isPausing(task.item.id);
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -455,22 +483,60 @@ class _DownloadAction extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           FButton.icon(
-            onPress: cancelling
+            onPress: pausing
                 ? null
-                : () => unawaited(
-                      ref
-                          .read(driveDownloadManagerProvider.notifier)
-                          .cancelTask(task.item.id),
-                    ),
+                : () => unawaited(manager.pauseTask(task.item.id)),
             style: FButtonStyle.outline(),
             child: Icon(
-              cancelling ? FIcons.hourglass : FIcons.x,
+              pausing ? FIcons.hourglass : Icons.pause_rounded,
               size: 16,
             ),
           ),
         ],
       );
     }
+
+    if (isPaused) {
+      final resuming = manager.isResuming(task.item.id);
+      return FButton.icon(
+        onPress: resuming
+            ? null
+            : () => unawaited(manager.resumeTask(task.item.id)),
+        style: FButtonStyle.outline(),
+        child: Icon(
+          resuming ? FIcons.hourglass : Icons.play_arrow_rounded,
+          size: 16,
+        ),
+      );
+    }
+
+    if (isFailed) {
+      final resuming = manager.isResuming(task.item.id);
+      final canResume = task.canResume;
+      final label = canResume ? '继续' : '重新下载';
+      final icon = canResume ? Icons.play_arrow_rounded : Icons.refresh_rounded;
+      return FButton(
+        onPress: resuming
+            ? null
+            : () => unawaited(
+                  manager.resumeTask(
+                    task.item.id,
+                    restart: !canResume,
+                  ),
+                ),
+        style: FButtonStyle.outline(),
+        mainAxisSize: MainAxisSize.min,
+        prefix: Icon(
+          resuming ? Icons.hourglass_top_rounded : icon,
+          size: 16,
+        ),
+        child: Text(
+          resuming ? '处理中' : label,
+          style: typography.sm.copyWith(fontWeight: FontWeight.w600),
+        ),
+      );
+    }
+
     return FButton.icon(
       onPress: () => unawaited(
         ref.read(driveDownloadManagerProvider.notifier).removeTask(task.item.id),

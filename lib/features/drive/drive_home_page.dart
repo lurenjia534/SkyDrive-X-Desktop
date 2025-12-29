@@ -110,7 +110,8 @@ class _DriveHomeView extends ConsumerWidget {
                     final subtitle = buildDriveSubtitle(item);
                     drive_api.DownloadTask? activeTask;
                     for (final task in downloadQueue.active) {
-                      if (task.item.id == item.id) {
+                      if (task.item.id == item.id &&
+                          task.status == DownloadStatus.inProgress) {
                         activeTask = task;
                         break;
                       }
