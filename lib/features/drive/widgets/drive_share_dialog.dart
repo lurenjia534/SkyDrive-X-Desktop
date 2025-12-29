@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:forui/forui.dart';
 import 'package:skydrivex/features/drive/providers/drive_share_provider.dart';
 import 'package:skydrivex/src/rust/api/drive/models.dart' as drive_models;
 
 class DriveShareDialog extends ConsumerStatefulWidget {
-  const DriveShareDialog({super.key});
+  const DriveShareDialog({super.key, required this.animation});
+
+  final Animation<double> animation;
 
   @override
   ConsumerState<DriveShareDialog> createState() => _DriveShareDialogState();
@@ -31,208 +34,173 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
   Widget build(BuildContext context) {
     final capsAsync = ref.watch(shareCapabilitiesProvider);
     final item = ref.watch(shareTargetItemProvider);
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final theme = context.theme;
+    final colors = theme.colors;
+    final typography = theme.typography;
 
     Widget content;
     if (capsAsync.isLoading) {
-      content = const SizedBox(
-        height: 140,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      );
+      content = _LoadingState(typography: typography, colors: colors);
     } else if (capsAsync.hasError) {
-      content = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('无法获取分享能力', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Text(
-            capsAsync.error.toString(),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.error,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: OutlinedButton.icon(
-              onPressed: () => ref.refresh(shareCapabilitiesProvider),
-              icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('重试'),
-            ),
-          ),
-        ],
+      content = _ErrorState(
+        error: capsAsync.error,
+        onRetry: () => ref.refresh(shareCapabilitiesProvider),
       );
     } else {
       final caps = capsAsync.value!;
       final canEmbed = caps.canEmbedLink;
       final canOrg = caps.canOrgScopeLink;
       final canPassword = caps.canPassword;
-      final scopeOptions = <_ScopeOption>[
-        _ScopeOption(
+      final scopeOptions = <_ShareOption<drive_models.LinkScope>>[
+        _ShareOption(
           label: '任何知道链接的人',
-          scope: drive_models.LinkScope.anonymous,
+          value: drive_models.LinkScope.anonymous,
           enabled: true,
           icon: Icons.public_rounded,
         ),
-        _ScopeOption(
+        _ShareOption(
           label: '仅组织内人员',
-          scope: drive_models.LinkScope.organization,
+          value: drive_models.LinkScope.organization,
           enabled: canOrg,
           icon: Icons.apartment_rounded,
         ),
-        _ScopeOption(
+        _ShareOption(
           label: '指定人员',
-          scope: drive_models.LinkScope.users,
+          value: drive_models.LinkScope.users,
           enabled: true,
           icon: Icons.people_alt_rounded,
         ),
       ];
-      final typeOptions = <_TypeOption>[
-        _TypeOption(
+      final typeOptions = <_ShareOption<drive_models.LinkType>>[
+        _ShareOption(
           label: '仅查看',
-          type: drive_models.LinkType.view,
+          value: drive_models.LinkType.view,
           icon: Icons.visibility_rounded,
           enabled: true,
         ),
-        _TypeOption(
+        _ShareOption(
           label: '可编辑',
-          type: drive_models.LinkType.edit,
+          value: drive_models.LinkType.edit,
           icon: Icons.edit_rounded,
           enabled: true,
         ),
-        _TypeOption(
+        _ShareOption(
           label: '嵌入',
-          type: drive_models.LinkType.embed,
+          value: drive_models.LinkType.embed,
           icon: Icons.code_rounded,
           enabled: canEmbed,
         ),
       ];
 
-      final passwordField = canPassword
-          ? TextField(
-              controller: _passwordController,
-              decoration: const InputDecoration(
-                labelText: '密码（可选，仅个人版）',
-                prefixIcon: Icon(Icons.lock_outline_rounded),
-              ),
-              obscureText: true,
-            )
-          : null;
-
-      final recipientsField = _scope == drive_models.LinkScope.users
-          ? TextField(
-              controller: _recipientsController,
-              decoration: const InputDecoration(
-                labelText: '指定人员邮箱（逗号分隔）',
-                prefixIcon: Icon(Icons.mail_outline_rounded),
-              ),
-            )
-          : null;
-
       content = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('分享 “${item.name}”', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 16),
-          Text('链接类型', style: theme.textTheme.bodySmall),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: typeOptions
-                .map(
-                  (opt) => ChoiceChip(
-                    label: Text(opt.label),
-                    avatar: Icon(opt.icon, size: 18),
-                    selected: _linkType == opt.type,
-                    onSelected: opt.enabled
-                        ? (_) => setState(() => _linkType = opt.type)
-                        : null,
-                  ),
-                )
-                .toList(),
+          Text(
+            '分享 “${item.name}”',
+            style: typography.base.copyWith(
+              color: colors.foreground,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 16),
-          Text('访问范围', style: theme.textTheme.bodySmall),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: scopeOptions
-                .map(
-                  (opt) => ChoiceChip(
-                    label: Text(opt.label),
-                    avatar: Icon(opt.icon, size: 18),
-                    selected: _scope == opt.scope,
-                    onSelected: opt.enabled
-                        ? (_) => setState(() => _scope = opt.scope)
-                        : null,
-                  ),
-                )
-                .toList(),
+          _OptionGroup<drive_models.LinkType>(
+            title: '链接类型',
+            options: typeOptions,
+            selected: _linkType,
+            onSelect: (value) => setState(() => _linkType = value),
+          ),
+          const SizedBox(height: 16),
+          _OptionGroup<drive_models.LinkScope>(
+            title: '访问范围',
+            options: scopeOptions,
+            selected: _scope,
+            onSelect: (value) => setState(() => _scope = value),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Checkbox(
-                value: _retainInherited,
-                onChanged: (v) => setState(() => _retainInherited = v ?? true),
-              ),
-              const Expanded(child: Text('保留继承的权限（避免覆盖父级设置）')),
-            ],
+          FCheckbox(
+            value: _retainInherited,
+            onChange: (value) =>
+                setState(() => _retainInherited = value),
+            label: const Text('保留继承的权限（避免覆盖父级设置）'),
           ),
-          if (passwordField != null) ...[
-            const SizedBox(height: 8),
-            passwordField,
+          if (canPassword) ...[
+            const SizedBox(height: 12),
+            FTextField(
+              controller: _passwordController,
+              label: const Text('密码（可选，仅个人版）'),
+              obscureText: true,
+              prefixBuilder: (_, __, ___) => const Padding(
+                padding: EdgeInsets.only(left: 14, right: 10),
+                child: Icon(Icons.lock_outline_rounded, size: 18),
+              ),
+            ),
           ],
-          if (recipientsField != null) ...[
-            const SizedBox(height: 8),
-            recipientsField,
+          if (_scope == drive_models.LinkScope.users) ...[
+            const SizedBox(height: 12),
+            FTextField(
+              controller: _recipientsController,
+              label: const Text('指定人员邮箱（逗号分隔）'),
+              prefixBuilder: (_, __, ___) => const Padding(
+                padding: EdgeInsets.only(left: 14, right: 10),
+                child: Icon(Icons.mail_outline_rounded, size: 18),
+              ),
+            ),
           ],
-          const SizedBox(height: 16),
-          if (_resultUrl != null)
+          if (_resultUrl != null) ...[
+            const SizedBox(height: 16),
             _ShareResult(
               url: _resultUrl!,
               onCopy: () => _copyAndNotify(context, _resultUrl!),
             ),
+          ],
         ],
       );
     }
 
-    return AlertDialog(
-      titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-      contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+    return FDialog(
+      animation: widget.animation,
+      constraints: const BoxConstraints(minWidth: 360, maxWidth: 640),
       title: Row(
         children: [
-          const Icon(Icons.share_outlined),
+          const Icon(Icons.share_outlined, size: 20),
           const SizedBox(width: 8),
-          Text('创建分享链接', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            '创建分享链接',
+            style: typography.lg.copyWith(
+              fontWeight: FontWeight.w700,
+              color: colors.foreground,
+            ),
+          ),
         ],
       ),
-      content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520),
-        child: content,
+      body: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 520),
+        child: SingleChildScrollView(child: content),
       ),
+      direction: Axis.horizontal,
       actions: [
-        TextButton(
-          onPressed: _creating ? null : () => Navigator.of(context).pop(),
+        FButton(
+          onPress: _creating ? null : () => Navigator.of(context).pop(),
+          style: FButtonStyle.outline(),
           child: const Text('取消'),
         ),
-        FilledButton.icon(
-          onPressed: _creating || capsAsync.isLoading || capsAsync.hasError
+        FButton(
+          onPress: _creating || capsAsync.isLoading || capsAsync.hasError
               ? null
               : () => _handleCreate(context, ref),
-          icon: _creating
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+          style: FButtonStyle.primary(),
+          prefix: _creating
+              ? FCircularProgress.loader(
+                  style: (style) => style.copyWith(
+                    iconStyle: IconThemeData(
+                      color: colors.primaryForeground,
+                      size: 16,
+                    ),
+                  ),
                 )
-              : const Icon(Icons.link_rounded),
-          label: const Text('生成链接'),
+              : const Icon(Icons.link_rounded, size: 16),
+          child: const Text('生成链接'),
         ),
       ],
     );
@@ -270,14 +238,10 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
       setState(() {
         _resultUrl = result.webUrl ?? '';
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('分享链接已生成')));
+      _showToast(context, '分享链接已生成');
     } catch (err) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('生成失败：$err')));
+      _showToast(context, '生成失败：$err');
     } finally {
       if (mounted) {
         setState(() {
@@ -289,38 +253,101 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
 
   void _copyAndNotify(BuildContext context, String url) {
     Clipboard.setData(ClipboardData(text: url));
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('已复制到剪贴板')));
+    _showToast(context, '已复制到剪贴板');
+  }
+
+  void _showToast(BuildContext context, String message) {
+    if (context.findAncestorStateOfType<FToasterState>() != null) {
+      showFToast(context: context, title: Text(message));
+      return;
+    }
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
-class _ScopeOption {
-  const _ScopeOption({
+class _ShareOption<T> {
+  const _ShareOption({
     required this.label,
-    required this.scope,
+    required this.value,
     required this.enabled,
     required this.icon,
   });
 
   final String label;
-  final drive_models.LinkScope scope;
+  final T value;
   final bool enabled;
   final IconData icon;
 }
 
-class _TypeOption {
-  const _TypeOption({
-    required this.label,
-    required this.type,
-    required this.icon,
-    required this.enabled,
+class _OptionGroup<T> extends StatelessWidget {
+  const _OptionGroup({
+    required this.title,
+    required this.options,
+    required this.selected,
+    required this.onSelect,
   });
 
-  final String label;
-  final drive_models.LinkType type;
-  final IconData icon;
-  final bool enabled;
+  final String title;
+  final List<_ShareOption<T>> options;
+  final T selected;
+  final ValueChanged<T> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final colors = theme.colors;
+    final typography = theme.typography;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          title,
+          style: typography.sm.copyWith(
+            fontWeight: FontWeight.w600,
+            color: colors.mutedForeground,
+          ),
+        ),
+        const SizedBox(height: 8),
+        FTileGroup(
+          divider: FItemDivider.indented,
+          children: options
+              .map(
+                (option) => FTile(
+                  enabled: option.enabled,
+                  selected: option.value == selected,
+                  onPress:
+                      option.enabled ? () => onSelect(option.value) : null,
+                  prefix: Icon(
+                    option.icon,
+                    size: 18,
+                    color: option.enabled
+                        ? colors.foreground
+                        : colors.mutedForeground,
+                  ),
+                  title: Text(
+                    option.label,
+                    style: typography.base.copyWith(
+                      color: option.enabled
+                          ? colors.foreground
+                          : colors.mutedForeground,
+                    ),
+                  ),
+                  suffix: Icon(
+                    FIcons.check,
+                    size: 16,
+                    color: option.value == selected
+                        ? colors.primary
+                        : Colors.transparent,
+                  ),
+                ),
+              )
+              .toList(growable: false),
+        ),
+      ],
+    );
+  }
 }
 
 class _ShareResult extends StatelessWidget {
@@ -331,42 +358,115 @@ class _ShareResult extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(12),
+    final theme = context.theme;
+    final colors = theme.colors;
+    final typography = theme.typography;
+
+    return FCard.raw(
+      style: (style) => style.copyWith(
+        decoration: BoxDecoration(
+          color: colors.secondary.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.border.withValues(alpha: 0.6)),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '分享链接',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '分享链接',
+              style: typography.sm.copyWith(
+                color: colors.mutedForeground,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          SelectableText(
-            url.isEmpty ? '未返回链接，可能被策略阻止' : url,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
+            const SizedBox(height: 6),
+            SelectableText(
+              url.isEmpty ? '未返回链接，可能被策略阻止' : url,
+              style: typography.base.copyWith(fontWeight: FontWeight.w600),
             ),
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: url.isEmpty ? null : onCopy,
-              icon: const Icon(Icons.copy_rounded, size: 18),
-              label: const Text('复制'),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FButton(
+                onPress: url.isEmpty ? null : onCopy,
+                style: FButtonStyle.ghost(),
+                prefix: const Icon(Icons.copy_rounded, size: 16),
+                child: const Text('复制'),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _LoadingState extends StatelessWidget {
+  const _LoadingState({required this.typography, required this.colors});
+
+  final FTypography typography;
+  final FColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 160,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            FCircularProgress.loader(
+              style: (style) => style.copyWith(
+                iconStyle: IconThemeData(color: colors.primary, size: 18),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '正在加载分享能力…',
+              style: typography.sm.copyWith(color: colors.mutedForeground),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.error, required this.onRetry});
+
+  final Object? error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final typography = theme.typography;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FAlert(
+          style: FAlertStyle.destructive(),
+          title: const Text('无法获取分享能力'),
+          subtitle: Text(error?.toString() ?? '未知错误'),
+        ),
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FButton(
+            onPress: onRetry,
+            style: FButtonStyle.outline(),
+            prefix: const Icon(FIcons.refreshCcw, size: 16),
+            child: Text(
+              '重试',
+              style: typography.sm.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

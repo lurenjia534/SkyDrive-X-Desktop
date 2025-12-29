@@ -209,12 +209,14 @@ class DriveItemActionService {
     required WidgetRef ref,
     required drive_api.DriveItemSummary item,
   }) async {
-    await showDialog<void>(
+    await showFDialog<void>(
       context: context,
-      builder: (dialogContext) {
+      useRootNavigator: true,
+      barrierLabel: '分享链接',
+      builder: (dialogContext, style, animation) {
         return ProviderScope(
           overrides: [shareTargetItemProvider.overrideWithValue(item)],
-          child: const DriveShareDialog(),
+          child: DriveShareDialog(animation: animation),
         );
       },
     );
