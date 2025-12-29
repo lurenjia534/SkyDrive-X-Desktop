@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/features/drive/models/drive_breadcrumb.dart';
 import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
+import 'package:skydrivex/src/rust/api/drive/create_folder.dart'
+    as drive_create_api;
 
 final driveHomeControllerProvider =
     AsyncNotifierProvider<DriveHomeController, DriveHomeState>(
@@ -82,6 +84,20 @@ class DriveHomeController extends AsyncNotifier<DriveHomeState> {
       state = AsyncData(current.copyWith(isLoadingMore: false));
       rethrow;
     }
+  }
+
+  Future<drive_api.DriveItemSummary> createFolder(String name) async {
+    final current = _current;
+    final parentId =
+        current.breadcrumbs.isEmpty ? null : current.breadcrumbs.last.id;
+    final created = await drive_create_api.createDriveFolder(
+      name: name,
+      parentId: parentId,
+      parentPath: null,
+      conflictBehavior: null,
+    );
+    await refresh(showSkeleton: false);
+    return created;
   }
 
   Future<void> _loadFolder({

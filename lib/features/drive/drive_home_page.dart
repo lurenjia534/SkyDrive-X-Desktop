@@ -1,9 +1,13 @@
+import 'dart:async';
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/features/drive/providers/drive_download_manager.dart';
 import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
 import 'package:skydrivex/features/drive/services/drive_item_action_service.dart';
 import 'package:skydrivex/features/drive/utils/drive_item_formatters.dart';
+import 'package:skydrivex/features/drive/widgets/drive_background_context_menu.dart';
 import 'package:skydrivex/features/drive/widgets/drive_breadcrumb_bar.dart';
 import 'package:skydrivex/features/drive/widgets/drive_download_indicator.dart';
 import 'package:skydrivex/features/drive/widgets/drive_empty_view.dart';
@@ -47,22 +51,126 @@ class DriveHomePage extends ConsumerWidget {
   }
 }
 
-class _DriveHomeView extends ConsumerWidget {
+class _DriveHomeView extends ConsumerStatefulWidget {
   const _DriveHomeView({required this.state, required this.isRefreshing});
 
   final DriveHomeState state;
   final bool isRefreshing;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_DriveHomeView> createState() => _DriveHomeViewState();
+}
+
+class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
+  DateTime? _suppressBackgroundMenuUntil;
+
+  bool get _isBackgroundMenuSuppressed {
+    final until = _suppressBackgroundMenuUntil;
+    if (until == null) return false;
+    return DateTime.now().isBefore(until);
+  }
+
+  void _markSuppressBackgroundMenu() {
+    _suppressBackgroundMenuUntil =
+        DateTime.now().add(const Duration(milliseconds: 120));
+  }
+
+  Future<void> _handleItemTap(drive_api.DriveItemSummary item) async {
+    final controller = ref.read(driveHomeControllerProvider.notifier);
+    if (item.isFolder) {
+      await controller.openFolder(item);
+      return;
+    }
+    await DriveItemActionService.showPropertiesSheet(
+      context: context,
+      ref: ref,
+      item: item,
+    );
+  }
+
+  Future<void> _handleItemContextMenu(
+    drive_api.DriveItemSummary item,
+    TapDownDetails details,
+  ) async {
+    _markSuppressBackgroundMenu();
+    unawaited(closeDriveBackgroundContextMenu());
+    final selected = await showDriveItemContextMenu(
+      context: context,
+      item: item,
+      globalPosition: details.globalPosition,
+    );
+
+    if (selected == null) return;
+    if (!context.mounted) return;
+    switch (selected) {
+      case DriveContextAction.download:
+        await DriveItemActionService.handleDownload(
+          context: context,
+          ref: ref,
+          item: item,
+        );
+        break;
+      case DriveContextAction.delete:
+        await DriveItemActionService.confirmAndDelete(
+          context: context,
+          ref: ref,
+          item: item,
+        );
+        break;
+      case DriveContextAction.share:
+        await DriveItemActionService.showShareDialog(
+          context: context,
+          ref: ref,
+          item: item,
+        );
+        break;
+      case DriveContextAction.move:
+        await DriveItemActionService.showMoveSheet(
+          context: context,
+          ref: ref,
+          item: item,
+        );
+        break;
+      case DriveContextAction.properties:
+        await DriveItemActionService.showPropertiesSheet(
+          context: context,
+          ref: ref,
+          item: item,
+        );
+        break;
+    }
+  }
+
+  Future<void> _handleBackgroundPointerDown(PointerDownEvent event) async {
+    if (event.buttons & kSecondaryMouseButton == 0) return;
+    if (_isBackgroundMenuSuppressed) return;
+    final selected = await showDriveBackgroundContextMenu(
+      context: context,
+      globalPosition: event.position,
+    );
+    if (!mounted || selected == null) return;
+    switch (selected) {
+      case DriveBackgroundAction.createFolder:
+        await DriveItemActionService.promptCreateFolder(
+          context: context,
+          ref: ref,
+        );
+        break;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final viewState = widget.state;
     final controller = ref.read(driveHomeControllerProvider.notifier);
     final downloadQueue = ref.watch(driveDownloadManagerProvider);
     final showInlineLoadingBar =
-        (isRefreshing || state.isRefreshing) && state.items.isNotEmpty;
-    final showEmptyState = state.items.isEmpty;
+        (widget.isRefreshing || viewState.isRefreshing) &&
+        viewState.items.isNotEmpty;
+    final showEmptyState = viewState.items.isEmpty;
     final listItemCount =
-        state.items.length +
-        (state.nextLink != null ? 1 : 0) +
+        viewState.items.length +
+        (viewState.nextLink != null ? 1 : 0) +
         (showEmptyState ? 1 : 0);
 
     return Column(
@@ -71,7 +179,7 @@ class _DriveHomeView extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
           child: DriveBreadcrumbBar(
-            segments: state.breadcrumbs,
+            segments: viewState.breadcrumbs,
             onRootTap: () => controller.tapBreadcrumb(null),
             onSegmentTap: controller.tapBreadcrumb,
           ),
@@ -82,55 +190,59 @@ class _DriveHomeView extends ConsumerWidget {
               RefreshIndicator(
                 key: const ValueKey('drive-content'),
                 onRefresh: () => controller.refresh(),
-                child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  itemCount: listItemCount,
-                  itemBuilder: (context, index) {
-                    if (showEmptyState && index == 0) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 48),
-                        child: DriveEmptyView(),
-                      );
-                    }
-                    if (index >= state.items.length) {
-                      return DriveLoadMoreTile(
-                        isLoading: state.isLoadingMore,
-                        onLoadMore: () async {
-                          try {
-                            await controller.loadMore();
-                          } catch (err) {
-                            if (!context.mounted) return;
-                            _showSnack(context, '加载更多失败：$err');
-                          }
-                        },
-                      );
-                    }
-                    final item = state.items[index];
-                    final subtitle = buildDriveSubtitle(item);
-                    drive_api.DownloadTask? activeTask;
-                    for (final task in downloadQueue.active) {
-                      if (task.item.id == item.id &&
-                          task.status == DownloadStatus.inProgress) {
-                        activeTask = task;
-                        break;
+                child: Listener(
+                  behavior: HitTestBehavior.translucent,
+                  onPointerDown: _handleBackgroundPointerDown,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    itemCount: listItemCount,
+                    itemBuilder: (context, index) {
+                      if (showEmptyState && index == 0) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 48),
+                          child: DriveEmptyView(),
+                        );
                       }
-                    }
-                    final trailing = item.isFolder
-                        ? null
-                        : DriveDownloadIndicator(
-                            isDownloading: activeTask != null,
-                            progress: activeTask?.progressRatio,
-                          );
-                    return DriveItemTile(
-                      item: item,
-                      subtitle: subtitle,
-                      onTap: () => _handleItemTap(context, ref, item),
-                      onSecondaryTapDown: (details) =>
-                          _handleContextMenu(context, ref, item, details),
-                      trailing: trailing,
-                    );
-                  },
+                      if (index >= viewState.items.length) {
+                        return DriveLoadMoreTile(
+                          isLoading: viewState.isLoadingMore,
+                          onLoadMore: () async {
+                            try {
+                              await controller.loadMore();
+                            } catch (err) {
+                              if (!context.mounted) return;
+                              _showSnack(context, '加载更多失败：$err');
+                            }
+                          },
+                        );
+                      }
+                      final item = viewState.items[index];
+                      final subtitle = buildDriveSubtitle(item);
+                      drive_api.DownloadTask? activeTask;
+                      for (final task in downloadQueue.active) {
+                        if (task.item.id == item.id &&
+                            task.status == DownloadStatus.inProgress) {
+                          activeTask = task;
+                          break;
+                        }
+                      }
+                      final trailing = item.isFolder
+                          ? null
+                          : DriveDownloadIndicator(
+                              isDownloading: activeTask != null,
+                              progress: activeTask?.progressRatio,
+                            );
+                      return DriveItemTile(
+                        item: item,
+                        subtitle: subtitle,
+                        onTap: () => _handleItemTap(item),
+                        onSecondaryTapDown: (details) =>
+                            _handleItemContextMenu(item, details),
+                        trailing: trailing,
+                      );
+                    },
+                  ),
                 ),
               ),
               if (showInlineLoadingBar)
@@ -145,76 +257,6 @@ class _DriveHomeView extends ConsumerWidget {
         ),
       ],
     );
-  }
-}
-
-Future<void> _handleItemTap(
-  BuildContext context,
-  WidgetRef ref,
-  drive_api.DriveItemSummary item,
-) async {
-  final controller = ref.read(driveHomeControllerProvider.notifier);
-  if (item.isFolder) {
-    await controller.openFolder(item);
-    return;
-  }
-  await DriveItemActionService.showPropertiesSheet(
-    context: context,
-    ref: ref,
-    item: item,
-  );
-}
-
-Future<void> _handleContextMenu(
-  BuildContext context,
-  WidgetRef ref,
-  drive_api.DriveItemSummary item,
-  TapDownDetails details,
-) async {
-  final selected = await showDriveItemContextMenu(
-    context: context,
-    item: item,
-    globalPosition: details.globalPosition,
-  );
-
-  if (selected == null) return;
-  if (!context.mounted) return;
-  switch (selected) {
-    case DriveContextAction.download:
-      await DriveItemActionService.handleDownload(
-        context: context,
-        ref: ref,
-        item: item,
-      );
-      break;
-    case DriveContextAction.delete:
-      await DriveItemActionService.confirmAndDelete(
-        context: context,
-        ref: ref,
-        item: item,
-      );
-      break;
-    case DriveContextAction.share:
-      await DriveItemActionService.showShareDialog(
-        context: context,
-        ref: ref,
-        item: item,
-      );
-      break;
-    case DriveContextAction.move:
-      await DriveItemActionService.showMoveSheet(
-        context: context,
-        ref: ref,
-        item: item,
-      );
-      break;
-    case DriveContextAction.properties:
-      await DriveItemActionService.showPropertiesSheet(
-        context: context,
-        ref: ref,
-        item: item,
-      );
-      break;
   }
 }
 

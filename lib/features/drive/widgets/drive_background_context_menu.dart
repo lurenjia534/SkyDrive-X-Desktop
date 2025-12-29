@@ -1,57 +1,45 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
-import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
+import 'package:skydrivex/features/drive/widgets/drive_item_context_menu.dart';
 
-enum DriveContextAction {
-  download('下载', Icons.download_rounded),
-  delete('删除', Icons.delete_outline_rounded),
-  share('分享', Icons.share_outlined),
-  move('移动', Icons.drive_file_move_outline),
-  properties('属性', Icons.info_outline_rounded);
+enum DriveBackgroundAction {
+  createFolder('新建文件夹', FIcons.folderPlus);
 
-  const DriveContextAction(this.label, this.icon);
+  const DriveBackgroundAction(this.label, this.icon);
   final String label;
   final IconData icon;
 }
 
-_DriveContextMenuOverlayState? _activeMenu;
+_DriveBackgroundContextMenuOverlayState? _activeMenu;
 
-Future<void> closeDriveItemContextMenu() async {
+Future<void> closeDriveBackgroundContextMenu() async {
   if (_activeMenu != null) {
     await _activeMenu!._close();
   }
 }
 
-/// 在指针位置展示右键菜单，返回用户选择的动作。
-Future<DriveContextAction?> showDriveItemContextMenu({
+Future<DriveBackgroundAction?> showDriveBackgroundContextMenu({
   required BuildContext context,
-  required drive_api.DriveItemSummary item,
   required Offset globalPosition,
 }) async {
+  unawaited(closeDriveItemContextMenu());
   if (_activeMenu != null) {
     unawaited(_activeMenu!._close());
   }
-  final actions = <DriveContextAction>[
-    if (!item.isFolder) DriveContextAction.download,
-    DriveContextAction.delete,
-    DriveContextAction.share,
-    DriveContextAction.move,
-    DriveContextAction.properties,
-  ];
 
   final overlay = Overlay.of(context, rootOverlay: true);
   if (overlay == null) return null;
   final overlayBox = overlay.context.findRenderObject();
   if (overlayBox is! RenderBox) return null;
   final position = overlayBox.globalToLocal(globalPosition);
-  final completer = Completer<DriveContextAction?>();
+  final completer = Completer<DriveBackgroundAction?>();
 
   late final OverlayEntry entry;
   entry = OverlayEntry(
-    builder: (context) => _DriveContextMenuOverlay(
+    builder: (context) => _DriveBackgroundContextMenuOverlay(
       position: position,
-      actions: actions,
       onClose: (action) {
         if (entry.mounted) {
           entry.remove();
@@ -67,23 +55,22 @@ Future<DriveContextAction?> showDriveItemContextMenu({
   return completer.future;
 }
 
-class _DriveContextMenuOverlay extends StatefulWidget {
-  const _DriveContextMenuOverlay({
+class _DriveBackgroundContextMenuOverlay extends StatefulWidget {
+  const _DriveBackgroundContextMenuOverlay({
     required this.position,
-    required this.actions,
     required this.onClose,
   });
 
   final Offset position;
-  final List<DriveContextAction> actions;
-  final ValueChanged<DriveContextAction?> onClose;
+  final ValueChanged<DriveBackgroundAction?> onClose;
 
   @override
-  State<_DriveContextMenuOverlay> createState() =>
-      _DriveContextMenuOverlayState();
+  State<_DriveBackgroundContextMenuOverlay> createState() =>
+      _DriveBackgroundContextMenuOverlayState();
 }
 
-class _DriveContextMenuOverlayState extends State<_DriveContextMenuOverlay>
+class _DriveBackgroundContextMenuOverlayState
+    extends State<_DriveBackgroundContextMenuOverlay>
     with SingleTickerProviderStateMixin {
   late final FPopoverController _controller = FPopoverController(vsync: this);
   var _closing = false;
@@ -98,7 +85,7 @@ class _DriveContextMenuOverlayState extends State<_DriveContextMenuOverlay>
     });
   }
 
-  Future<void> _close([DriveContextAction? action]) async {
+  Future<void> _close([DriveBackgroundAction? action]) async {
     if (_closing) return;
     _closing = true;
     if (_controller.status != AnimationStatus.dismissed &&
@@ -134,15 +121,14 @@ class _DriveContextMenuOverlayState extends State<_DriveContextMenuOverlay>
             menu: [
               FItemGroup(
                 divider: FItemDivider.full,
-                children: widget.actions
-                    .map(
-                      (action) => FItem(
-                        onPress: () => _close(action),
-                        prefix: Icon(action.icon, size: 18),
-                        title: Text(action.label),
-                      ),
-                    )
-                    .toList(growable: false),
+                children: [
+                  FItem(
+                    onPress: () =>
+                        _close(DriveBackgroundAction.createFolder),
+                    prefix: const Icon(FIcons.folderPlus, size: 18),
+                    title: const Text('新建文件夹'),
+                  ),
+                ],
               ),
             ],
             child: const SizedBox(width: 1, height: 1),

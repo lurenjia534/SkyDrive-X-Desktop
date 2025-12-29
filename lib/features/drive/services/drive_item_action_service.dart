@@ -50,6 +50,96 @@ class DriveItemActionService {
     );
   }
 
+  static Future<void> promptCreateFolder({
+    required BuildContext context,
+    required WidgetRef ref,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final controller = TextEditingController(text: '新建文件夹');
+    controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: controller.text.length,
+    );
+    final focusNode = FocusNode();
+
+    final result = await showFDialog<String>(
+      context: context,
+      barrierLabel: '新建文件夹',
+      builder: (dialogContext, style, animation) {
+        final theme = dialogContext.theme;
+        final colors = theme.colors;
+        final typography = theme.typography;
+        return FDialog(
+          animation: animation,
+          title: Text(
+            '新建文件夹',
+            style: typography.lg.copyWith(
+              fontWeight: FontWeight.w700,
+              color: colors.foreground,
+            ),
+          ),
+          body: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '在当前目录创建一个新文件夹。',
+                style: typography.sm.copyWith(
+                  color: colors.mutedForeground,
+                ),
+              ),
+              const SizedBox(height: 12),
+              FTextField(
+                controller: controller,
+                focusNode: focusNode,
+                autofocus: true,
+                textInputAction: TextInputAction.done,
+                onSubmit: (_) =>
+                    Navigator.of(dialogContext).pop(controller.text),
+              ),
+            ],
+          ),
+          direction: Axis.horizontal,
+          actions: [
+            FButton(
+              onPress: () => Navigator.of(dialogContext).pop(),
+              style: FButtonStyle.outline(),
+              child: const Text('取消'),
+            ),
+            FButton(
+              onPress: () =>
+                  Navigator.of(dialogContext).pop(controller.text),
+              style: FButtonStyle.primary(),
+              child: const Text('创建'),
+            ),
+          ],
+        );
+      },
+    );
+
+    focusNode.dispose();
+    controller.dispose();
+
+    if (result == null) return;
+    final name = result.trim();
+    if (name.isEmpty) {
+      messenger.showSnackBar(const SnackBar(content: Text('名称不能为空')));
+      return;
+    }
+
+    final homeController = ref.read(driveHomeControllerProvider.notifier);
+    try {
+      final created = await homeController.createFolder(name);
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('已创建文件夹：${created.name}')),
+      );
+    } catch (err) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text('新建文件夹失败：$err')));
+    }
+  }
+
   static Future<bool> handleDownload({
     required BuildContext context,
     required WidgetRef ref,
