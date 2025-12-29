@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
 
 class DriveLoadMoreTile extends StatelessWidget {
   const DriveLoadMoreTile({
@@ -12,18 +13,28 @@ class DriveLoadMoreTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.theme;
+    final colors = theme.colors;
+    final typography = theme.typography;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: OutlinedButton.icon(
-        onPressed: isLoading ? null : onLoadMore,
-        icon: isLoading
-            ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
+      child: FButton(
+        onPress: isLoading ? null : onLoadMore,
+        style: FButtonStyle.outline(),
+        prefix: isLoading
+            ? FCircularProgress.loader(
+                style: (style) => style.copyWith(
+                  iconStyle: IconThemeData(
+                    color: colors.primary,
+                    size: 16,
+                  ),
+                ),
               )
-            : const Icon(Icons.expand_more),
-        label: Text(isLoading ? '加载中…' : '加载更多'),
+            : const Icon(FIcons.chevronDown, size: 16),
+        child: Text(
+          isLoading ? '加载中…' : '加载更多',
+          style: typography.sm.copyWith(fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }

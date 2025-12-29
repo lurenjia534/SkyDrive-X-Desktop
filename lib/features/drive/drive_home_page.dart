@@ -120,12 +120,10 @@ class _DriveHomeView extends ConsumerWidget {
                         : DriveDownloadIndicator(
                             isDownloading: activeTask != null,
                             progress: activeTask?.progressRatio,
-                            colorScheme: Theme.of(context).colorScheme,
                           );
                     return DriveItemTile(
                       item: item,
                       subtitle: subtitle,
-                      colorScheme: Theme.of(context).colorScheme,
                       onTap: () => _handleItemTap(context, ref, item),
                       onSecondaryTapDown: (details) =>
                           _handleContextMenu(context, ref, item, details),

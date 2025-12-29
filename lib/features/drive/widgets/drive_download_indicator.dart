@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
 
 class DriveDownloadIndicator extends StatelessWidget {
   const DriveDownloadIndicator({
     super.key,
     required this.isDownloading,
-    required this.colorScheme,
     this.progress,
   });
 
   final bool isDownloading;
-  final ColorScheme colorScheme;
   final double? progress;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.theme.colors;
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 220),
       child: isDownloading
@@ -23,14 +23,14 @@ class DriveDownloadIndicator extends StatelessWidget {
               height: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: colorScheme.primary,
+                color: colors.primary,
                 value: progress?.clamp(0, 1),
               ),
             )
           : Icon(
               Icons.download_rounded,
               key: const ValueKey('download-icon'),
-              color: colorScheme.primary.withValues(alpha: 0.85),
+              color: colors.primary.withValues(alpha: 0.85),
               size: 20,
             ),
     );
