@@ -30,14 +30,14 @@ class DriveHomePage extends ConsumerWidget {
     return asyncState.when(
       data: (data) => _DriveHomeView(state: data, isRefreshing: false),
       loading: () {
-        final previous = asyncState.asData?.value;
+        final previous = asyncState.value;
         if (previous != null) {
           return _DriveHomeView(state: previous, isRefreshing: true);
         }
-        return const DriveLoadingList(key: ValueKey('drive-loading'));
+        return const _DriveHomeLoadingView();
       },
       error: (error, _) {
-        final previous = asyncState.asData?.value;
+        final previous = asyncState.value;
         if (previous != null) {
           return _DriveHomeView(state: previous, isRefreshing: false);
         }
@@ -48,6 +48,47 @@ class DriveHomePage extends ConsumerWidget {
               .refresh(showSkeleton: true),
         );
       },
+    );
+  }
+}
+
+class _DriveHomeLoadingView extends ConsumerWidget {
+  const _DriveHomeLoadingView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.read(driveHomeControllerProvider.notifier);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: DriveBreadcrumbBar(
+                  segments: const [],
+                  onRootTap: () => controller.tapBreadcrumb(null),
+                  onSegmentTap: (_) {},
+                ),
+              ),
+              const SizedBox(width: 12),
+              FButton(
+                onPress: () => DriveItemActionService.promptCreateFolder(
+                  context: context,
+                  ref: ref,
+                ),
+                style: FButtonStyle.outline(),
+                prefix: const Icon(FIcons.folderPlus, size: 16),
+                child: const Text('新建文件夹'),
+              ),
+            ],
+          ),
+        ),
+        const Expanded(
+          child: DriveLoadingList(key: ValueKey('drive-loading')),
+        ),
+      ],
     );
   }
 }
@@ -174,11 +215,14 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
     final showInlineLoadingBar =
         (widget.isRefreshing || viewState.isRefreshing) &&
         viewState.items.isNotEmpty;
-    final showEmptyState = viewState.items.isEmpty;
+    final showLoadingState =
+        viewState.items.isEmpty && (widget.isRefreshing || viewState.isRefreshing);
+    final showEmptyState = viewState.items.isEmpty && !showLoadingState;
     final listItemCount =
         viewState.items.length +
         (viewState.nextLink != null ? 1 : 0) +
-        (showEmptyState ? 1 : 0);
+        (showEmptyState ? 1 : 0) +
+        (showLoadingState ? 1 : 0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -221,6 +265,12 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
                     physics: const AlwaysScrollableScrollPhysics(),
                     itemCount: listItemCount,
                     itemBuilder: (context, index) {
+                      if (showLoadingState && index == 0) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 120),
+                          child: DriveLoadingList(),
+                        );
+                      }
                       if (showEmptyState && index == 0) {
                         return const Padding(
                           padding: EdgeInsets.symmetric(vertical: 48),
