@@ -1,4 +1,5 @@
 mod client;
+pub mod create_folder;
 pub mod download;
 pub mod download_manager;
 pub mod delete;
@@ -12,6 +13,7 @@ pub mod upload;
 pub mod upload_manager;
 
 pub use download::download_drive_item;
+pub use create_folder::create_drive_folder;
 pub use delete::delete_drive_item;
 pub use download_manager::{
     clear_download_history, download_progress_stream, download_queue_state, enqueue_download_task,

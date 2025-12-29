@@ -8,7 +8,7 @@ import 'models.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `download_drive_item_internal`, `download_drive_item_with_progress`, `fetch_download_metadata`, `is_recoverable`, `message`, `prepare_destination`, `sanitize_file_name`, `stream_download`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DownloadError`, `DriveFileFacet`, `DriveItemDownloadDto`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DownloadError`, `DriveItemDownloadDto`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `fmt`, `fmt`, `fmt`
 
 /// 下载指定 drive item（仅文件），保存到 target_dir。
