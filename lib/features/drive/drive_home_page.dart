@@ -151,6 +151,13 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
           ref: ref,
         );
         break;
+      case DriveContextAction.uploadFiles:
+        await DriveItemActionService.promptUploadFiles(
+          context: context,
+          ref: ref,
+          parentId: item.id,
+        );
+        break;
       case DriveContextAction.download:
         await DriveItemActionService.handleDownload(
           context: context,
@@ -200,6 +207,12 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
     switch (selected) {
       case DriveBackgroundAction.createFolder:
         await DriveItemActionService.promptCreateFolder(
+          context: context,
+          ref: ref,
+        );
+        break;
+      case DriveBackgroundAction.uploadFiles:
+        await DriveItemActionService.promptUploadFiles(
           context: context,
           ref: ref,
         );
