@@ -1,9 +1,11 @@
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:skydrivex/features/drive/providers/download_directory_provider.dart';
 import 'package:skydrivex/features/drive/providers/drive_download_manager.dart';
 import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
+import 'package:skydrivex/features/drive/providers/drive_upload_manager.dart';
 import 'package:skydrivex/features/drive/widgets/drive_move_sheet.dart';
 import 'package:skydrivex/features/drive/providers/drive_share_provider.dart';
 import 'package:skydrivex/features/drive/widgets/drive_file_action_sheet.dart';
@@ -14,6 +16,8 @@ import 'package:skydrivex/src/rust/api/drive/move_item.dart';
 
 /// 封装文件/文件夹相关的常用操作，降低页面耦合。
 class DriveItemActionService {
+  static const int _simpleUploadMaxBytes = 250 * 1024 * 1024;
+
   static Future<void> showPropertiesSheet({
     required BuildContext context,
     required WidgetRef ref,
@@ -283,6 +287,60 @@ class DriveItemActionService {
         );
       },
     );
+  }
+
+  static Future<void> promptUploadFiles({
+    required BuildContext context,
+    required WidgetRef ref,
+    String? parentId,
+  }) async {
+    final files = await openFiles();
+    if (files.isEmpty) return;
+
+    final breadcrumbs =
+        ref.read(driveHomeControllerProvider).asData?.value.breadcrumbs ?? [];
+    final targetParentId = parentId ?? (breadcrumbs.isNotEmpty
+        ? breadcrumbs.last.id
+        : null);
+    final manager = ref.read(driveUploadManagerProvider.notifier);
+    var uploadedCount = 0;
+    final failures = <String>[];
+
+    for (final file in files) {
+      try {
+        final size = await file.length();
+        if (size <= _simpleUploadMaxBytes) {
+          final bytes = await file.readAsBytes();
+          await manager.enqueue(
+            parentId: targetParentId,
+            fileName: file.name,
+            localPath: file.path,
+            content: bytes,
+            overwrite: false,
+          );
+        } else {
+          await manager.enqueueLarge(
+            parentId: targetParentId,
+            fileName: file.name,
+            localPath: file.path,
+            overwrite: false,
+          );
+        }
+        uploadedCount += 1;
+      } catch (err) {
+        failures.add('${file.name}：$err');
+      }
+    }
+
+    if (!context.mounted) return;
+
+    if (uploadedCount > 0) {
+      _showToast(context, '已加入上传队列：$uploadedCount 个文件');
+      await ref.read(driveHomeControllerProvider.notifier).refresh();
+    }
+    if (failures.isNotEmpty) {
+      _showToast(context, '部分文件上传失败：${failures.join('、')}');
+    }
   }
 
   static void _showToast(BuildContext context, String message) {
