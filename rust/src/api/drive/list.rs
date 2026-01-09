@@ -1,5 +1,5 @@
 use super::{
-    client::{build_blocking_client, current_access_token},
+    client::{build_blocking_client, send_with_refresh},
     models::{DriveItemSummary, DrivePage},
     GRAPH_BASE,
 };
@@ -19,7 +19,6 @@ pub fn list_drive_children(
     folder_path: Option<String>,
     next_link: Option<String>,
 ) -> Result<DrivePage, String> {
-    let access_token = current_access_token()?;
     // 1. next_link > 2. folder_id > 3. 路径（含 root）——与 Graph API 约定一致。
     let request_url = if let Some(link) = next_link {
         link
@@ -29,7 +28,7 @@ pub fn list_drive_children(
         build_children_url(folder_path.as_deref())
     };
 
-    fetch_drive_children(&request_url, &access_token)
+    fetch_drive_children(&request_url)
 }
 
 /// 根据路径构造 `/root:/path:/children` URL，自动处理空串与多重 `/` 的情况。
@@ -53,16 +52,18 @@ fn build_children_url(path: Option<&str>) -> String {
     }
 }
 
-fn fetch_drive_children(url: &str, access_token: &str) -> Result<DrivePage, String> {
+fn fetch_drive_children(url: &str) -> Result<DrivePage, String> {
     // 设置较短超时，避免 UI 阻塞；下载等长耗时场景另行处理。
     let client = build_blocking_client(Duration::from_secs(30))?;
 
-    let response = client
-        .get(url)
-        .bearer_auth(access_token)
-        .header("Accept", "application/json")
-        .send()
-        .map_err(|e| format!("failed to list drive items: {e}"))?;
+    let response = send_with_refresh(|token| {
+        client
+            .get(url)
+            .bearer_auth(token)
+            .header("Accept", "application/json")
+            .send()
+            .map_err(|e| format!("failed to list drive items: {e}"))
+    })?;
 
     if response.status().as_u16() == 401 {
         return Err("access token rejected by Graph API; please sign in again".to_string());

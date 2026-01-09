@@ -1,4 +1,4 @@
-use crate::db;
+use crate::{api::auth::refresh_tokens, db};
 use reqwest::{blocking::Client, redirect::Policy};
 use std::time::Duration;
 
@@ -8,6 +8,26 @@ pub(crate) fn current_access_token() -> Result<String, String> {
     let record = db::load_auth_record()?
         .ok_or_else(|| "no authentication state available; please sign in".to_string())?;
     Ok(record.access_token)
+}
+
+pub(crate) fn refresh_access_token() -> Result<String, String> {
+    let refreshed = refresh_tokens()?;
+    Ok(refreshed.tokens.access_token)
+}
+
+pub(crate) fn send_with_refresh<F>(
+    mut send: F,
+) -> Result<reqwest::blocking::Response, String>
+where
+    F: FnMut(&str) -> Result<reqwest::blocking::Response, String>,
+{
+    let access_token = current_access_token()?;
+    let response = send(&access_token)?;
+    if response.status().as_u16() != 401 {
+        return Ok(response);
+    }
+    let refreshed = refresh_access_token()?;
+    send(&refreshed)
 }
 
 /// 构建一个带有统一超时与重定向策略的阻塞式 HTTP 客户端。

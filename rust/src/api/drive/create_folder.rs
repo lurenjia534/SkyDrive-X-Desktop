@@ -1,5 +1,5 @@
 use super::{
-    client::{build_blocking_client, current_access_token},
+    client::{build_blocking_client, send_with_refresh},
     models::DriveItemSummary,
     GRAPH_BASE,
 };
@@ -46,7 +46,6 @@ pub fn create_drive_folder(
         }
     };
 
-    let access_token = current_access_token()?;
     let client = build_blocking_client(Duration::from_secs(30))?;
     let url = if let Some(id) = parent_id {
         format!("{GRAPH_BASE}/me/drive/items/{id}/children")
@@ -55,13 +54,15 @@ pub fn create_drive_folder(
     };
 
     let body = CreateFolderRequest::new(trimmed_name.to_string(), conflict);
-    let response = client
-        .post(url)
-        .bearer_auth(access_token)
-        .header("Accept", "application/json")
-        .json(&body)
-        .send()
-        .map_err(|e| format!("failed to create folder: {e}"))?;
+    let response = send_with_refresh(|token| {
+        client
+            .post(&url)
+            .bearer_auth(token)
+            .header("Accept", "application/json")
+            .json(&body)
+            .send()
+            .map_err(|e| format!("failed to create folder: {e}"))
+    })?;
 
     if response.status().as_u16() == 401 {
         return Err("access token rejected by Graph API; please sign in again".to_string());

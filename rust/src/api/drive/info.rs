@@ -1,5 +1,5 @@
 use super::{
-    client::{build_blocking_client, current_access_token},
+    client::{build_blocking_client, send_with_refresh},
     models::{DriveInfo, DriveOwner, DriveQuota},
     GRAPH_BASE,
 };
@@ -11,16 +11,17 @@ use std::time::Duration;
 /// - 若 OneDrive 未开通或不可用，返回明确的错误提示。
 #[flutter_rust_bridge::frb]
 pub fn get_drive_overview() -> Result<DriveInfo, String> {
-    let access_token = current_access_token()?;
     let client = build_blocking_client(Duration::from_secs(30))?;
 
     let url = format!("{GRAPH_BASE}/me/drive?$select=id,driveType,owner,quota");
-    let response = client
-        .get(url)
-        .bearer_auth(&access_token)
-        .header("Accept", "application/json")
-        .send()
-        .map_err(|e| format!("failed to fetch drive overview: {e}"))?;
+    let response = send_with_refresh(|token| {
+        client
+            .get(&url)
+            .bearer_auth(token)
+            .header("Accept", "application/json")
+            .send()
+            .map_err(|e| format!("failed to fetch drive overview: {e}"))
+    })?;
 
     if response.status().as_u16() == 401 {
         return Err("access token rejected by Graph API; please sign in again".to_string());

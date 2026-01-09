@@ -1,5 +1,5 @@
 use super::{
-    client::{build_blocking_client, current_access_token},
+    client::{build_blocking_client, send_with_refresh},
     models::DriveItemSummary,
     GRAPH_BASE,
 };
@@ -9,7 +9,7 @@ use std::fs::File;
 use std::io::{BufReader, Cursor, Read, Seek, SeekFrom};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc,
+    Arc, Mutex,
 };
 use std::time::Duration;
 use std::thread;
@@ -53,7 +53,6 @@ pub(crate) fn upload_small_file_with_hooks(
         return Err("file too large for simple upload; please use chunked upload".to_string());
     }
 
-    let access_token = current_access_token()?;
     let client = build_blocking_client(Duration::from_secs(120))?;
 
     let encoded_name = utf8_percent_encode(file_name.trim(), NON_ALPHANUMERIC).to_string();
@@ -73,19 +72,22 @@ pub(crate) fn upload_small_file_with_hooks(
     };
 
     let total_len = content.len() as u64;
-    let reader = ProgressReader::new(
-        Cursor::new(content),
-        total_len,
-        cancel_flag.clone(),
-        progress,
-    );
-    let response = client
-        .put(url)
-        .bearer_auth(access_token)
-        .header("Content-Type", "application/octet-stream")
-        .body(reqwest::blocking::Body::sized(reader, total_len))
-        .send()
-        .map_err(|e| format!("failed to upload file: {e}"))?;
+    let progress = progress.map(|cb| Arc::new(Mutex::new(cb)));
+    let response = send_with_refresh(|token| {
+        let reader = ProgressReader::new(
+            Cursor::new(content.clone()),
+            total_len,
+            cancel_flag.clone(),
+            progress.clone(),
+        );
+        client
+            .put(&url)
+            .bearer_auth(token)
+            .header("Content-Type", "application/octet-stream")
+            .body(reqwest::blocking::Body::sized(reader, total_len))
+            .send()
+            .map_err(|e| format!("failed to upload file: {e}"))
+    })?;
 
     if response.status().as_u16() == 401 {
         return Err("access token rejected by Graph API; please sign in again".to_string());
@@ -112,7 +114,6 @@ pub(crate) fn create_upload_session(
     file_name: &str,
     overwrite: bool,
 ) -> Result<UploadSessionResponse, String> {
-    let access_token = current_access_token()?;
     let client = build_blocking_client(Duration::from_secs(30))?;
 
     let encoded_name = utf8_percent_encode(file_name.trim(), NON_ALPHANUMERIC).to_string();
@@ -148,12 +149,14 @@ pub(crate) fn create_upload_session(
         },
     };
 
-    let resp = client
-        .post(url)
-        .bearer_auth(access_token)
-        .json(&body)
-        .send()
-        .map_err(|e| format!("failed to create upload session: {e}"))?;
+    let resp = send_with_refresh(|token| {
+        client
+            .post(&url)
+            .bearer_auth(token)
+            .json(&body)
+            .send()
+            .map_err(|e| format!("failed to create upload session: {e}"))
+    })?;
 
     if resp.status().as_u16() == 401 {
         return Err("access token rejected by Graph API; please sign in again".to_string());
@@ -489,7 +492,7 @@ struct ProgressReader<R: Read> {
     sent: u64,
     total: u64,
     cancel_flag: Option<Arc<AtomicBool>>,
-    progress: Option<Box<dyn FnMut(u64, Option<u64>) + Send>>,
+    progress: Option<Arc<Mutex<Box<dyn FnMut(u64, Option<u64>) + Send>>>>,
 }
 
 impl<R: Read> ProgressReader<R> {
@@ -497,7 +500,7 @@ impl<R: Read> ProgressReader<R> {
         inner: R,
         total: u64,
         cancel_flag: Option<Arc<AtomicBool>>,
-        progress: Option<Box<dyn FnMut(u64, Option<u64>) + Send>>,
+        progress: Option<Arc<Mutex<Box<dyn FnMut(u64, Option<u64>) + Send>>>>,
     ) -> Self {
         Self {
             inner,
@@ -522,8 +525,10 @@ impl<R: Read> Read for ProgressReader<R> {
         let read_bytes = self.inner.read(buf)?;
         if read_bytes > 0 {
             self.sent = self.sent.saturating_add(read_bytes as u64);
-            if let Some(cb) = self.progress.as_mut() {
-                cb(self.sent, Some(self.total));
+            if let Some(cb) = self.progress.as_ref() {
+                if let Ok(mut handler) = cb.lock() {
+                    (*handler)(self.sent, Some(self.total));
+                }
             }
         }
         Ok(read_bytes)

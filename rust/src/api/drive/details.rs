@@ -1,5 +1,5 @@
 use super::{
-    client::{build_blocking_client, current_access_token},
+    client::{build_blocking_client, send_with_refresh},
     models::DriveItemDetails,
     GRAPH_BASE,
 };
@@ -12,17 +12,18 @@ pub fn get_drive_item_details(item_id: String) -> Result<DriveItemDetails, Strin
     if item_id.trim().is_empty() {
         return Err("drive item id is required".to_string());
     }
-    let access_token = current_access_token()?;
     let client = build_blocking_client(Duration::from_secs(30))?;
 
     // 保留常用字段与关键 facet；如需更多关系（children/versions），另行调用。
     let url = format!("{GRAPH_BASE}/me/drive/items/{item_id}?$select=id,name,size,createdDateTime,lastModifiedDateTime,webUrl,eTag,cTag,file,folder,fileSystemInfo,parentReference,@microsoft.graph.downloadUrl");
-    let response = client
-        .get(url)
-        .bearer_auth(&access_token)
-        .header("Accept", "application/json")
-        .send()
-        .map_err(|e| format!("failed to fetch drive item details: {e}"))?;
+    let response = send_with_refresh(|token| {
+        client
+            .get(&url)
+            .bearer_auth(token)
+            .header("Accept", "application/json")
+            .send()
+            .map_err(|e| format!("failed to fetch drive item details: {e}"))
+    })?;
 
     if response.status().as_u16() == 401 {
         return Err("access token rejected by Graph API; please sign in again".to_string());

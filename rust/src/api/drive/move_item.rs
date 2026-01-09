@@ -1,5 +1,5 @@
 use super::{
-    client::{build_blocking_client, current_access_token},
+    client::{build_blocking_client, send_with_refresh},
     models::DriveItemSummary,
     GRAPH_BASE,
 };
@@ -27,22 +27,22 @@ pub fn move_drive_item(
     }
 
     let body = MoveRequest::new(new_parent_id, new_name);
-    let access_token = current_access_token()?;
     let client = build_blocking_client(Duration::from_secs(30))?;
     let url = format!("{GRAPH_BASE}/me/drive/items/{item_id}");
 
-    let mut request = client
-        .patch(url)
-        .bearer_auth(&access_token)
-        .header("Accept", "application/json")
-        .json(&body);
-    if let Some(tag) = if_match {
-        request = request.header("If-Match", tag);
-    }
-
-    let response = request
-        .send()
-        .map_err(|e| format!("failed to move drive item: {e}"))?;
+    let response = send_with_refresh(|token| {
+        let mut request = client
+            .patch(&url)
+            .bearer_auth(token)
+            .header("Accept", "application/json")
+            .json(&body);
+        if let Some(tag) = if_match.as_deref() {
+            request = request.header("If-Match", tag);
+        }
+        request
+            .send()
+            .map_err(|e| format!("failed to move drive item: {e}"))
+    })?;
 
     if response.status().as_u16() == 401 {
         return Err("access token rejected by Graph API; please sign in again".to_string());

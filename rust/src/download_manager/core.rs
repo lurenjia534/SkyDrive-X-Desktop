@@ -229,11 +229,7 @@ impl DownloadManager {
         progress_callback: &mut Option<Box<dyn FnMut(u64, Option<u64>) + Send>>,
         control_token: Arc<AtomicU8>,
     ) -> Result<DriveDownloadResult, DownloadError> {
-        let access_token = current_access_token().map_err(|message| DownloadError::Failed {
-            message,
-            recoverable: false,
-        })?;
-        let metadata = fetch_download_metadata(&task.item.id, &access_token)?;
+        let metadata = fetch_download_metadata(&task.item.id)?;
         if metadata.file.is_none() {
             return Err(DownloadError::Failed {
                 message: "选中的项目不是可下载的文件".to_string(),
@@ -275,6 +271,14 @@ impl DownloadManager {
             );
         }
 
+        let fallback_token = if metadata.download_url.is_none() {
+            Some(current_access_token().map_err(|message| DownloadError::Failed {
+                message,
+                recoverable: false,
+            })?)
+        } else {
+            None
+        };
         let (download_endpoint, bearer_token) = match metadata.download_url.as_ref() {
             Some(url) => (url.clone(), None),
             None => (
@@ -282,7 +286,7 @@ impl DownloadManager {
                     "{GRAPH_BASE}/me/drive/items/{item_id}/content",
                     item_id = task.item.id
                 ),
-                Some(access_token.as_str()),
+                fallback_token,
             ),
         };
 

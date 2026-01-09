@@ -1,5 +1,5 @@
 use super::{
-    client::{build_blocking_client, current_access_token},
+    client::{build_blocking_client, send_with_refresh},
     GRAPH_BASE,
 };
 use std::time::Duration;
@@ -15,25 +15,25 @@ pub fn delete_drive_item(
         return Err("drive item id is required".to_string());
     }
 
-    let access_token = current_access_token()?;
     let client = build_blocking_client(Duration::from_secs(30))?;
     let url = format!("{GRAPH_BASE}/me/drive/items/{item_id}");
 
-    let mut request = client
-        .delete(url)
-        .bearer_auth(&access_token)
-        .header("Accept", "application/json");
-
-    if let Some(tag) = if_match.filter(|t| !t.trim().is_empty()) {
-        request = request.header("If-Match", tag);
-    }
-    if bypass_locks {
-        request = request.header("Prefer", "bypass-shared-lock,bypass-checked-out");
-    }
-
-    let response = request
-        .send()
-        .map_err(|e| format!("failed to delete drive item: {e}"))?;
+    let if_match = if_match.filter(|t| !t.trim().is_empty());
+    let response = send_with_refresh(|token| {
+        let mut request = client
+            .delete(&url)
+            .bearer_auth(token)
+            .header("Accept", "application/json");
+        if let Some(tag) = if_match.as_deref() {
+            request = request.header("If-Match", tag);
+        }
+        if bypass_locks {
+            request = request.header("Prefer", "bypass-shared-lock,bypass-checked-out");
+        }
+        request
+            .send()
+            .map_err(|e| format!("failed to delete drive item: {e}"))
+    })?;
 
     let status = response.status();
     if status.as_u16() == 401 {

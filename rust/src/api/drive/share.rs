@@ -1,5 +1,5 @@
 use super::{
-    client::{build_blocking_client, current_access_token},
+    client::{build_blocking_client, send_with_refresh},
     info::get_drive_overview,
     models::{LinkScope, LinkType, ShareCapabilities, ShareLinkResult},
     GRAPH_BASE,
@@ -64,16 +64,17 @@ pub fn create_share_link(
         recipients,
     );
 
-    let access_token = current_access_token()?;
     let client = build_blocking_client(Duration::from_secs(30))?;
     let url = format!("{GRAPH_BASE}/me/drive/items/{item_id}/createLink");
-    let response = client
-        .post(url)
-        .bearer_auth(&access_token)
-        .header("Accept", "application/json")
-        .json(&body)
-        .send()
-        .map_err(|e| format!("failed to create share link: {e}"))?;
+    let response = send_with_refresh(|token| {
+        client
+            .post(&url)
+            .bearer_auth(token)
+            .header("Accept", "application/json")
+            .json(&body)
+            .send()
+            .map_err(|e| format!("failed to create share link: {e}"))
+    })?;
 
     eprintln!(
         "[share] createLink request body: type={:?} scope={:?} pwd_set={} recipients={:?} retain_inherited={:?} expiration={:?}",

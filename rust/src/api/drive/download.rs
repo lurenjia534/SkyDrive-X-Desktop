@@ -1,5 +1,5 @@
 use super::{
-    client::{build_blocking_client, current_access_token},
+    client::{build_blocking_client, current_access_token, refresh_access_token, send_with_refresh},
     models::DriveDownloadResult,
     GRAPH_BASE,
 };
@@ -28,6 +28,7 @@ pub(crate) enum DownloadError {
     Paused,
     Cancelled(String),
     Failed { message: String, recoverable: bool },
+    DownloadUrlExpired,
 }
 
 impl DownloadError {
@@ -36,12 +37,14 @@ impl DownloadError {
             DownloadError::Paused => "下载已暂停".to_string(),
             DownloadError::Cancelled(message) => message.clone(),
             DownloadError::Failed { message, .. } => message.clone(),
+            DownloadError::DownloadUrlExpired => "下载链接已过期，请重试".to_string(),
         }
     }
 
     pub(crate) fn is_recoverable(&self) -> bool {
         match self {
             DownloadError::Failed { recoverable, .. } => *recoverable,
+            DownloadError::DownloadUrlExpired => true,
             _ => false,
         }
     }
@@ -95,11 +98,8 @@ fn download_drive_item_internal(
         });
     }
 
-    let access_token = current_access_token()
-        .map_err(|message| DownloadError::Failed { message, recoverable: false })?;
     eprintln!("[drive-download] fetching metadata for item {}", item_id);
-    let metadata = fetch_download_metadata(&item_id, &access_token)?;
-
+    let mut metadata = fetch_download_metadata(&item_id)?;
     if metadata.file.is_none() {
         eprintln!(
             "[drive-download] item {} has no file facet (name={:?})",
@@ -111,24 +111,6 @@ fn download_drive_item_internal(
         });
     }
 
-    let (download_endpoint, bearer_token) = match metadata.download_url.as_ref() {
-        Some(url) => {
-            eprintln!(
-                "[drive-download] using pre-authenticated download url for {}",
-                item_id
-            );
-            (url.clone(), None)
-        }
-        None => {
-            eprintln!(
-                "[drive-download] missing downloadUrl, fallback to /content for {}",
-                item_id
-            );
-            let content_url = format!("{GRAPH_BASE}/me/drive/items/{item_id}/content");
-            (content_url, Some(access_token.as_str()))
-        }
-    };
-
     let file_name = metadata
         .name
         .as_deref()
@@ -136,21 +118,63 @@ fn download_drive_item_internal(
         .unwrap_or_else(|| "download.bin".to_string());
 
     let destination = prepare_destination(&target_dir, &file_name, overwrite)?;
-    if let Some(cb) = progress.as_mut() {
-        cb(0, metadata.size);
-    }
     let mut progress_ref = progress
         .as_mut()
         .map(|cb| cb.as_mut() as &mut (dyn FnMut(u64, Option<u64>) + Send));
-    let bytes_downloaded = stream_download(
-        &download_endpoint,
-        bearer_token,
-        &destination,
-        metadata.size,
-        None,
-        progress_ref.as_deref_mut(),
-        control_flag.as_ref(),
-    )?;
+
+    let mut attempts = 0;
+    let bytes_downloaded = loop {
+        if let Some(cb) = progress_ref.as_deref_mut() {
+            cb(0, metadata.size);
+        }
+        let fallback_token = if metadata.download_url.is_none() {
+            Some(current_access_token().map_err(|message| DownloadError::Failed {
+                message,
+                recoverable: false,
+            })?)
+        } else {
+            None
+        };
+        let (download_endpoint, bearer_token) = match metadata.download_url.as_ref() {
+            Some(url) => {
+                eprintln!(
+                    "[drive-download] using pre-authenticated download url for {}",
+                    item_id
+                );
+                (url.clone(), None)
+            }
+            None => {
+                eprintln!(
+                    "[drive-download] missing downloadUrl, fallback to /content for {}",
+                    item_id
+                );
+                let content_url = format!("{GRAPH_BASE}/me/drive/items/{item_id}/content");
+                (content_url, fallback_token)
+            }
+        };
+
+        match stream_download(
+            &download_endpoint,
+            bearer_token,
+            &destination,
+            metadata.size,
+            None,
+            progress_ref.as_deref_mut(),
+            control_flag.as_ref(),
+        ) {
+            Ok(bytes) => break bytes,
+            Err(DownloadError::DownloadUrlExpired) if attempts == 0 => {
+                attempts += 1;
+                eprintln!(
+                    "[drive-download] downloadUrl expired for {}, refreshing metadata",
+                    item_id
+                );
+                metadata = fetch_download_metadata(&item_id)?;
+                continue;
+            }
+            Err(err) => return Err(err),
+        }
+    };
     eprintln!(
         "[drive-download] saved {} bytes to {}",
         bytes_downloaded,
@@ -170,10 +194,7 @@ fn download_drive_item_internal(
     })
 }
 
-pub(crate) fn fetch_download_metadata(
-    item_id: &str,
-    access_token: &str,
-) -> Result<DriveItemDownloadDto, DownloadError> {
+pub(crate) fn fetch_download_metadata(item_id: &str) -> Result<DriveItemDownloadDto, DownloadError> {
     // 单次请求只关心必要字段，避免传输冗余信息。
     let client = build_blocking_client(Duration::from_secs(30)).map_err(|message| {
         DownloadError::Failed {
@@ -184,15 +205,18 @@ pub(crate) fn fetch_download_metadata(
     let url = format!(
         "{GRAPH_BASE}/me/drive/items/{item_id}?$select=name,size,file,eTag,@microsoft.graph.downloadUrl"
     );
-    let response = client
-        .get(url)
-        .bearer_auth(access_token)
-        .header("Accept", "application/json")
-        .send()
-        .map_err(|e| DownloadError::Failed {
-            message: format!("failed to fetch download metadata: {e}"),
-            recoverable: true,
-        })?;
+    let response = send_with_refresh(|token| {
+        client
+            .get(&url)
+            .bearer_auth(token)
+            .header("Accept", "application/json")
+            .send()
+            .map_err(|e| format!("failed to fetch download metadata: {e}"))
+    })
+    .map_err(|message| DownloadError::Failed {
+        recoverable: is_recoverable_fetch_error(&message),
+        message,
+    })?;
 
     if response.status().as_u16() == 401 {
         return Err(DownloadError::Failed {
@@ -222,6 +246,48 @@ pub(crate) fn fetch_download_metadata(
             message: format!("failed to parse download metadata: {e}"),
             recoverable: false,
         })
+}
+
+fn is_recoverable_fetch_error(message: &str) -> bool {
+    let lower = message.to_lowercase();
+    if lower.contains("no authentication state") {
+        return false;
+    }
+    if lower.contains("no refresh token") {
+        return false;
+    }
+    if lower.contains("interactive authentication required") {
+        return false;
+    }
+    if lower.contains("invalid_grant") {
+        return false;
+    }
+    if lower.contains("interaction_required") {
+        return false;
+    }
+    if lower.contains("login_required") {
+        return false;
+    }
+    if lower.contains("consent_required") {
+        return false;
+    }
+    if lower.contains("aadsts") {
+        return false;
+    }
+
+    const MARKER: &str = "token endpoint returned http ";
+    if let Some(index) = lower.find(MARKER) {
+        let tail = lower[index + MARKER.len()..].trim_start();
+        if let Some(code_str) = tail.split_whitespace().next() {
+            if let Ok(code) = code_str.parse::<u16>() {
+                if (400..500).contains(&code) && code != 429 {
+                    return false;
+                }
+            }
+        }
+    }
+
+    true
 }
 
 /// 对 Graph 返回的文件名进行清洗，兼容不同桌面平台的非法字符。
@@ -280,12 +346,34 @@ pub(crate) fn prepare_destination(
 /// 逐块读取响应体，写入文件后触发进度回调，确保 UI 能看到实时变化。
 pub(crate) fn stream_download(
     download_url: &str,
-    bearer_token: Option<&str>,
+    bearer_token: Option<String>,
+    destination: &Path,
+    total_size: Option<u64>,
+    resume_from: Option<u64>,
+    progress: Option<&mut (dyn FnMut(u64, Option<u64>) + Send)>,
+    control_flag: Option<&Arc<AtomicU8>>,
+) -> Result<u64, DownloadError> {
+    stream_download_internal(
+        download_url,
+        bearer_token,
+        destination,
+        total_size,
+        resume_from,
+        progress,
+        control_flag,
+        true,
+    )
+}
+
+fn stream_download_internal(
+    download_url: &str,
+    bearer_token: Option<String>,
     destination: &Path,
     total_size: Option<u64>,
     resume_from: Option<u64>,
     mut progress: Option<&mut (dyn FnMut(u64, Option<u64>) + Send)>,
     control_flag: Option<&Arc<AtomicU8>>,
+    allow_refresh: bool,
 ) -> Result<u64, DownloadError> {
     let client =
         build_blocking_client(Duration::from_secs(600)).map_err(|message| DownloadError::Failed {
@@ -319,7 +407,7 @@ pub(crate) fn stream_download(
     }
 
     let mut request = client.get(download_url);
-    if let Some(token) = bearer_token {
+    if let Some(token) = bearer_token.as_deref() {
         request = request.bearer_auth(token);
     }
     if start_from > 0 {
@@ -333,6 +421,31 @@ pub(crate) fn stream_download(
         })?;
 
     let status = response.status();
+    if status.as_u16() == 401 {
+        if allow_refresh && bearer_token.is_some() {
+            let refreshed = refresh_access_token().map_err(|message| DownloadError::Failed {
+                message,
+                recoverable: false,
+            })?;
+            return stream_download_internal(
+                download_url,
+                Some(refreshed),
+                destination,
+                total_size,
+                resume_from,
+                progress,
+                control_flag,
+                false,
+            );
+        }
+        if bearer_token.is_none() {
+            return Err(DownloadError::DownloadUrlExpired);
+        }
+        return Err(DownloadError::Failed {
+            message: "access token rejected by Graph API; please sign in again".to_string(),
+            recoverable: false,
+        });
+    }
     if status.as_u16() == 416 {
         return Err(DownloadError::Failed {
             message: "无法继续续传，文件可能已更新或范围无效".to_string(),
