@@ -5,6 +5,7 @@ use super::{
 };
 use serde::Deserialize;
 use std::{
+    cell::RefCell,
     fs::{self, OpenOptions},
     io::{BufWriter, Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
@@ -82,7 +83,7 @@ fn download_drive_item_internal(
     item_id: String,
     target_dir: String,
     overwrite: bool,
-    mut progress: Option<ProgressCallback>,
+    progress: Option<ProgressCallback>,
     control_flag: Option<Arc<AtomicU8>>,
 ) -> Result<DriveDownloadResult, DownloadError> {
     if item_id.trim().is_empty() {
@@ -118,15 +119,9 @@ fn download_drive_item_internal(
         .unwrap_or_else(|| "download.bin".to_string());
 
     let destination = prepare_destination(&target_dir, &file_name, overwrite)?;
-    let mut progress_ref = progress
-        .as_mut()
-        .map(|cb| cb.as_mut() as &mut (dyn FnMut(u64, Option<u64>) + Send));
-
+    let progress_cell = progress.map(RefCell::new);
     let mut attempts = 0;
     let bytes_downloaded = loop {
-        if let Some(cb) = progress_ref.as_deref_mut() {
-            cb(0, metadata.size);
-        }
         let fallback_token = if metadata.download_url.is_none() {
             Some(current_access_token().map_err(|message| DownloadError::Failed {
                 message,
@@ -153,15 +148,23 @@ fn download_drive_item_internal(
             }
         };
 
-        match stream_download(
-            &download_endpoint,
-            bearer_token,
-            &destination,
-            metadata.size,
-            None,
-            progress_ref.as_deref_mut(),
-            control_flag.as_ref(),
-        ) {
+        let result = {
+            let mut progress_guard =
+                progress_cell.as_ref().map(|cell| cell.borrow_mut());
+            let progress_ref = progress_guard.as_deref_mut().map(|cb| {
+                cb.as_mut() as &mut (dyn FnMut(u64, Option<u64>) + Send)
+            });
+            stream_download(
+                &download_endpoint,
+                bearer_token,
+                &destination,
+                metadata.size,
+                None,
+                progress_ref,
+                control_flag.as_ref(),
+            )
+        };
+        match result {
             Ok(bytes) => break bytes,
             Err(DownloadError::DownloadUrlExpired) if attempts == 0 => {
                 attempts += 1;
@@ -344,13 +347,13 @@ pub(crate) fn prepare_destination(
 
 /// 实际执行 HTTP 下载并流式写入磁盘，必要时附带 Bearer token。
 /// 逐块读取响应体，写入文件后触发进度回调，确保 UI 能看到实时变化。
-pub(crate) fn stream_download(
+pub(crate) fn stream_download<'a>(
     download_url: &str,
     bearer_token: Option<String>,
     destination: &Path,
     total_size: Option<u64>,
     resume_from: Option<u64>,
-    progress: Option<&mut (dyn FnMut(u64, Option<u64>) + Send)>,
+    progress: Option<&'a mut (dyn FnMut(u64, Option<u64>) + Send + 'a)>,
     control_flag: Option<&Arc<AtomicU8>>,
 ) -> Result<u64, DownloadError> {
     stream_download_internal(
@@ -365,13 +368,13 @@ pub(crate) fn stream_download(
     )
 }
 
-fn stream_download_internal(
+fn stream_download_internal<'a>(
     download_url: &str,
     bearer_token: Option<String>,
     destination: &Path,
     total_size: Option<u64>,
     resume_from: Option<u64>,
-    mut progress: Option<&mut (dyn FnMut(u64, Option<u64>) + Send)>,
+    mut progress: Option<&'a mut (dyn FnMut(u64, Option<u64>) + Send + 'a)>,
     control_flag: Option<&Arc<AtomicU8>>,
     allow_refresh: bool,
 ) -> Result<u64, DownloadError> {
