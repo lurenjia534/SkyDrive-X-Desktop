@@ -1,4 +1,4 @@
-package com.example.skydrivex
+package com.lurenjia534.skydrivex
 
 import io.flutter.embedding.android.FlutterActivity
 
