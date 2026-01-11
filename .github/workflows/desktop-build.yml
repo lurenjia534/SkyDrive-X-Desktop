@@ -3,6 +3,7 @@ name: Build Desktop Releases
 on:
   push:
     branches: [main]
+    tags: [v*]
   pull_request:
     branches: [main]
 
@@ -21,6 +22,51 @@ jobs:
       # 拉取代码
       - name: Checkout
         uses: actions/checkout@v4
+
+      # 读取应用版本号
+      - name: Read app version
+        id: app_version
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          text = Path("pubspec.yaml").read_text(encoding="utf-8")
+          match = re.search(r"^version:\\s*([^\\s]+)\\s*$", text, re.M)
+          if not match:
+            raise SystemExit("version not found in pubspec.yaml")
+          version = match.group(1).strip()
+          name = version
+          build = ""
+          build_number = os.environ.get("GITHUB_RUN_NUMBER", "0")
+          if "+" in version:
+            name, build = version.split("+", 1)
+            if not build.isdigit():
+              raise SystemExit(f"build number must be numeric, got: {build}")
+            build_number = build
+
+          output_path = os.environ["GITHUB_OUTPUT"]
+          with open(output_path, "a", encoding="utf-8") as fh:
+            fh.write(f"version={version}\n")
+            fh.write(f"name={name}\n")
+            fh.write(f"build_number={build_number}\n")
+          PY
+
+      # 校验 tag 与 pubspec 版本一致（允许 vX.Y.Z 或 vX.Y.Z+N）
+      - name: Validate tag matches pubspec version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          tag="${tag#v}"
+          version="${{ steps.app_version.outputs.version }}"
+          base="${{ steps.app_version.outputs.name }}"
+          if [[ "$tag" != "$version" && "$tag" != "$base" ]]; then
+            echo "Tag $tag does not match pubspec version $version or $base"
+            exit 1
+          fi
 
       # 安装稳定版 Rust 工具链（用于核心逻辑）
       - name: Set up Rust
@@ -87,10 +133,34 @@ jobs:
         shell: bash
         run: |
           case "${{ matrix.os }}" in
-            ubuntu-latest) flutter build linux --release --build-name 1.0.0 --build-number ${{ github.run_number }} ;;
-            macos-latest) flutter build macos --release --build-name 1.0.0 --build-number ${{ github.run_number }} ;;
-            windows-latest) flutter build windows --release --build-name 1.0.0 --build-number ${{ github.run_number }} ;;
+            ubuntu-latest) flutter build linux --release --build-name "${{ steps.app_version.outputs.name }}" --build-number "${{ steps.app_version.outputs.build_number }}" ;;
+            macos-latest) flutter build macos --release --build-name "${{ steps.app_version.outputs.name }}" --build-number "${{ steps.app_version.outputs.build_number }}" ;;
+            windows-latest) flutter build windows --release --build-name "${{ steps.app_version.outputs.name }}" --build-number "${{ steps.app_version.outputs.build_number }}" ;;
           esac
+
+      # 打包 Linux 构建产物
+      - name: Package Linux release
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          mkdir -p dist
+          tar -C build/linux/x64/release -czf "dist/skydrivex-linux-${{ steps.app_version.outputs.version }}.tar.gz" bundle
+
+      # 打包 Windows 构建产物
+      - name: Package Windows release
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path "build/windows/x64/runner/Release/*" -DestinationPath "dist/skydrivex-windows-${{ steps.app_version.outputs.version }}.zip"
+
+      # 打包 macOS 构建产物
+      - name: Package macOS release
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent "build/macos/Build/Products/Release/skydrivex.app" "dist/skydrivex-macos-${{ steps.app_version.outputs.version }}.zip"
 
       # 上传 Linux 构建工件
       - name: Upload artifact
@@ -98,7 +168,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: skydrivex-linux
-          path: build/linux/x64/release/bundle/
+          path: dist/skydrivex-linux-${{ steps.app_version.outputs.version }}.tar.gz
 
       # 上传 Windows 构建工件
       - name: Upload artifact
@@ -106,7 +176,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: skydrivex-windows
-          path: build/windows/x64/runner/Release/
+          path: dist/skydrivex-windows-${{ steps.app_version.outputs.version }}.zip
           if-no-files-found: warn
 
       # 上传 macOS 构建工件
@@ -115,4 +185,28 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: skydrivex-macos
-          path: build/macos/Build/Products/Release/*.app
+          path: dist/skydrivex-macos-${{ steps.app_version.outputs.version }}.zip
+
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: desktop
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          prerelease: false
+          draft: false
+          files: |
+            dist/**/*.zip
+            dist/**/*.tar.gz
