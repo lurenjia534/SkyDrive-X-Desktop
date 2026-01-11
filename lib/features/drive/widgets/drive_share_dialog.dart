@@ -127,7 +127,9 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
           if (canPassword) ...[
             const SizedBox(height: 12),
             FTextField(
-              controller: _passwordController,
+              control: FTextFieldControl.managed(
+                controller: _passwordController,
+              ),
               label: const Text('密码（可选，仅个人版）'),
               obscureText: true,
               prefixBuilder: (_, __, ___) => const Padding(
@@ -139,7 +141,9 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
           if (_scope == drive_models.LinkScope.users) ...[
             const SizedBox(height: 12),
             FTextField(
-              controller: _recipientsController,
+              control: FTextFieldControl.managed(
+                controller: _recipientsController,
+              ),
               label: const Text('指定人员邮箱（逗号分隔）'),
               prefixBuilder: (_, __, ___) => const Padding(
                 padding: EdgeInsets.only(left: 14, right: 10),

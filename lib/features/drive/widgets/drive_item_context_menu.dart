@@ -130,7 +130,9 @@ class _DriveContextMenuOverlayState extends State<_DriveContextMenuOverlay>
           left: widget.position.dx,
           top: widget.position.dy,
           child: FPopoverMenu(
-            popoverController: _controller,
+            control: FPopoverControl.managed(
+              controller: _controller,
+            ),
             menuAnchor: Alignment.topLeft,
             childAnchor: Alignment.topLeft,
             spacing: FPortalSpacing.zero,

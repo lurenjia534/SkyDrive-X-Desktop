@@ -45,7 +45,9 @@ class AuthFormPanel extends StatelessWidget {
           ],
           // Client ID label and input
           FTextField(
-            controller: clientIdController,
+            control: FTextFieldControl.managed(
+              controller: clientIdController,
+            ),
             label: Text(
               'CLIENT ID',
               style: typography.xs.copyWith(

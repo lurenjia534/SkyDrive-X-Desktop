@@ -91,7 +91,9 @@ class DriveItemActionService {
               ),
               const SizedBox(height: 12),
               FTextField(
-                controller: controller,
+                control: FTextFieldControl.managed(
+                  controller: controller,
+                ),
                 autofocus: true,
                 textInputAction: TextInputAction.done,
                 onSubmit: (_) =>

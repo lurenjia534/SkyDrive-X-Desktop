@@ -858,17 +858,19 @@ class _DownloadConcurrencyTile extends ConsumerWidget {
                   items: {
                     for (final option in _options) '$option 个任务': option,
                   },
-                  initialValue: value,
+                  control: FSelectControl.lifted(
+                    value: value,
+                    onChange: (selected) {
+                      if (selected != null && selected != value) {
+                        unawaited(
+                          ref
+                              .read(downloadConcurrencyProvider.notifier)
+                              .updateLimit(selected),
+                        );
+                      }
+                    },
+                  ),
                   hint: '选择任务数量',
-                  onChange: (selected) {
-                    if (selected != null && selected != value) {
-                      unawaited(
-                        ref
-                            .read(downloadConcurrencyProvider.notifier)
-                            .updateLimit(selected),
-                      );
-                    }
-                  },
                 ),
               ),
               const SizedBox(width: 16),
