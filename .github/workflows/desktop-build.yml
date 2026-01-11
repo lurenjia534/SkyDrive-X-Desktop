@@ -64,7 +64,9 @@ jobs:
           version="${{ steps.app_version.outputs.version }}"
           base="${{ steps.app_version.outputs.name }}"
           if [[ "$tag" != "$version" && "$tag" != "$base" ]]; then
-            echo "Tag $tag does not match pubspec version $version or $base"
+            echo "::error ::Tag '$tag' does not match pubspec.yaml version '$version'."
+            echo "::error ::Expected tag 'v$version' (full) or 'v$base' (without +build)."
+            echo "::error ::Update pubspec.yaml or retag to match the version."
             exit 1
           fi
 
