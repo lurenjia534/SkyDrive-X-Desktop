@@ -4,19 +4,28 @@ Future<bool> revealInFileManager(String path) async {
   final trimmed = path.trim();
   if (trimmed.isEmpty) return false;
 
+  final entityType = await FileSystemEntity.type(
+    trimmed,
+    followLinks: true,
+  );
+  final isDirectory = entityType == FileSystemEntityType.directory;
   final file = File(trimmed);
-  final exists = await file.exists();
   final filePath = file.path;
-  final directoryPath = file.parent.path;
+  final directoryPath = isDirectory ? trimmed : file.parent.path;
+  final exists = isDirectory ? true : await file.exists();
 
   try {
     if (Platform.isMacOS) {
-      final args = exists ? ['-R', filePath] : [directoryPath];
+      final args = (!isDirectory && exists)
+          ? ['-R', filePath]
+          : [directoryPath];
       final result = await Process.run('open', args);
       return result.exitCode == 0;
     }
     if (Platform.isWindows) {
-      final args = exists ? ['/select,', filePath] : [directoryPath];
+      final args = (!isDirectory && exists)
+          ? ['/select,', filePath]
+          : [directoryPath];
       final result = await Process.run('explorer.exe', args);
       return result.exitCode == 0;
     }

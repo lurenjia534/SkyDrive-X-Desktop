@@ -368,11 +368,13 @@ class _DownloadTile extends StatelessWidget {
             ? FIcons.cloudDownload
             : (isPaused ? Icons.pause_rounded : FIcons.download));
 
+    final savedPath = task.savedPath;
     final canShowMenu =
-        showPath &&
-        task.status == DownloadStatus.completed &&
-        task.savedPath != null &&
-        task.savedPath!.trim().isNotEmpty;
+        (task.status == DownloadStatus.completed &&
+            savedPath != null &&
+            savedPath.trim().isNotEmpty) ||
+        task.status == DownloadStatus.inProgress ||
+        task.status == DownloadStatus.paused;
 
     Future<void> handleContextMenu(TapDownDetails details) async {
       final selected = await showDriveDownloadContextMenu(
@@ -382,14 +384,18 @@ class _DownloadTile extends StatelessWidget {
       if (!context.mounted || selected == null) return;
       switch (selected) {
         case DriveDownloadContextAction.revealInFolder:
-          final savedPath = task.savedPath;
-          if (savedPath == null || savedPath.trim().isEmpty) {
-            _showToast(context, '无法定位文件');
+          final path = task.status == DownloadStatus.completed &&
+                  savedPath != null &&
+                  savedPath.trim().isNotEmpty
+              ? savedPath
+              : task.targetDir;
+          if (path.trim().isEmpty) {
+            _showToast(context, '无法定位文件夹');
             return;
           }
           var opened = false;
           try {
-            opened = await revealInFileManager(savedPath);
+            opened = await revealInFileManager(path);
           } catch (_) {
             opened = false;
           }
