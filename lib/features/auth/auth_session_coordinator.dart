@@ -151,8 +151,19 @@ class AuthSessionCoordinator extends Notifier<AuthSessionState>
   }
 
   Future<void> _triggerRefresh() async {
+    final startAt = DateTime.now().toIso8601String();
+    print(
+      '[auth] AuthSessionCoordinator._triggerRefresh start '
+      'mounted=${ref.mounted} at $startAt',
+    );
+    if (!ref.mounted) return;
     _refreshTimer?.cancel();
     final ok = await refreshSilently();
+    final endAt = DateTime.now().toIso8601String();
+    print(
+      '[auth] AuthSessionCoordinator._triggerRefresh end '
+      'ok=$ok mounted=${ref.mounted} at $endAt',
+    );
     if (!ref.mounted) return;
     if (ok) {
       _refreshFailureCount = 0;

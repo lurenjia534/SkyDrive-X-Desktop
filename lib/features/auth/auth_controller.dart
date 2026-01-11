@@ -63,7 +63,15 @@ class AuthController extends Notifier<AuthState> {
   Future<bool>? _refreshInFlight;
 
   @override
-  AuthState build() => const AuthState();
+  AuthState build() {
+    final now = DateTime.now().toIso8601String();
+    print('[auth] AuthController.build mounted=${ref.mounted} at $now');
+    ref.onDispose(() {
+      final disposedAt = DateTime.now().toIso8601String();
+      print('[auth] AuthController.dispose at $disposedAt');
+    });
+    return const AuthState();
+  }
 
   void setValidationError(String message) {
     state = state.copyWith(
@@ -91,12 +99,14 @@ class AuthController extends Notifier<AuthState> {
         clientId: clientId,
         scopes: scopes,
       );
+      if (!ref.mounted) return;
       auth_api.StoredAuthState? persisted;
       try {
         persisted = await auth_api.loadPersistedAuthState();
       } catch (_) {
         persisted = null;
       }
+      if (!ref.mounted) return;
       final nextTokens = persisted?.tokens ?? tokens;
       state = state.copyWith(
         tokens: nextTokens,
@@ -107,9 +117,12 @@ class AuthController extends Notifier<AuthState> {
         clearError: true,
       );
     } catch (err) {
+      if (!ref.mounted) return;
       state = state.copyWith(error: err.toString(), clearTokens: true);
     } finally {
-      state = state.copyWith(isAuthenticating: false);
+      if (ref.mounted) {
+        state = state.copyWith(isAuthenticating: false);
+      }
     }
   }
 
@@ -129,9 +142,11 @@ class AuthController extends Notifier<AuthState> {
     try {
       persisted = await auth_api.loadPersistedAuthState();
     } catch (err) {
+      if (!ref.mounted) return;
       state = state.copyWith(error: err.toString(), clearTokens: true);
       return;
     }
+    if (!ref.mounted) return;
     if (persisted == null) return;
     _refreshGeneration++;
     _pendingRefreshState = null;
@@ -163,11 +178,22 @@ class AuthController extends Notifier<AuthState> {
 
   Future<bool> _doRefreshTokens({required bool showLoading}) async {
     final refreshGeneration = ++_refreshGeneration;
+    final startAt = DateTime.now().toIso8601String();
+    print(
+      '[auth] AuthController.refreshTokens start '
+      'gen=$refreshGeneration showLoading=$showLoading mounted=${ref.mounted} at $startAt',
+    );
     if (showLoading) {
       state = state.copyWith(isAuthenticating: true, clearError: true);
     }
     try {
       final updatedState = await auth_refresh.refreshTokens();
+      final doneAt = DateTime.now().toIso8601String();
+      print(
+        '[auth] AuthController.refreshTokens success '
+        'gen=$refreshGeneration mounted=${ref.mounted} at $doneAt',
+      );
+      if (!ref.mounted) return false;
       final nextState = state.copyWith(
         tokens: updatedState.tokens,
         updatedAtMillis: updatedState.updatedAtMillis.toInt(),
@@ -184,6 +210,12 @@ class AuthController extends Notifier<AuthState> {
       }
       return true;
     } catch (err) {
+      final errorAt = DateTime.now().toIso8601String();
+      print(
+        '[auth] AuthController.refreshTokens error '
+        'gen=$refreshGeneration mounted=${ref.mounted} at $errorAt error=$err',
+      );
+      if (!ref.mounted) return false;
       final message = err.toString();
       final shouldClear = _shouldClearTokensOnRefreshError(message);
       final nextState = state.copyWith(
