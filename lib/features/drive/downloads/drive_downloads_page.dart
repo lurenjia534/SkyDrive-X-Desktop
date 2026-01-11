@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:skydrivex/features/drive/providers/drive_download_manager.dart';
+import 'package:skydrivex/features/drive/widgets/drive_download_context_menu.dart';
 import 'package:skydrivex/features/drive/utils/drive_item_formatters.dart';
+import 'package:skydrivex/utils/reveal_in_file_manager.dart';
 
 class DriveDownloadsPage extends ConsumerWidget {
   const DriveDownloadsPage({super.key});
@@ -366,48 +368,84 @@ class _DownloadTile extends StatelessWidget {
             ? FIcons.cloudDownload
             : (isPaused ? Icons.pause_rounded : FIcons.download));
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: leadingColor.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(16),
+    final canShowMenu =
+        showPath &&
+        task.status == DownloadStatus.completed &&
+        task.savedPath != null &&
+        task.savedPath!.trim().isNotEmpty;
+
+    Future<void> handleContextMenu(TapDownDetails details) async {
+      final selected = await showDriveDownloadContextMenu(
+        context: context,
+        globalPosition: details.globalPosition,
+      );
+      if (!context.mounted || selected == null) return;
+      switch (selected) {
+        case DriveDownloadContextAction.revealInFolder:
+          final savedPath = task.savedPath;
+          if (savedPath == null || savedPath.trim().isEmpty) {
+            _showToast(context, '无法定位文件');
+            return;
+          }
+          var opened = false;
+          try {
+            opened = await revealInFileManager(savedPath);
+          } catch (_) {
+            opened = false;
+          }
+          if (!opened && context.mounted) {
+            _showToast(context, '无法打开文件夹');
+          }
+          break;
+      }
+    }
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onSecondaryTapDown: canShowMenu ? handleContextMenu : null,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: leadingColor.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(leadingIcon, color: leadingColor, size: 22),
             ),
-            child: Icon(leadingIcon, color: leadingColor, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  task.item.name,
-                  style: typography.base.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colors.foreground,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.item.name,
+                    style: typography.base.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: colors.foreground,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                buildSubtitle(),
-              ],
+                  const SizedBox(height: 6),
+                  buildSubtitle(),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Align(
-            alignment: Alignment.topRight,
-            child: _DownloadAction(
-              task: task,
-              ref: ref,
-              colors: colors,
-              typography: typography,
+            const SizedBox(width: 10),
+            Align(
+              alignment: Alignment.topRight,
+              child: _DownloadAction(
+                task: task,
+                ref: ref,
+                colors: colors,
+                typography: typography,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -581,4 +619,13 @@ String? _formatSpeed(double? bytesPerSecond) {
     return '${(bytesPerSecond / kb).toStringAsFixed(1)} KB/s';
   }
   return '${bytesPerSecond.toStringAsFixed(0)} B/s';
+}
+
+void _showToast(BuildContext context, String message) {
+  if (context.findAncestorStateOfType<FToasterState>() != null) {
+    showFToast(context: context, title: Text(message));
+    return;
+  }
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  messenger?.showSnackBar(SnackBar(content: Text(message)));
 }
