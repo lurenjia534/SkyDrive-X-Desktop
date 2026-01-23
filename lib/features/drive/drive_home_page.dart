@@ -19,6 +19,7 @@ import 'package:skydrivex/features/drive/widgets/drive_item_tile.dart';
 import 'package:skydrivex/features/drive/widgets/drive_load_more_tile.dart';
 import 'package:skydrivex/features/drive/widgets/drive_loading_list.dart';
 import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
+import 'package:skydrivex/utils/toast.dart';
 
 class DriveHomePage extends ConsumerWidget {
   const DriveHomePage({super.key});
@@ -347,5 +348,5 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
 }
 
 void _showSnack(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  showToast(context, message);
 }

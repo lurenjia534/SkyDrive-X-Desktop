@@ -10,6 +10,7 @@ import 'package:skydrivex/features/drive/settings/drive_settings_page.dart';
 import 'package:skydrivex/features/drive/widgets/quick_action_side_sheet.dart';
 import 'package:skydrivex/features/drive/uploads/drive_uploads_page.dart';
 import 'package:skydrivex/src/rust/api/auth/auth.dart' as auth_api;
+import 'package:skydrivex/utils/toast.dart';
 
 import 'drive_home_page.dart';
 import 'drive_navigation_rail.dart';
@@ -56,9 +57,7 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
 
   void _showPlaceholder(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showToast(context, message);
   }
 
   void _handleNavigationSelection(int index) {
@@ -83,9 +82,7 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
       );
     } catch (err) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('清除凭据失败：$err')));
+        showToast(context, '清除凭据失败：$err');
       }
     } finally {
       if (mounted) {

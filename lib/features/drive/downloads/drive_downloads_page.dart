@@ -8,6 +8,7 @@ import 'package:skydrivex/features/drive/providers/drive_download_manager.dart';
 import 'package:skydrivex/features/drive/widgets/drive_download_context_menu.dart';
 import 'package:skydrivex/features/drive/utils/drive_item_formatters.dart';
 import 'package:skydrivex/utils/reveal_in_file_manager.dart';
+import 'package:skydrivex/utils/toast.dart';
 
 class DriveDownloadsPage extends ConsumerWidget {
   const DriveDownloadsPage({super.key});
@@ -628,10 +629,5 @@ String? _formatSpeed(double? bytesPerSecond) {
 }
 
 void _showToast(BuildContext context, String message) {
-  if (context.findAncestorStateOfType<FToasterState>() != null) {
-    showFToast(context: context, title: Text(message));
-    return;
-  }
-  final messenger = ScaffoldMessenger.maybeOf(context);
-  messenger?.showSnackBar(SnackBar(content: Text(message)));
+  showToast(context, message);
 }

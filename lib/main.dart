@@ -21,7 +21,10 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       supportedLocales: FLocalizations.supportedLocales,
       localizationsDelegates: const [...FLocalizations.localizationsDelegates],
-      builder: (_, child) => FAnimatedTheme(data: theme, child: child!),
+      builder: (_, child) => FAnimatedTheme(
+        data: theme,
+        child: FToaster(child: child!),
+      ),
       theme: theme.toApproximateMaterialTheme(),
       initialRoute: '/auth',
       routes: {

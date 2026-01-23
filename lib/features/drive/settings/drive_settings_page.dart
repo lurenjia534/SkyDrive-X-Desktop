@@ -9,6 +9,7 @@ import 'package:skydrivex/features/drive/providers/download_directory_provider.d
 import 'package:skydrivex/features/drive/providers/drive_info_provider.dart';
 import 'package:skydrivex/features/drive/utils/drive_item_formatters.dart';
 import 'package:skydrivex/utils/download_destination.dart';
+import 'package:skydrivex/utils/toast.dart';
 
 class DriveSettingsPage extends ConsumerStatefulWidget {
   const DriveSettingsPage({super.key});
@@ -744,15 +745,11 @@ class _DownloadDirectoryTile extends ConsumerWidget {
           .read(downloadDirectoryProvider.notifier)
           .updateDirectory(result);
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('下载路径已更新')));
+        showToast(context, '下载路径已更新');
       }
     } catch (err) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('更新失败：$err')));
+        showToast(context, '更新失败：$err');
       }
     }
   }
@@ -764,15 +761,11 @@ class _DownloadDirectoryTile extends ConsumerWidget {
           .read(downloadDirectoryProvider.notifier)
           .updateDirectory(defaultPath);
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('已恢复默认下载路径')));
+        showToast(context, '已恢复默认下载路径');
       }
     } catch (err) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('操作失败：$err')));
+        showToast(context, '操作失败：$err');
       }
     }
   }

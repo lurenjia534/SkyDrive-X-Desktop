@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:skydrivex/features/drive/providers/drive_share_provider.dart';
 import 'package:skydrivex/src/rust/api/drive/models.dart' as drive_models;
+import 'package:skydrivex/utils/toast.dart';
 
 class DriveShareDialog extends ConsumerStatefulWidget {
   const DriveShareDialog({super.key, required this.animation});
@@ -261,12 +262,7 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
   }
 
   void _showToast(BuildContext context, String message) {
-    if (context.findAncestorStateOfType<FToasterState>() != null) {
-      showFToast(context: context, title: Text(message));
-      return;
-    }
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    messenger?.showSnackBar(SnackBar(content: Text(message)));
+    showToast(context, message);
   }
 }
 

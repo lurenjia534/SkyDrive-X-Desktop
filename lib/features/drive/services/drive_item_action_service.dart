@@ -13,6 +13,7 @@ import 'package:skydrivex/features/drive/widgets/drive_share_dialog.dart';
 import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
 import 'package:skydrivex/src/rust/api/drive/delete.dart';
 import 'package:skydrivex/src/rust/api/drive/move_item.dart';
+import 'package:skydrivex/utils/toast.dart';
 
 /// 封装文件/文件夹相关的常用操作，降低页面耦合。
 class DriveItemActionService {
@@ -346,11 +347,6 @@ class DriveItemActionService {
   }
 
   static void _showToast(BuildContext context, String message) {
-    if (context.findAncestorStateOfType<FToasterState>() != null) {
-      showFToast(context: context, title: Text(message));
-      return;
-    }
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    messenger?.showSnackBar(SnackBar(content: Text(message)));
+    showToast(context, message);
   }
 }
