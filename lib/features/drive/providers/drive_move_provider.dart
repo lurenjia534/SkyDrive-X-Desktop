@@ -15,8 +15,11 @@ class DriveMoveController extends Notifier<DriveMoveState> {
   @override
   DriveMoveState build() {
     _service = const DriveMoveService();
-    _loadFolder(folderId: null, breadcrumbs: const []);
-    return const DriveMoveState.initial();
+    final initial = const DriveMoveState.initial();
+    Future.microtask(
+      () => _loadFolder(folderId: null, breadcrumbs: const []),
+    );
+    return initial;
   }
 
   Future<void> refreshCurrent() async {
@@ -46,6 +49,7 @@ class DriveMoveController extends Notifier<DriveMoveState> {
     required String? folderId,
     required List<DriveBreadcrumbSegment> breadcrumbs,
   }) async {
+    if (!ref.mounted) return;
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final items = await _service.fetchChildren(folderId);
