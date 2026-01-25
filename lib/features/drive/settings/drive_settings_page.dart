@@ -23,7 +23,9 @@ class DriveSettingsPage extends ConsumerStatefulWidget {
 class _DriveSettingsPageState extends ConsumerState<DriveSettingsPage> {
   @override
   Widget build(BuildContext context) {
-    final themeState = ref.watch(appThemeProvider);
+    final themeAsync = ref.watch(appThemeProvider);
+    final themeState = themeAsync.value ?? AppThemeState.defaults;
+    final themeLoading = themeAsync.isLoading;
     final themeController = ref.read(appThemeProvider.notifier);
     return CustomScrollView(
       slivers: [
@@ -38,8 +40,11 @@ class _DriveSettingsPageState extends ConsumerState<DriveSettingsPage> {
                 _ThemeSettingsTile(
                   followSystem: themeState.followSystem,
                   manualMode: themeState.manualMode,
-                  onFollowSystemChanged: themeController.setFollowSystem,
-                  onManualModeChanged: themeController.setManualMode,
+                  enabled: !themeLoading,
+                  onFollowSystemChanged: (value) =>
+                      unawaited(themeController.setFollowSystem(value)),
+                  onManualModeChanged: (mode) =>
+                      unawaited(themeController.setManualMode(mode)),
                 ),
                 const SizedBox(height: 24),
                 const _SettingsSyncTile(),
@@ -126,12 +131,14 @@ class _ThemeSettingsTile extends StatelessWidget {
     required this.manualMode,
     required this.onFollowSystemChanged,
     required this.onManualModeChanged,
+    this.enabled = true,
   });
 
   final bool followSystem;
   final ThemeMode manualMode;
   final ValueChanged<bool> onFollowSystemChanged;
   final ValueChanged<ThemeMode> onManualModeChanged;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -173,7 +180,11 @@ class _ThemeSettingsTile extends StatelessWidget {
                   ],
                 ),
               ),
-              FSwitch(value: followSystem, onChange: onFollowSystemChanged),
+              FSwitch(
+                value: followSystem,
+                enabled: enabled,
+                onChange: enabled ? onFollowSystemChanged : null,
+              ),
             ],
           ),
           if (!followSystem) ...[
@@ -190,7 +201,9 @@ class _ThemeSettingsTile extends StatelessWidget {
               children: [
                 Expanded(
                   child: FButton(
-                    onPress: () => onManualModeChanged(ThemeMode.light),
+                    onPress: enabled
+                        ? () => onManualModeChanged(ThemeMode.light)
+                        : null,
                     style: manualMode == ThemeMode.light
                         ? FButtonStyle.primary()
                         : FButtonStyle.outline(),
@@ -200,7 +213,9 @@ class _ThemeSettingsTile extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: FButton(
-                    onPress: () => onManualModeChanged(ThemeMode.dark),
+                    onPress: enabled
+                        ? () => onManualModeChanged(ThemeMode.dark)
+                        : null,
                     style: manualMode == ThemeMode.dark
                         ? FButtonStyle.primary()
                         : FButtonStyle.outline(),

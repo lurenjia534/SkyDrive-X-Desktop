@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/theme/app_theme_provider.dart';
@@ -28,8 +30,9 @@ class AuthPrototypePage extends ConsumerWidget {
     final uiState = ref.watch(authPrototypeViewModelProvider);
     return AuthPrototypeView(
       uiState: uiState,
-      onToggleTheme: () =>
-          ref.read(appThemeProvider.notifier).toggleManualMode(),
+      onToggleTheme: () => unawaited(
+        ref.read(appThemeProvider.notifier).toggleManualMode(),
+      ),
       onSignIn: (clientId) => ref
           .read(authPrototypeViewModelProvider.notifier)
           .signInWithClientId(clientId),

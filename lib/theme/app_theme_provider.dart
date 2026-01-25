@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'app_theme_service.dart';
+
 @immutable
 class AppThemeState {
   const AppThemeState({
@@ -10,6 +12,11 @@ class AppThemeState {
 
   final bool followSystem;
   final ThemeMode manualMode;
+
+  static const defaults = AppThemeState(
+    followSystem: true,
+    manualMode: ThemeMode.light,
+  );
 
   ThemeMode get themeMode => followSystem ? ThemeMode.system : manualMode;
 
@@ -24,40 +31,79 @@ class AppThemeState {
   }
 }
 
-final appThemeProvider = NotifierProvider<AppThemeController, AppThemeState>(
+final appThemeProvider =
+    AsyncNotifierProvider<AppThemeController, AppThemeState>(
   AppThemeController.new,
 );
 
-class AppThemeController extends Notifier<AppThemeState> {
+class AppThemeController extends AsyncNotifier<AppThemeState> {
+  late final AppThemeService _service;
+
   @override
-  AppThemeState build() {
-    return const AppThemeState(
-      followSystem: true,
-      manualMode: ThemeMode.light,
+  Future<AppThemeState> build() async {
+    _service = const AppThemeService();
+    final followSystem = await _service.getFollowSystem();
+    final manualMode = await _service.getManualMode();
+    return AppThemeState(
+      followSystem: followSystem,
+      manualMode: manualMode,
     );
   }
 
-  void setFollowSystem(bool followSystem) {
-    state = state.copyWith(followSystem: followSystem);
+  AppThemeState _fallbackState() {
+    return state.value ?? AppThemeState.defaults;
   }
 
-  void setManualMode(ThemeMode mode) {
+  Future<void> setFollowSystem(bool followSystem) async {
+    final previous = _fallbackState();
+    final next = previous.copyWith(followSystem: followSystem);
+    state = AsyncValue.data(next);
+    try {
+      await _service.setFollowSystem(followSystem);
+    } catch (err, stack) {
+      state = AsyncValue.error(err, stack);
+      state = AsyncValue.data(previous);
+      rethrow;
+    }
+  }
+
+  Future<void> setManualMode(ThemeMode mode) async {
     if (mode == ThemeMode.system) {
       return;
     }
-    state = state.copyWith(
+    final previous = _fallbackState();
+    final next = previous.copyWith(
       followSystem: false,
       manualMode: mode,
     );
+    state = AsyncValue.data(next);
+    try {
+      await _service.setFollowSystem(false);
+      await _service.setManualMode(mode);
+    } catch (err, stack) {
+      state = AsyncValue.error(err, stack);
+      state = AsyncValue.data(previous);
+      rethrow;
+    }
   }
 
-  void toggleManualMode() {
-    final nextMode = state.manualMode == ThemeMode.dark
+  Future<void> toggleManualMode() async {
+    final previous = _fallbackState();
+    final nextMode = previous.manualMode == ThemeMode.dark
         ? ThemeMode.light
         : ThemeMode.dark;
-    state = state.copyWith(
+    final next = previous.copyWith(
       followSystem: false,
       manualMode: nextMode,
     );
+    state = AsyncValue.data(next);
+    try {
+      await _service.setFollowSystem(false);
+      await _service.setManualMode(nextMode);
+    } catch (err, stack) {
+      state = AsyncValue.error(err, stack);
+      state = AsyncValue.data(previous);
+      rethrow;
+    }
   }
 }

@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -803181245;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1653033776;
 
 // Section: executor
 
@@ -874,6 +874,70 @@ fn wire__crate__api__drive__share__get_share_capabilities_impl(
         },
     )
 }
+fn wire__crate__api__settings__theme__get_theme_follow_system_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_theme_follow_system",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::settings::theme::get_theme_follow_system()?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__settings__theme__get_theme_manual_mode_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_theme_manual_mode",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::settings::theme::get_theme_manual_mode()?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__simple__greet_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -1320,6 +1384,73 @@ fn wire__crate__api__settings__download_directory__set_download_directory_impl(
                 transform_result_sse::<_, String>((move || {
                     let output_ok =
                         crate::api::settings::download_directory::set_download_directory(api_path)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__settings__theme__set_theme_follow_system_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_theme_follow_system",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_value = <bool>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::settings::theme::set_theme_follow_system(api_value)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__settings__theme__set_theme_manual_mode_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_theme_manual_mode",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_mode = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::settings::theme::set_theme_manual_mode(api_mode)?;
                     Ok(output_ok)
                 })())
             }
@@ -2295,86 +2426,110 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        25 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__drive__list__list_drive_children_impl(
+        24 => wire__crate__api__settings__theme__get_theme_follow_system_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        27 => wire__crate__api__auth__auth__load_persisted_auth_state_impl(
+        25 => wire__crate__api__settings__theme__get_theme_manual_mode_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        28 => wire__crate__api__drive__move_item__move_drive_item_impl(
+        27 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__drive__list__list_drive_children_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        29 => wire__crate__api__drive__download_manager__pause_download_task_impl(
+        29 => wire__crate__api__auth__auth__load_persisted_auth_state_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        30 => {
+        30 => wire__crate__api__drive__move_item__move_drive_item_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        31 => wire__crate__api__drive__download_manager__pause_download_task_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        32 => {
             wire__crate__api__auth__auth__persist_auth_state_impl(port, ptr, rust_vec_len, data_len)
         }
-        31 => {
+        33 => {
             wire__crate__api__auth__refresh__refresh_tokens_impl(port, ptr, rust_vec_len, data_len)
         }
-        32 => wire__crate__api__drive__download_manager__remove_download_task_impl(
+        34 => wire__crate__api__drive__download_manager__remove_download_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        33 => wire__crate__api__drive__upload_manager__remove_upload_task_impl(
+        35 => wire__crate__api__drive__upload_manager__remove_upload_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        34 => wire__crate__api__drive__download_manager__resume_download_task_impl(
+        36 => wire__crate__api__drive__download_manager__resume_download_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        35 => wire__crate__api__settings__download_concurrency__set_download_concurrency_impl(
+        37 => wire__crate__api__settings__download_concurrency__set_download_concurrency_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        36 => wire__crate__api__settings__download_directory__set_download_directory_impl(
+        38 => wire__crate__api__settings__download_directory__set_download_directory_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        37 => wire__crate__api__drive__upload_manager__upload_progress_stream_impl(
+        39 => wire__crate__api__settings__theme__set_theme_follow_system_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        38 => wire__crate__api__drive__upload_manager__upload_queue_state_impl(
+        40 => wire__crate__api__settings__theme__set_theme_manual_mode_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        39 => wire__crate__api__drive__models__upload_queue_state_default_impl(
+        41 => wire__crate__api__drive__upload_manager__upload_progress_stream_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        40 => wire__crate__api__drive__upload__upload_small_file_impl(
+        42 => wire__crate__api__drive__upload_manager__upload_queue_state_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        43 => wire__crate__api__drive__models__upload_queue_state_default_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        44 => wire__crate__api__drive__upload__upload_small_file_impl(
             port,
             ptr,
             rust_vec_len,
@@ -2392,7 +2547,7 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        24 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }

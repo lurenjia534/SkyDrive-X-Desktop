@@ -17,7 +17,7 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeState = ref.watch(appThemeProvider);
+    final themeState = ref.watch(appThemeProvider).value ?? AppThemeState.defaults;
     final lightTheme = zincLight;
     final darkTheme = zincDark;
     return MaterialApp(

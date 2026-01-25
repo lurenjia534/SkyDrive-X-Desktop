@@ -19,6 +19,7 @@ import 'api/drive/upload.dart';
 import 'api/drive/upload_manager.dart';
 import 'api/settings/download_concurrency.dart';
 import 'api/settings/download_directory.dart';
+import 'api/settings/theme.dart';
 import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';
