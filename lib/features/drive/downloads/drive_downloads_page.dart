@@ -72,7 +72,7 @@ class DriveDownloadsPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    '暂无下载任务',
+                    'No downloads yet',
                     style: typography.lg.copyWith(
                       fontWeight: FontWeight.w600,
                       color: colors.foreground,
@@ -80,7 +80,7 @@ class DriveDownloadsPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '在 Files 页面发起下载后，这里会显示任务进度与历史记录。',
+                    'Start a download from the Files page to see progress and history here.',
                     textAlign: TextAlign.center,
                     style: typography.sm.copyWith(
                       color: colors.mutedForeground,
@@ -100,7 +100,7 @@ class DriveDownloadsPage extends ConsumerWidget {
       children: [
         if (inProgressTasks.isNotEmpty)
           _DownloadSection(
-            title: '下载中',
+            title: 'Downloading',
             tasks: inProgressTasks,
             ref: ref,
             colors: colors,
@@ -108,7 +108,7 @@ class DriveDownloadsPage extends ConsumerWidget {
           ),
         if (pausedTasks.isNotEmpty)
           _DownloadSection(
-            title: '已暂停',
+            title: 'Paused',
             tasks: pausedTasks,
             ref: ref,
             colors: colors,
@@ -116,7 +116,7 @@ class DriveDownloadsPage extends ConsumerWidget {
           ),
         if (queue.failed.isNotEmpty)
           _DownloadSection(
-            title: '失败',
+            title: 'Failed',
             tasks: queue.failed,
             showError: true,
             ref: ref,
@@ -128,7 +128,7 @@ class DriveDownloadsPage extends ConsumerWidget {
           ),
         if (queue.completed.isNotEmpty)
           _DownloadSection(
-            title: '已完成',
+            title: 'Completed',
             tasks: queue.completed,
             showPath: true,
             ref: ref,
@@ -192,7 +192,7 @@ class _DownloadSection extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 prefix: const Icon(FIcons.trash2, size: 16),
                 child: Text(
-                  '清除失败',
+                  'Clear failed',
                   style: typography.sm.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
@@ -262,13 +262,13 @@ class _DownloadTile extends StatelessWidget {
     final statusLabel = () {
       switch (task.status) {
         case DownloadStatus.inProgress:
-          return '下载中';
+          return 'Downloading';
         case DownloadStatus.paused:
-          return '已暂停';
+          return 'Paused';
         case DownloadStatus.completed:
-          return '已完成';
+          return 'Completed';
         case DownloadStatus.failed:
-          return '失败';
+          return 'Failed';
       }
     }();
 
@@ -279,7 +279,7 @@ class _DownloadTile extends StatelessWidget {
         : '0 B';
     final totalLabel = task.sizeLabel != null
         ? formatFileSize(_bigIntToSafeInt(task.sizeLabel))
-        : '未知';
+        : 'Unknown';
     final speed = manager.speedFor(task.item.id);
     final speedLabel = _formatSpeed(speed);
 
@@ -308,7 +308,7 @@ class _DownloadTile extends StatelessWidget {
           task.status == DownloadStatus.inProgress ||
           task.status == DownloadStatus.paused;
       if (!isActive) {
-        final sizeInfo = task.sizeLabel != null ? '大小 $totalLabel' : '大小未知';
+        final sizeInfo = task.sizeLabel != null ? 'Size $totalLabel' : 'Size unknown';
         return Text('$statusLabel · $sizeInfo', style: subtitleStyle);
       }
       final details = [
@@ -391,7 +391,7 @@ class _DownloadTile extends StatelessWidget {
               ? savedPath
               : task.targetDir;
           if (path.trim().isEmpty) {
-            _showToast(context, '无法定位文件夹');
+            _showToast(context, 'Unable to locate folder');
             return;
           }
           var opened = false;
@@ -401,7 +401,7 @@ class _DownloadTile extends StatelessWidget {
             opened = false;
           }
           if (!opened && context.mounted) {
-            _showToast(context, '无法打开文件夹');
+            _showToast(context, 'Unable to open folder');
           }
           break;
       }
@@ -568,7 +568,7 @@ class _DownloadAction extends StatelessWidget {
     if (isFailed) {
       final resuming = manager.isResuming(task.item.id);
       final canResume = task.canResume;
-      final label = canResume ? '继续' : '重新下载';
+      final label = canResume ? 'Resume' : 'Download again';
       final icon = canResume ? Icons.play_arrow_rounded : Icons.refresh_rounded;
       return FButton(
         onPress: resuming
@@ -586,7 +586,7 @@ class _DownloadAction extends StatelessWidget {
           size: 16,
         ),
         child: Text(
-          resuming ? '处理中' : label,
+          resuming ? 'Processing' : label,
           style: typography.sm.copyWith(fontWeight: FontWeight.w600),
         ),
       );

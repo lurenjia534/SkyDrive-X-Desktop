@@ -303,7 +303,7 @@ class _DriveRailToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = extended ? '收起导航' : '展开导航';
+    final label = extended ? 'Collapse navigation' : 'Expand navigation';
     return Row(
       children: [
         Tooltip(
@@ -333,7 +333,7 @@ class _DriveRailToggle extends StatelessWidget {
         if (extended) ...[
           const SizedBox(width: 10),
           Text(
-            '收起导航',
+            'Collapse navigation',
             style: typography.sm.copyWith(
               color: colors.mutedForeground,
               fontWeight: FontWeight.w600,

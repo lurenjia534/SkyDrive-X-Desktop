@@ -21,7 +21,7 @@ Future<void> showQuickActionSideSheet(
     side: FLayout.rtl,
     useRootNavigator: true,
     barrierDismissible: true,
-    barrierLabel: '关闭快捷操作',
+    barrierLabel: 'Close quick actions',
     draggable: false,
     mainAxisMaxRatio: widthFactor,
     builder: (sheetContext) => _QuickActionSideSheet(
@@ -118,7 +118,7 @@ class _QuickActionSideSheet extends StatelessWidget {
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            '快速上传照片或新建项目，稍后可在前端接入实际逻辑。',
+                            'Quickly upload photos or create items. Wiring to real logic can come later.',
                             style: typography.sm.copyWith(
                               color: colors.mutedForeground,
                               height: 1.5,
@@ -177,28 +177,28 @@ class _QuickActionSideSheet extends StatelessWidget {
                             children: [
                               _QuickActionItem(
                                 icon: Icons.image_outlined,
-                                label: '上传照片/小文件',
-                                description: '选择本地图片并上传到当前目录',
+                                label: 'Upload photos / small files',
+                                description: 'Choose local images and upload to the current folder',
                                 onPress: () =>
                                     _handleAction(context, onUploadPhoto),
                               ),
                               _QuickActionItem(
                                 icon: Icons.create_new_folder_outlined,
-                                label: '新建文件夹',
-                                description: '在当前视图下创建一个子文件夹',
+                                label: 'New folder',
+                                description: 'Create a subfolder in the current view',
                                 onPress: () =>
                                     _handleAction(context, onCreateFolder),
                               ),
                               _QuickActionItem(
                                 icon: Icons.insert_drive_file_outlined,
-                                label: '上传文档',
-                                description: '适合小体积的文档即时上传',
+                                label: 'Upload document',
+                                description: 'Great for small documents',
                                 onPress: () => _handleAction(context, onUploadDoc),
                               ),
                               _QuickActionItem(
                                 icon: Icons.cloud_upload_rounded,
-                                label: '上传大文件（分片）',
-                                description: '适合超过 250MB 的内容，使用分片上传',
+                                label: 'Upload large file (chunked)',
+                                description: 'For files over 250MB, use chunked upload',
                                 onPress: () =>
                                     _handleAction(context, onUploadLarge),
                               ),
@@ -206,7 +206,7 @@ class _QuickActionSideSheet extends StatelessWidget {
                           ),
                           const SizedBox(height: 14),
                           Text(
-                            '后续可将这些入口与实际上传/创建逻辑绑定。',
+                            'These actions can be wired to real upload/create logic later.',
                             style: typography.xs.copyWith(
                               color: colors.mutedForeground,
                             ),

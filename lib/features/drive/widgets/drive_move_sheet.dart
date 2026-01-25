@@ -64,7 +64,7 @@ class DriveMoveSheet extends ConsumerWidget {
         borderRadius: listRadius,
         child: Center(
           child: Text(
-            '暂无可用文件夹',
+            'No folders available',
             style: typography.sm.copyWith(
               color: colors.mutedForeground,
             ),
@@ -136,7 +136,7 @@ class DriveMoveSheet extends ConsumerWidget {
             ),
             title: Text(entry.name),
             subtitle: entry.childCount != null
-                ? Text('${entry.childCount} 项')
+                ? Text('${entry.childCount} items')
                 : null,
             suffix: isSelf
                 ? null
@@ -188,7 +188,7 @@ class DriveMoveSheet extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '移动 “${item.name}”',
+                          'Move "${item.name}"',
                           style: typography.lg.copyWith(
                             fontWeight: FontWeight.w700,
                             color: colors.foreground,
@@ -206,7 +206,7 @@ class DriveMoveSheet extends ConsumerWidget {
                   const SizedBox(height: 6),
                   Text(
                     breadcrumbs.isEmpty
-                        ? '当前位置：根目录'
+                        ? 'Current location: Root'
                         : _breadcrumbText(breadcrumbs),
                     style: typography.sm.copyWith(
                       color: colors.mutedForeground,
@@ -226,7 +226,7 @@ class DriveMoveSheet extends ConsumerWidget {
                       onMove(target);
                     },
                     style: FButtonStyle.primary(),
-                    child: const Text('移动到当前目录'),
+                    child: const Text('Move to current folder'),
                   ),
                 ],
               ),
@@ -292,7 +292,7 @@ class _MoveErrorView extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '加载失败：$message',
+              'Load failed: $message',
               textAlign: TextAlign.center,
               style: typography.sm.copyWith(
                 color: colors.mutedForeground,
@@ -304,7 +304,7 @@ class _MoveErrorView extends StatelessWidget {
               onPress: onRetry,
               style: FButtonStyle.outline(),
               prefix: const Icon(FIcons.refreshCcw, size: 16),
-              child: const Text('重试'),
+              child: const Text('Retry'),
             ),
           ],
         ),

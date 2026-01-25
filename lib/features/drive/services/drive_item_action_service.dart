@@ -34,7 +34,7 @@ class DriveItemActionService {
       context: context,
       side: FLayout.rtl,
       useRootNavigator: true,
-      barrierLabel: '文件属性',
+      barrierLabel: 'File properties',
       barrierDismissible: true,
       draggable: false,
       mainAxisMaxRatio: widthFactor,
@@ -59,14 +59,14 @@ class DriveItemActionService {
     required BuildContext context,
     required WidgetRef ref,
   }) async {
-    final controller = TextEditingController(text: '新建文件夹');
+    final controller = TextEditingController(text: 'New folder');
     controller.selection = TextSelection(
       baseOffset: 0,
       extentOffset: controller.text.length,
     );
     final result = await showFDialog<String>(
       context: context,
-      barrierLabel: '新建文件夹',
+      barrierLabel: 'New folder',
       builder: (dialogContext, style, animation) {
         final theme = dialogContext.theme;
         final colors = theme.colors;
@@ -74,7 +74,7 @@ class DriveItemActionService {
         return FDialog(
           animation: animation,
           title: Text(
-            '新建文件夹',
+            'New folder',
             style: typography.lg.copyWith(
               fontWeight: FontWeight.w700,
               color: colors.foreground,
@@ -85,7 +85,7 @@ class DriveItemActionService {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '在当前目录创建一个新文件夹。',
+                'Create a new folder in the current directory.',
                 style: typography.sm.copyWith(
                   color: colors.mutedForeground,
                 ),
@@ -107,13 +107,13 @@ class DriveItemActionService {
             FButton(
               onPress: () => Navigator.of(dialogContext).pop(),
               style: FButtonStyle.outline(),
-              child: const Text('取消'),
+              child: const Text('Cancel'),
             ),
             FButton(
               onPress: () =>
                   Navigator.of(dialogContext).pop(controller.text),
               style: FButtonStyle.primary(),
-              child: const Text('创建'),
+              child: const Text('Create'),
             ),
           ],
         );
@@ -125,7 +125,7 @@ class DriveItemActionService {
     if (result == null) return;
     final name = result.trim();
     if (name.isEmpty) {
-      _showToast(context, '名称不能为空');
+      _showToast(context, 'Name cannot be empty');
       return;
     }
 
@@ -133,10 +133,10 @@ class DriveItemActionService {
     try {
       final created = await homeController.createFolder(name);
       if (!context.mounted) return;
-      _showToast(context, '已创建文件夹：${created.name}');
+      _showToast(context, 'Folder created: ${created.name}');
     } catch (err) {
       if (!context.mounted) return;
-      _showToast(context, '新建文件夹失败：$err');
+      _showToast(context, 'Create folder failed: $err');
     }
   }
 
@@ -148,23 +148,23 @@ class DriveItemActionService {
     final manager = ref.read(driveDownloadManagerProvider.notifier);
     final queue = ref.read(driveDownloadManagerProvider);
     if (queue.isActive(item.id)) {
-      _showToast(context, '下载中：${item.name}');
+      _showToast(context, 'Downloading: ${item.name}');
       return false;
     }
     String targetDir;
     try {
       targetDir = await ref.read(downloadDirectoryProvider.future);
     } catch (err) {
-      _showToast(context, '无法获取下载目录：$err');
+      _showToast(context, 'Unable to fetch download folder: $err');
       return false;
     }
     try {
       await manager.enqueue(item, targetDirectory: targetDir);
     } catch (err) {
-      _showToast(context, '加入下载队列失败：$err');
+      _showToast(context, 'Failed to add to download queue: $err');
       return false;
     }
-    _showToast(context, '已加入下载队列：${item.name}');
+    _showToast(context, 'Added to download queue: ${item.name}');
     return true;
   }
 
@@ -177,16 +177,16 @@ class DriveItemActionService {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('删除确认'),
-          content: Text('确定将 "${item.name}" 移动到回收站吗？'),
+          title: const Text('Confirm delete'),
+          content: Text('Move "${item.name}" to the recycle bin?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('取消'),
+              child: const Text('Cancel'),
             ),
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('删除'),
+              child: const Text('Delete'),
             ),
           ],
         );
@@ -197,7 +197,7 @@ class DriveItemActionService {
     try {
       await deleteDriveItem(itemId: item.id, ifMatch: null, bypassLocks: false);
     } catch (err) {
-      _showToast(context, '删除失败：$err');
+      _showToast(context, 'Delete failed: $err');
       return;
     }
 
@@ -205,10 +205,10 @@ class DriveItemActionService {
     try {
       await controller.refresh(showSkeleton: false);
     } catch (err) {
-      _showToast(context, '删除成功，但刷新失败：$err');
+      _showToast(context, 'Deleted, but refresh failed: $err');
       return;
     }
-    _showToast(context, '已删除：${item.name}');
+    _showToast(context, 'Deleted: ${item.name}');
   }
 
   static Future<void> showShareDialog({
@@ -219,7 +219,7 @@ class DriveItemActionService {
     await showFDialog<void>(
       context: context,
       useRootNavigator: true,
-      barrierLabel: '分享链接',
+      barrierLabel: 'Share link',
       builder: (dialogContext, style, animation) {
         return ProviderScope(
           overrides: [shareTargetItemProvider.overrideWithValue(item)],
@@ -238,7 +238,7 @@ class DriveItemActionService {
       context: context,
       barrierColor: Colors.black54,
       barrierDismissible: true,
-      barrierLabel: '关闭移动侧栏',
+      barrierLabel: 'Close move panel',
       transitionDuration: const Duration(milliseconds: 280),
       pageBuilder: (dialogContext, animation, secondaryAnimation) {
         return Align(
@@ -257,7 +257,7 @@ class DriveItemActionService {
                   );
                   if (dialogContext.mounted) {
                     Navigator.of(dialogContext).pop();
-                    _showToast(dialogContext, '移动成功');
+                    _showToast(dialogContext, 'Move succeeded');
                     // 移动完成后刷新列表，但避免在对话框关闭前触发界面跳转。
                     await ref
                         .read(driveHomeControllerProvider.notifier)
@@ -265,7 +265,7 @@ class DriveItemActionService {
                   }
                 } catch (err) {
                   if (dialogContext.mounted) {
-                    _showToast(dialogContext, '移动失败：$err');
+                    _showToast(dialogContext, 'Move failed: $err');
                   }
                 }
               },
@@ -338,11 +338,11 @@ class DriveItemActionService {
     if (!context.mounted) return;
 
     if (uploadedCount > 0) {
-      _showToast(context, '已加入上传队列：$uploadedCount 个文件');
+      _showToast(context, 'Added to upload queue: $uploadedCount files');
       await ref.read(driveHomeControllerProvider.notifier).refresh();
     }
     if (failures.isNotEmpty) {
-      _showToast(context, '部分文件上传失败：${failures.join('、')}');
+      _showToast(context, 'Some files failed to upload: ${failures.join('、')}');
     }
   }
 

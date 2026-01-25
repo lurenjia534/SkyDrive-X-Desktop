@@ -81,7 +81,7 @@ class _DriveHomeLoadingView extends ConsumerWidget {
                 ),
                 style: FButtonStyle.outline(),
                 prefix: const Icon(FIcons.folderPlus, size: 16),
-                child: const Text('新建文件夹'),
+                child: const Text('New folder'),
               ),
             ],
           ),
@@ -260,7 +260,7 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
                 ),
                 style: FButtonStyle.outline(),
                 prefix: const Icon(FIcons.folderPlus, size: 16),
-                child: const Text('新建文件夹'),
+                child: const Text('New folder'),
               ),
             ],
           ),
@@ -299,7 +299,7 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
                               await controller.loadMore();
                             } catch (err) {
                               if (!context.mounted) return;
-                              _showSnack(context, '加载更多失败：$err');
+                              _showSnack(context, 'Failed to load more: $err');
                             }
                           },
                         );

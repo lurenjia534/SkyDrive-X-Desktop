@@ -35,7 +35,7 @@ class DriveEmptyView extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            '空空如也',
+            'Nothing here',
             style: typography.lg.copyWith(
               fontWeight: FontWeight.w700,
               color: colors.foreground,
@@ -43,7 +43,7 @@ class DriveEmptyView extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '赶紧去 OneDrive 上传点内容吧。',
+            'Upload something to OneDrive to get started.',
             style: typography.sm.copyWith(
               color: colors.mutedForeground,
             ),

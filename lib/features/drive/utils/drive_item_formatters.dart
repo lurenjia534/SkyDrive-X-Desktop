@@ -6,7 +6,7 @@ String buildDriveSubtitle(drive_api.DriveItemSummary item) {
   if (item.isFolder) {
     final count = item.childCount?.toInt();
     if (count != null) {
-      pieces.add('$count 项内容');
+      pieces.add('$count items');
     }
   } else {
     final size = item.size?.toInt();
@@ -18,7 +18,7 @@ String buildDriveSubtitle(drive_api.DriveItemSummary item) {
     }
   }
   if (item.lastModified != null) {
-    pieces.add('更新于 ${item.lastModified}');
+    pieces.add('Updated ${item.lastModified}');
   }
   if (pieces.isEmpty) return '—';
   return pieces.join(' · ');

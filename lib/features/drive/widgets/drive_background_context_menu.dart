@@ -5,8 +5,8 @@ import 'package:forui/forui.dart';
 import 'package:skydrivex/features/drive/widgets/drive_item_context_menu.dart';
 
 enum DriveBackgroundAction {
-  createFolder('新建文件夹', FIcons.folderPlus),
-  uploadFiles('上传文件', Icons.cloud_upload_rounded);
+  createFolder('New folder', FIcons.folderPlus),
+  uploadFiles('Upload files', Icons.cloud_upload_rounded);
 
   const DriveBackgroundAction(this.label, this.icon);
   final String label;
@@ -129,13 +129,13 @@ class _DriveBackgroundContextMenuOverlayState
                     onPress: () =>
                         _close(DriveBackgroundAction.createFolder),
                     prefix: const Icon(FIcons.folderPlus, size: 18),
-                    title: const Text('新建文件夹'),
+                    title: const Text('New folder'),
                   ),
                   FItem(
                     onPress: () => _close(DriveBackgroundAction.uploadFiles),
                     prefix:
                         const Icon(Icons.cloud_upload_rounded, size: 18),
-                    title: const Text('上传文件'),
+                    title: const Text('Upload files'),
                   ),
                 ],
               ),

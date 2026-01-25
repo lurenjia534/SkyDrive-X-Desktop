@@ -25,7 +25,7 @@ class DriveErrorView extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: () => onRetry(),
               icon: const Icon(Icons.refresh),
-              label: const Text('重试'),
+              label: const Text('Retry'),
             ),
           ],
         ),

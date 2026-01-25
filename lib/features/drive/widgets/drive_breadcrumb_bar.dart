@@ -30,7 +30,7 @@ class DriveBreadcrumbBar extends StatelessWidget {
         FBreadcrumbItem(
           current: true,
           child: Text(
-            '所有文件',
+            'All files',
             style: typography.sm.copyWith(
               fontWeight: FontWeight.w600,
               color: colors.foreground,
@@ -41,7 +41,7 @@ class DriveBreadcrumbBar extends StatelessWidget {
         FBreadcrumbItem(
           onPress: onRootTap,
           child: Text(
-            '所有文件',
+            'All files',
             style: typography.sm.copyWith(
               fontWeight: FontWeight.w600,
               color: colors.mutedForeground,

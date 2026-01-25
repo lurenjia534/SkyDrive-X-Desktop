@@ -32,7 +32,7 @@ class DriveLoadMoreTile extends StatelessWidget {
               )
             : const Icon(FIcons.chevronDown, size: 16),
         child: Text(
-          isLoading ? '加载中…' : '加载更多',
+          isLoading ? 'Loading…' : 'Load more',
           style: typography.sm.copyWith(fontWeight: FontWeight.w600),
         ),
       ),

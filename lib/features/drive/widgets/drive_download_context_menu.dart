@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
 enum DriveDownloadContextAction {
-  revealInFolder('在文件夹中显示', Icons.folder_open_rounded);
+  revealInFolder('Show in folder', Icons.folder_open_rounded);
 
   const DriveDownloadContextAction(this.label, this.icon);
   final String label;

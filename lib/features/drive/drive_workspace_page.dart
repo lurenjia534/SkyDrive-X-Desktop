@@ -49,7 +49,8 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
     showQuickActionSideSheet(
       context,
       onUploadPhoto: _pickAndUploadSmallFile,
-      onCreateFolder: () => _showPlaceholder('新建文件夹入口待接入前端逻辑'),
+      onCreateFolder: () =>
+          _showPlaceholder('Create folder is not wired yet.'),
       onUploadDoc: _pickAndUploadSmallFile,
       onUploadLarge: _pickAndUploadLargeFile,
     );
@@ -82,7 +83,7 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
       );
     } catch (err) {
       if (mounted) {
-        showToast(context, '清除凭据失败：$err');
+        showToast(context, 'Failed to clear credentials: $err');
       }
     } finally {
       if (mounted) {
@@ -128,7 +129,7 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
             size: 20,
           ),
         ),
-        title: const Text('OneDrive 文件'),
+        title: const Text('OneDrive Files'),
         suffixes: [
           FHeaderAction(
             icon: const Icon(FIcons.refreshCcw),
@@ -185,7 +186,7 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
       if (file == null) return;
       final bytes = await file.readAsBytes();
       if (bytes.length > _simpleUploadMaxBytes) {
-        _showPlaceholder('文件超过 250MB，请使用分片上传');
+        _showPlaceholder('File exceeds 250MB. Use chunked upload.');
         return;
       }
       final breadcrumbs =
@@ -199,10 +200,10 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
         content: bytes,
         overwrite: false,
       );
-      _showPlaceholder('已加入上传队列：${file.name}');
+      _showPlaceholder('Added to upload queue: ${file.name}');
       await ref.read(driveHomeControllerProvider.notifier).refresh();
     } catch (err) {
-      _showPlaceholder('上传失败：$err');
+      _showPlaceholder('Upload failed: $err');
     } finally {
       if (mounted) {
         setState(() {
@@ -233,11 +234,12 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
         overwrite: false,
       );
       _showPlaceholder(
-        '已加入分片上传队列：${file.name}（${(fileSize / (1024 * 1024)).toStringAsFixed(1)} MB）',
+        'Added to chunked upload queue: ${file.name} '
+        '(${(fileSize / (1024 * 1024)).toStringAsFixed(1)} MB)',
       );
       await ref.read(driveHomeControllerProvider.notifier).refresh();
     } catch (err) {
-      _showPlaceholder('上传失败：$err');
+      _showPlaceholder('Upload failed: $err');
     } finally {
       if (mounted) {
         setState(() {

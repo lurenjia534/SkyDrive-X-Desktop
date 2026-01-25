@@ -4,13 +4,13 @@ import 'package:forui/forui.dart';
 import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
 
 enum DriveContextAction {
-  createFolder('新建文件夹', FIcons.folderPlus),
-  uploadFiles('上传文件', Icons.cloud_upload_rounded),
-  download('下载', Icons.download_rounded),
-  delete('删除', Icons.delete_outline_rounded),
-  share('分享', Icons.share_outlined),
-  move('移动', Icons.drive_file_move_outline),
-  properties('属性', Icons.info_outline_rounded);
+  createFolder('New folder', FIcons.folderPlus),
+  uploadFiles('Upload files', Icons.cloud_upload_rounded),
+  download('Download', Icons.download_rounded),
+  delete('Delete', Icons.delete_outline_rounded),
+  share('Share', Icons.share_outlined),
+  move('Move', Icons.drive_file_move_outline),
+  properties('Properties', Icons.info_outline_rounded);
 
   const DriveContextAction(this.label, this.icon);
   final String label;

@@ -54,19 +54,19 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
       final canPassword = caps.canPassword;
       final scopeOptions = <_ShareOption<drive_models.LinkScope>>[
         _ShareOption(
-          label: '任何知道链接的人',
+          label: 'Anyone with the link',
           value: drive_models.LinkScope.anonymous,
           enabled: true,
           icon: Icons.public_rounded,
         ),
         _ShareOption(
-          label: '仅组织内人员',
+          label: 'People in the organization',
           value: drive_models.LinkScope.organization,
           enabled: canOrg,
           icon: Icons.apartment_rounded,
         ),
         _ShareOption(
-          label: '指定人员',
+          label: 'Specific people',
           value: drive_models.LinkScope.users,
           enabled: true,
           icon: Icons.people_alt_rounded,
@@ -74,19 +74,19 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
       ];
       final typeOptions = <_ShareOption<drive_models.LinkType>>[
         _ShareOption(
-          label: '仅查看',
+          label: 'View only',
           value: drive_models.LinkType.view,
           icon: Icons.visibility_rounded,
           enabled: true,
         ),
         _ShareOption(
-          label: '可编辑',
+          label: 'Can edit',
           value: drive_models.LinkType.edit,
           icon: Icons.edit_rounded,
           enabled: true,
         ),
         _ShareOption(
-          label: '嵌入',
+          label: 'Embed',
           value: drive_models.LinkType.embed,
           icon: Icons.code_rounded,
           enabled: canEmbed,
@@ -98,7 +98,7 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            '分享 “${item.name}”',
+            'Share "${item.name}"',
             style: typography.base.copyWith(
               color: colors.foreground,
               fontWeight: FontWeight.w600,
@@ -106,14 +106,14 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
           ),
           const SizedBox(height: 16),
           _OptionGroup<drive_models.LinkType>(
-            title: '链接类型',
+            title: 'Link type',
             options: typeOptions,
             selected: _linkType,
             onSelect: (value) => setState(() => _linkType = value),
           ),
           const SizedBox(height: 16),
           _OptionGroup<drive_models.LinkScope>(
-            title: '访问范围',
+            title: 'Access scope',
             options: scopeOptions,
             selected: _scope,
             onSelect: (value) => setState(() => _scope = value),
@@ -123,7 +123,7 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
             value: _retainInherited,
             onChange: (value) =>
                 setState(() => _retainInherited = value),
-            label: const Text('保留继承的权限（避免覆盖父级设置）'),
+            label: const Text('Keep inherited permissions (avoid overriding parent settings)'),
           ),
           if (canPassword) ...[
             const SizedBox(height: 12),
@@ -131,7 +131,7 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
               control: FTextFieldControl.managed(
                 controller: _passwordController,
               ),
-              label: const Text('密码（可选，仅个人版）'),
+              label: const Text('Password (optional, personal only)'),
               obscureText: true,
               prefixBuilder: (_, __, ___) => const Padding(
                 padding: EdgeInsets.only(left: 14, right: 10),
@@ -145,7 +145,7 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
               control: FTextFieldControl.managed(
                 controller: _recipientsController,
               ),
-              label: const Text('指定人员邮箱（逗号分隔）'),
+              label: const Text('Recipient emails (comma-separated)'),
               prefixBuilder: (_, __, ___) => const Padding(
                 padding: EdgeInsets.only(left: 14, right: 10),
                 child: Icon(Icons.mail_outline_rounded, size: 18),
@@ -171,7 +171,7 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
           const Icon(Icons.share_outlined, size: 20),
           const SizedBox(width: 8),
           Text(
-            '创建分享链接',
+            'Create share link',
             style: typography.lg.copyWith(
               fontWeight: FontWeight.w700,
               color: colors.foreground,
@@ -188,7 +188,7 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
         FButton(
           onPress: _creating ? null : () => Navigator.of(context).pop(),
           style: FButtonStyle.outline(),
-          child: const Text('取消'),
+          child: const Text('Cancel'),
         ),
         FButton(
           onPress: _creating || capsAsync.isLoading || capsAsync.hasError
@@ -205,7 +205,7 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
                   ),
                 )
               : const Icon(Icons.link_rounded, size: 16),
-          child: const Text('生成链接'),
+          child: const Text('Create link'),
         ),
       ],
     );
@@ -243,10 +243,10 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
       setState(() {
         _resultUrl = result.webUrl ?? '';
       });
-      _showToast(context, '分享链接已生成');
+      _showToast(context, 'Share link created');
     } catch (err) {
       if (!mounted) return;
-      _showToast(context, '生成失败：$err');
+      _showToast(context, 'Creation failed: $err');
     } finally {
       if (mounted) {
         setState(() {
@@ -258,7 +258,7 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
 
   void _copyAndNotify(BuildContext context, String url) {
     Clipboard.setData(ClipboardData(text: url));
-    _showToast(context, '已复制到剪贴板');
+    _showToast(context, 'Copied to clipboard');
   }
 
   void _showToast(BuildContext context, String message) {
@@ -376,7 +376,7 @@ class _ShareResult extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '分享链接',
+              'Share link',
               style: typography.sm.copyWith(
                 color: colors.mutedForeground,
                 fontWeight: FontWeight.w600,
@@ -384,7 +384,7 @@ class _ShareResult extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             SelectableText(
-              url.isEmpty ? '未返回链接，可能被策略阻止' : url,
+              url.isEmpty ? 'No link returned. It may be blocked by policy.' : url,
               style: typography.base.copyWith(fontWeight: FontWeight.w600),
             ),
             Align(
@@ -393,7 +393,7 @@ class _ShareResult extends StatelessWidget {
                 onPress: url.isEmpty ? null : onCopy,
                 style: FButtonStyle.ghost(),
                 prefix: const Icon(Icons.copy_rounded, size: 16),
-                child: const Text('复制'),
+                child: const Text('Copy'),
               ),
             ),
           ],
@@ -424,7 +424,7 @@ class _LoadingState extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              '正在加载分享能力…',
+              'Loading share capabilities…',
               style: typography.sm.copyWith(color: colors.mutedForeground),
             ),
           ],
@@ -450,8 +450,8 @@ class _ErrorState extends StatelessWidget {
       children: [
         FAlert(
           style: FAlertStyle.destructive(),
-          title: const Text('无法获取分享能力'),
-          subtitle: Text(error?.toString() ?? '未知错误'),
+          title: const Text('Unable to fetch sharing capabilities'),
+          subtitle: Text(error?.toString() ?? 'Unknown error'),
         ),
         const SizedBox(height: 12),
         Align(
@@ -461,7 +461,7 @@ class _ErrorState extends StatelessWidget {
             style: FButtonStyle.outline(),
             prefix: const Icon(FIcons.refreshCcw, size: 16),
             child: Text(
-              '重试',
+              'Retry',
               style: typography.sm.copyWith(fontWeight: FontWeight.w600),
             ),
           ),

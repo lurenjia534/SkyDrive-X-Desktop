@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:skydrivex/features/drive/providers/drive_upload_manager.dart';
 
-/// 上传管理器页面：展示进行中、失败、已完成任务。
+/// 上传管理器页面：展示进行中、Failed、Completed任务。
 class DriveUploadsPage extends ConsumerWidget {
   const DriveUploadsPage({super.key});
 
@@ -59,7 +59,7 @@ class DriveUploadsPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    '暂无上传任务',
+                    'No uploads yet',
                     style: typography.lg.copyWith(
                       fontWeight: FontWeight.w600,
                       color: colors.foreground,
@@ -67,7 +67,7 @@ class DriveUploadsPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '在侧边栏点击上传入口后，这里会显示正在上传和历史记录。',
+                    'Click Upload in the sidebar to see active and past uploads here.',
                     textAlign: TextAlign.center,
                     style: typography.sm.copyWith(
                       color: colors.mutedForeground,
@@ -87,7 +87,7 @@ class DriveUploadsPage extends ConsumerWidget {
       children: [
         if (queue.active.isNotEmpty)
           _UploadSection(
-            title: '上传中',
+            title: 'Uploading',
             tasks: queue.active,
             ref: ref,
             colors: colors,
@@ -95,7 +95,7 @@ class DriveUploadsPage extends ConsumerWidget {
           ),
         if (queue.failed.isNotEmpty)
           _UploadSection(
-            title: '失败',
+            title: 'Failed',
             tasks: queue.failed,
             ref: ref,
             showError: true,
@@ -105,7 +105,7 @@ class DriveUploadsPage extends ConsumerWidget {
           ),
         if (queue.completed.isNotEmpty)
           _UploadSection(
-            title: '已完成',
+            title: 'Completed',
             tasks: queue.completed,
             ref: ref,
             colors: colors,
@@ -166,7 +166,7 @@ class _UploadSection extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 prefix: const Icon(FIcons.trash2, size: 16),
                 child: Text(
-                  '清除失败',
+                  'Clear failed',
                   style: typography.sm.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
@@ -236,20 +236,20 @@ class _UploadTile extends StatelessWidget {
     final uploadedLabel = task.bytesUploaded != null
         ? _formatFileSize(task.bytesUploaded!)
         : '0 B';
-    final totalLabel = task.size != null ? _formatFileSize(task.size!) : '未知';
+    final totalLabel = task.size != null ? _formatFileSize(task.size!) : 'Unknown';
     final speed = manager.speedFor(task.taskId);
     final speedLabel = _formatSpeed(speed);
 
     final statusLabel = () {
       switch (task.status) {
         case UploadStatus.inProgress:
-          return '上传中';
+          return 'Uploading';
         case UploadStatus.completed:
-          return '已完成';
+          return 'Completed';
         case UploadStatus.failed:
-          return '失败';
+          return 'Failed';
         case UploadStatus.cancelled:
-          return '已取消';
+          return 'Cancelled';
       }
     }();
 
@@ -267,7 +267,7 @@ class _UploadTile extends StatelessWidget {
         );
       }
       if (task.status != UploadStatus.inProgress) {
-        final sizeInfo = task.size != null ? '大小 $totalLabel' : '大小未知';
+        final sizeInfo = task.size != null ? 'Size $totalLabel' : 'Size unknown';
         return Text('$statusLabel · $sizeInfo', style: subtitleStyle);
       }
       final details = [

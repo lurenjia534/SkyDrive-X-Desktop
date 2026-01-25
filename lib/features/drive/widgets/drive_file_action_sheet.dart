@@ -24,9 +24,9 @@ class DriveFileActionSheet extends ConsumerWidget {
     final typography = theme.typography;
     final sizeLabel = item.size != null
         ? formatFileSize(item.size!.toInt())
-        : '未知大小';
-    final typeLabel = item.mimeType ?? '未知类型';
-    final modifiedLabel = item.lastModified ?? '未提供';
+        : 'Unknown size';
+    final typeLabel = item.mimeType ?? 'Unknown type';
+    final modifiedLabel = item.lastModified ?? 'Not provided';
     final actionTextStyle = typography.sm.copyWith(
       fontWeight: FontWeight.w600,
       height: 1,
@@ -73,7 +73,7 @@ class DriveFileActionSheet extends ConsumerWidget {
                   Row(
                     children: [
                       Text(
-                        '文件详情',
+                        'File details',
                         style: typography.lg.copyWith(
                           fontWeight: FontWeight.w700,
                           color: colors.foreground,
@@ -148,7 +148,7 @@ class DriveFileActionSheet extends ConsumerWidget {
                             ),
                           ),
                           prefix: const Icon(FIcons.arrowLeft, size: 16),
-                          child: const Text('关闭'),
+                          child: const Text('Close'),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -180,7 +180,7 @@ class DriveFileActionSheet extends ConsumerWidget {
                             ),
                           ),
                           prefix: const Icon(FIcons.download, size: 16),
-                          child: const Text('下载到默认目录'),
+                          child: const Text('Download to default folder'),
                         ),
                       ),
                     ],
@@ -242,7 +242,7 @@ class _DetailsLoadBanner extends ConsumerWidget {
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                '属性加载失败',
+                'Failed to load properties',
                 style: typography.sm.copyWith(color: colors.error),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -252,7 +252,7 @@ class _DetailsLoadBanner extends ConsumerWidget {
               style: FButtonStyle.ghost(),
               mainAxisSize: MainAxisSize.min,
               child: Text(
-                '重试',
+                'Retry',
                 style: typography.sm.copyWith(fontWeight: FontWeight.w600),
               ),
             ),
@@ -290,63 +290,63 @@ class _DetailsSection extends ConsumerWidget {
         : baseSizeLabel;
     final typeLabel = details?.mimeType ?? baseTypeLabel;
     final modifiedLabel = details?.lastModifiedAt ?? baseModifiedLabel;
-    final createdLabel = details?.createdAt ?? '未知';
+    final createdLabel = details?.createdAt ?? 'Unknown';
     final fsCreated = details?.fileSystemCreatedAt;
     final fsModified = details?.fileSystemModifiedAt;
-    final webUrl = details?.webUrl ?? '未知';
-    final downloadUrl = details?.downloadUrl != null ? '可用' : '暂无';
+    final webUrl = details?.webUrl ?? 'Unknown';
+    final downloadUrl = details?.downloadUrl != null ? 'Available' : 'Unavailable';
     final etag = details?.etag ?? '—';
     final ctag = details?.ctag ?? '—';
-    final parentPath = details?.parentPath ?? '未知';
+    final parentPath = details?.parentPath ?? 'Unknown';
     final childCount = details?.childCount?.toInt();
 
     final rows = <FItemMixin>[
       _InfoRow(
         icon: Icons.description_outlined,
-        label: '文件类型',
+        label: 'File type',
         value: typeLabel,
       ),
       _InfoRow(
         icon: Icons.sd_storage_rounded,
-        label: '大小',
+        label: 'Size',
         value: sizeLabel,
       ),
       _InfoRow(
         icon: Icons.schedule_rounded,
-        label: '更新于',
+        label: 'Updated',
         value: modifiedLabel,
       ),
       _InfoRow(
         icon: Icons.event_available_rounded,
-        label: '创建于',
+        label: 'Created',
         value: createdLabel,
       ),
       if (fsCreated != null || fsModified != null)
         _InfoRow(
           icon: Icons.computer_rounded,
-          label: '文件系统时间',
+          label: 'File system time',
           value:
-              '创建 ${fsCreated ?? "未知"} · 修改 ${fsModified ?? "未知"}',
+              'Created ${fsCreated ?? "Unknown"} · Modified ${fsModified ?? "Unknown"}',
         ),
       _InfoRow(
         icon: Icons.folder_open_rounded,
-        label: '父路径',
+        label: 'Parent path',
         value: parentPath,
       ),
       if (childCount != null)
         _InfoRow(
           icon: Icons.insert_drive_file_rounded,
-          label: '子项数量',
+          label: 'Child items',
           value: '$childCount',
         ),
       _InfoRow(
         icon: Icons.language_rounded,
-        label: 'Web 链接',
+        label: 'Web link',
         value: webUrl,
       ),
       _InfoRow(
         icon: Icons.cloud_download_rounded,
-        label: '下载链接',
+        label: 'Download link',
         value: downloadUrl,
       ),
       _InfoRow(

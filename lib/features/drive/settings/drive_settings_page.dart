@@ -153,7 +153,7 @@ class _ThemeSettingsTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '外观',
+            'Appearance',
             style: typography.sm.copyWith(color: colors.mutedForeground),
           ),
           const SizedBox(height: 16),
@@ -164,7 +164,7 @@ class _ThemeSettingsTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '跟随系统主题',
+                      'Follow system theme',
                       style: typography.xl.copyWith(
                         fontWeight: FontWeight.w700,
                         color: colors.foreground,
@@ -172,7 +172,7 @@ class _ThemeSettingsTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '自动在浅色和深色主题间切换。',
+                      'Automatically switch between light and dark themes.',
                       style: typography.sm.copyWith(
                         color: colors.mutedForeground,
                       ),
@@ -190,7 +190,7 @@ class _ThemeSettingsTile extends StatelessWidget {
           if (!followSystem) ...[
             const SizedBox(height: 16),
             Text(
-              '主题模式',
+              'Theme mode',
               style: typography.sm.copyWith(
                 color: colors.mutedForeground,
                 fontWeight: FontWeight.w600,
@@ -207,7 +207,7 @@ class _ThemeSettingsTile extends StatelessWidget {
                     style: manualMode == ThemeMode.light
                         ? FButtonStyle.primary()
                         : FButtonStyle.outline(),
-                    child: const Text('浅色'),
+                    child: const Text('Light'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -219,7 +219,7 @@ class _ThemeSettingsTile extends StatelessWidget {
                     style: manualMode == ThemeMode.dark
                         ? FButtonStyle.primary()
                         : FButtonStyle.outline(),
-                    child: const Text('深色'),
+                    child: const Text('Dark'),
                   ),
                 ),
               ],
@@ -247,7 +247,7 @@ class _SettingsSyncTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '同步',
+            'Sync',
             style: typography.sm.copyWith(color: colors.mutedForeground),
           ),
           const SizedBox(height: 16),
@@ -262,7 +262,7 @@ class _SettingsSyncTile extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          '同步状态',
+                          'Sync status',
                           style: typography.xl.copyWith(
                             fontWeight: FontWeight.w700,
                             color: colors.foreground,
@@ -290,7 +290,7 @@ class _SettingsSyncTile extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        '上次同步 : 刚刚 · 计划间隔 : 15 分钟',
+                        'Last sync: just now · Interval: 15 min',
                         style: typography.sm.copyWith(
                           color: pillForeground,
                           fontWeight: FontWeight.w500,
@@ -334,7 +334,7 @@ class _SettingsSyncTile extends StatelessWidget {
                   ),
                 ),
                 prefix: const Icon(FIcons.rotateCw),
-                child: const Text('立即同步'),
+                child: const Text('Sync now'),
               ),
             ],
           ),
@@ -376,7 +376,7 @@ class _DriveInfoTile extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '无法获取 OneDrive 信息',
+            'Unable to fetch OneDrive info',
             style: typography.base.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
@@ -390,7 +390,7 @@ class _DriveInfoTile extends ConsumerWidget {
             style: FButtonStyle.outline(),
             prefix: const Icon(FIcons.rotateCcw, size: 16),
             child: Text(
-              '重试',
+              'Retry',
               style: typography.sm.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
@@ -400,11 +400,11 @@ class _DriveInfoTile extends ConsumerWidget {
       final info = state.value!;
       final owner = info.owner;
       final ownerName =
-          owner?.displayName ?? owner?.userPrincipalName ?? '未提供';
+          owner?.displayName ?? owner?.userPrincipalName ?? 'Not provided';
       final ownerUpn = owner?.userPrincipalName;
-      final accountType = info.driveType ?? '未知';
+      final accountType = info.driveType ?? 'Unknown';
       final quota = info.quota;
-      final quotaState = quota?.state ?? '未知';
+      final quotaState = quota?.state ?? 'Unknown';
       final totalLabel = _formatSize(quota?.total);
       final usedLabel = _formatSize(quota?.used);
       final remainingLabel = _formatSize(quota?.remaining);
@@ -425,14 +425,14 @@ class _DriveInfoTile extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'OneDrive 信息',
+                      'OneDrive Info',
                       style: typography.sm.copyWith(
                         color: colors.mutedForeground,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '存储配额',
+                      'Storage quota',
                       style: typography.xl2.copyWith(
                         fontWeight: FontWeight.w700,
                         color: colors.foreground,
@@ -441,7 +441,7 @@ class _DriveInfoTile extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '账户类型 : $accountType',
+                      'Account type: $accountType',
                       style: typography.sm.copyWith(
                         color: colors.mutedForeground,
                       ),
@@ -502,17 +502,17 @@ class _DriveInfoTile extends ConsumerWidget {
             builder: (context, constraints) {
               final metrics = [
                 _QuotaMetricCard(
-                  label: '总空间',
+                  label: 'Total',
                   value: totalLabel,
                   statusLabel: quotaState,
                 ),
                 _QuotaMetricCard(
-                  label: '已用',
+                  label: 'Used',
                   value: usedLabel,
                   progress: usedRatio,
                 ),
-                _QuotaMetricCard(label: '剩余', value: remainingLabel),
-                _QuotaMetricCard(label: '回收站', value: deletedLabel),
+                _QuotaMetricCard(label: 'Remaining', value: remainingLabel),
+                _QuotaMetricCard(label: 'Recycle bin', value: deletedLabel),
               ];
               const gap = 16.0;
               final width = constraints.maxWidth;
@@ -619,7 +619,7 @@ class _QuotaMetricCard extends StatelessWidget {
                   Icon(FIcons.circleCheck, size: 14, color: chipFg),
                   const SizedBox(width: 6),
                   Text(
-                    '状态 : $statusLabel',
+                    'Status: $statusLabel',
                     style: typography.xs.copyWith(
                       color: chipFg,
                       fontWeight: FontWeight.w600,
@@ -657,7 +657,7 @@ class _QuotaMetricCard extends StatelessWidget {
 }
 
 String _formatSize(BigInt? value) {
-  if (value == null) return '未知';
+  if (value == null) return 'Unknown';
   return formatFileSize(_bigIntToSafeInt(value));
 }
 
@@ -702,7 +702,7 @@ class _DownloadDirectoryTile extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '无法获取下载路径',
+            'Unable to fetch download path',
             style: typography.base.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
@@ -717,7 +717,7 @@ class _DownloadDirectoryTile extends ConsumerWidget {
             style: FButtonStyle.outline(),
             prefix: const Icon(FIcons.refreshCcw, size: 16),
             child: Text(
-              '重试',
+              'Retry',
               style: typography.sm.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
@@ -729,7 +729,7 @@ class _DownloadDirectoryTile extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '下载保存目录',
+            'Download directory',
             style: typography.base.copyWith(
               fontWeight: FontWeight.w600,
               color: colors.foreground,
@@ -753,7 +753,7 @@ class _DownloadDirectoryTile extends ConsumerWidget {
                 style: FButtonStyle.outline(),
                 prefix: const Icon(FIcons.mapPin, size: 16),
                 child: Text(
-                  '修改路径',
+                  'Change path',
                   style: typography.sm.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
@@ -762,7 +762,7 @@ class _DownloadDirectoryTile extends ConsumerWidget {
                 style: FButtonStyle.ghost(),
                 prefix: const Icon(FIcons.undo, size: 16),
                 child: Text(
-                  '恢复默认',
+                  'Restore default',
                   style: typography.sm.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
@@ -776,7 +776,7 @@ class _DownloadDirectoryTile extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SettingsCardHeader(label: '下载位置', action: refreshAction),
+          _SettingsCardHeader(label: 'Download location', action: refreshAction),
           const SizedBox(height: 12),
           body,
         ],
@@ -794,20 +794,20 @@ class _DownloadDirectoryTile extends ConsumerWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('修改下载目录'),
+          title: const Text('Change download folder'),
           content: TextField(
             controller: controller,
-            decoration: const InputDecoration(labelText: '目录路径'),
+            decoration: const InputDecoration(labelText: 'Folder path'),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('取消'),
+              child: const Text('Cancel'),
             ),
             FilledButton(
               onPressed: () =>
                   Navigator.of(context).pop(controller.text.trim()),
-              child: const Text('保存'),
+              child: const Text('Save'),
             ),
           ],
         );
@@ -819,11 +819,11 @@ class _DownloadDirectoryTile extends ConsumerWidget {
           .read(downloadDirectoryProvider.notifier)
           .updateDirectory(result);
       if (context.mounted) {
-        showToast(context, '下载路径已更新');
+        showToast(context, 'Download path updated');
       }
     } catch (err) {
       if (context.mounted) {
-        showToast(context, '更新失败：$err');
+        showToast(context, 'Update failed: $err');
       }
     }
   }
@@ -835,11 +835,11 @@ class _DownloadDirectoryTile extends ConsumerWidget {
           .read(downloadDirectoryProvider.notifier)
           .updateDirectory(defaultPath);
       if (context.mounted) {
-        showToast(context, '已恢复默认下载路径');
+        showToast(context, 'Restored default download path');
       }
     } catch (err) {
       if (context.mounted) {
-        showToast(context, '操作失败：$err');
+        showToast(context, 'Operation failed: $err');
       }
     }
   }
@@ -879,7 +879,7 @@ class _DownloadConcurrencyTile extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '无法获取并行下载数量',
+            'Unable to fetch download concurrency',
             style: typography.base.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
@@ -894,7 +894,7 @@ class _DownloadConcurrencyTile extends ConsumerWidget {
             style: FButtonStyle.outline(),
             prefix: const Icon(FIcons.refreshCcw, size: 16),
             child: Text(
-              '重试',
+              'Retry',
               style: typography.sm.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
@@ -906,7 +906,7 @@ class _DownloadConcurrencyTile extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '同时下载的任务数量',
+            'Concurrent download tasks',
             style: typography.base.copyWith(
               fontWeight: FontWeight.w600,
               color: colors.foreground,
@@ -914,7 +914,7 @@ class _DownloadConcurrencyTile extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '限制后台并行下载任务数，避免占满网络带宽。',
+            'Limit background concurrent downloads to avoid saturating bandwidth.',
             style: typography.sm.copyWith(color: colors.mutedForeground),
           ),
           const SizedBox(height: 12),
@@ -923,7 +923,8 @@ class _DownloadConcurrencyTile extends ConsumerWidget {
               Expanded(
                 child: FSelect<int>(
                   items: {
-                    for (final option in _options) '$option 个任务': option,
+                    for (final option in _options)
+                      '${option} task${option == 1 ? '' : 's'}': option,
                   },
                   control: FSelectControl.lifted(
                     value: value,
@@ -937,12 +938,12 @@ class _DownloadConcurrencyTile extends ConsumerWidget {
                       }
                     },
                   ),
-                  hint: '选择任务数量',
+                  hint: 'Select task count',
                 ),
               ),
               const SizedBox(width: 16),
               Text(
-                '当前：$value 个',
+                'Current: $value',
                 style: typography.sm.copyWith(color: colors.foreground),
               ),
             ],
@@ -955,7 +956,7 @@ class _DownloadConcurrencyTile extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SettingsCardHeader(label: '下载并发', action: refreshAction),
+          _SettingsCardHeader(label: 'Download concurrency', action: refreshAction),
           const SizedBox(height: 12),
           body,
         ],
