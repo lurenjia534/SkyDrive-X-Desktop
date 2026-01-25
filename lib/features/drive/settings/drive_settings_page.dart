@@ -16,8 +16,7 @@ class DriveSettingsPage extends ConsumerStatefulWidget {
   const DriveSettingsPage({super.key});
 
   @override
-  ConsumerState<DriveSettingsPage> createState() =>
-      _DriveSettingsPageState();
+  ConsumerState<DriveSettingsPage> createState() => _DriveSettingsPageState();
 }
 
 class _DriveSettingsPageState extends ConsumerState<DriveSettingsPage> {
@@ -33,31 +32,29 @@ class _DriveSettingsPageState extends ConsumerState<DriveSettingsPage> {
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
           sliver: SliverList(
-            delegate: SliverChildListDelegate(
-              [
-                const _DriveInfoTile(),
-                const SizedBox(height: 24),
-                _ThemeSettingsTile(
-                  followSystem: themeState.followSystem,
-                  manualMode: themeState.manualMode,
-                  enabled: !themeLoading,
-                  onFollowSystemChanged: (value) =>
-                      unawaited(themeController.setFollowSystem(value)),
-                  onManualModeChanged: (mode) =>
-                      unawaited(themeController.setManualMode(mode)),
-                ),
-                const SizedBox(height: 24),
-                const _SettingsSyncTile(),
-                const SizedBox(height: 24),
-                const Column(
-                  children: [
-                    _DownloadDirectoryTile(),
-                    SizedBox(height: 16),
-                    _DownloadConcurrencyTile(),
-                  ],
-                ),
-              ],
-            ),
+            delegate: SliverChildListDelegate([
+              const _DriveInfoTile(),
+              const SizedBox(height: 24),
+              _ThemeSettingsTile(
+                followSystem: themeState.followSystem,
+                manualMode: themeState.manualMode,
+                enabled: !themeLoading,
+                onFollowSystemChanged: (value) =>
+                    unawaited(themeController.setFollowSystem(value)),
+                onManualModeChanged: (mode) =>
+                    unawaited(themeController.setManualMode(mode)),
+              ),
+              const SizedBox(height: 24),
+              const _SettingsSyncTile(),
+              const SizedBox(height: 24),
+              const Column(
+                children: [
+                  _DownloadDirectoryTile(),
+                  SizedBox(height: 16),
+                  _DownloadConcurrencyTile(),
+                ],
+              ),
+            ]),
           ),
         ),
       ],
@@ -90,7 +87,8 @@ class _SettingsCard extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: padding ?? const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        padding:
+            padding ?? const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         child: child,
       ),
     );
@@ -320,10 +318,7 @@ class _SettingsSyncTile extends StatelessWidget {
                         ),
                       ),
                       iconStyle: FWidgetStateMap.all(
-                        IconThemeData(
-                          size: 16,
-                          color: colors.background,
-                        ),
+                        IconThemeData(size: 16, color: colors.background),
                       ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 14,
@@ -519,8 +514,8 @@ class _DriveInfoTile extends ConsumerWidget {
               final columns = width >= 740
                   ? 4
                   : width >= 420
-                      ? 2
-                      : 1;
+                  ? 2
+                  : 1;
               final cardWidth = (width - gap * (columns - 1)) / columns;
               return Wrap(
                 spacing: gap,
@@ -535,10 +530,7 @@ class _DriveInfoTile extends ConsumerWidget {
       );
     }
 
-    return _SettingsCard(
-      padding: const EdgeInsets.all(24),
-      child: body,
-    );
+    return _SettingsCard(padding: const EdgeInsets.all(24), child: body);
   }
 }
 
@@ -563,14 +555,12 @@ class _QuotaMetricCard extends StatelessWidget {
     final hasProgress = progress != null;
     final isDark = colors.brightness == Brightness.dark;
     final cardBackground = isDark ? colors.secondary : const Color(0xFFF9FAFB);
-    final valueColor =
-        isDark ? colors.foreground : const Color(0xFF111827);
-    final labelColor =
-        isDark ? colors.mutedForeground : const Color(0xFF6B7280);
-    final chipBg =
-        isDark ? const Color(0xFF064E3B) : const Color(0xFFDCFCE7);
-    final chipFg =
-        isDark ? const Color(0xFF6EE7B7) : const Color(0xFF16A34A);
+    final valueColor = isDark ? colors.foreground : const Color(0xFF111827);
+    final labelColor = isDark
+        ? colors.mutedForeground
+        : const Color(0xFF6B7280);
+    final chipBg = isDark ? const Color(0xFF064E3B) : const Color(0xFFDCFCE7);
+    final chipFg = isDark ? const Color(0xFF6EE7B7) : const Color(0xFF16A34A);
     final trackColor = isDark ? colors.border : const Color(0xFFE5E7EB);
 
     return Container(
@@ -683,7 +673,8 @@ class _DownloadDirectoryTile extends ConsumerWidget {
     final refreshAction = FButton.icon(
       onPress: state.isLoading
           ? null
-          : () => ref.read(downloadDirectoryProvider.notifier).refreshDirectory(),
+          : () =>
+                ref.read(downloadDirectoryProvider.notifier).refreshDirectory(),
       style: FButtonStyle.ghost(),
       child: const Icon(FIcons.refreshCcw, size: 16),
     );
@@ -776,7 +767,10 @@ class _DownloadDirectoryTile extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SettingsCardHeader(label: 'Download location', action: refreshAction),
+          _SettingsCardHeader(
+            label: 'Download location',
+            action: refreshAction,
+          ),
           const SizedBox(height: 12),
           body,
         ],
@@ -924,7 +918,7 @@ class _DownloadConcurrencyTile extends ConsumerWidget {
                 child: FSelect<int>(
                   items: {
                     for (final option in _options)
-                      '${option} task${option == 1 ? '' : 's'}': option,
+                      '$option task${option == 1 ? '' : 's'}': option,
                   },
                   control: FSelectControl.lifted(
                     value: value,
@@ -956,7 +950,10 @@ class _DownloadConcurrencyTile extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SettingsCardHeader(label: 'Download concurrency', action: refreshAction),
+          _SettingsCardHeader(
+            label: 'Download concurrency',
+            action: refreshAction,
+          ),
           const SizedBox(height: 12),
           body,
         ],
