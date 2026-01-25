@@ -28,7 +28,6 @@ Future<DriveDownloadContextAction?> showDriveDownloadContextMenu({
   }
 
   final overlay = Overlay.of(context, rootOverlay: true);
-  if (overlay == null) return null;
   final overlayBox = overlay.context.findRenderObject();
   if (overlayBox is! RenderBox) return null;
   final position = overlayBox.globalToLocal(globalPosition);
@@ -111,9 +110,7 @@ class _DriveDownloadContextMenuOverlayState
           left: widget.position.dx,
           top: widget.position.dy,
           child: FPopoverMenu(
-            control: FPopoverControl.managed(
-              controller: _controller,
-            ),
+            control: FPopoverControl.managed(controller: _controller),
             menuAnchor: Alignment.topLeft,
             childAnchor: Alignment.topLeft,
             spacing: FPortalSpacing.zero,
@@ -123,9 +120,8 @@ class _DriveDownloadContextMenuOverlayState
                 divider: FItemDivider.full,
                 children: [
                   FItem(
-                    onPress: () => _close(
-                      DriveDownloadContextAction.revealInFolder,
-                    ),
+                    onPress: () =>
+                        _close(DriveDownloadContextAction.revealInFolder),
                     prefix: Icon(
                       DriveDownloadContextAction.revealInFolder.icon,
                       size: 18,

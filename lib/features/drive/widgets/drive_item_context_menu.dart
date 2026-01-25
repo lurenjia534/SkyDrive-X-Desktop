@@ -45,7 +45,6 @@ Future<DriveContextAction?> showDriveItemContextMenu({
   ];
 
   final overlay = Overlay.of(context, rootOverlay: true);
-  if (overlay == null) return null;
   final overlayBox = overlay.context.findRenderObject();
   if (overlayBox is! RenderBox) return null;
   final position = overlayBox.globalToLocal(globalPosition);
@@ -130,9 +129,7 @@ class _DriveContextMenuOverlayState extends State<_DriveContextMenuOverlay>
           left: widget.position.dx,
           top: widget.position.dy,
           child: FPopoverMenu(
-            control: FPopoverControl.managed(
-              controller: _controller,
-            ),
+            control: FPopoverControl.managed(controller: _controller),
             menuAnchor: Alignment.topLeft,
             childAnchor: Alignment.topLeft,
             spacing: FPortalSpacing.zero,

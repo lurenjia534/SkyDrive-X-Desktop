@@ -31,7 +31,6 @@ Future<DriveBackgroundAction?> showDriveBackgroundContextMenu({
   }
 
   final overlay = Overlay.of(context, rootOverlay: true);
-  if (overlay == null) return null;
   final overlayBox = overlay.context.findRenderObject();
   if (overlayBox is! RenderBox) return null;
   final position = overlayBox.globalToLocal(globalPosition);
@@ -114,9 +113,7 @@ class _DriveBackgroundContextMenuOverlayState
           left: widget.position.dx,
           top: widget.position.dy,
           child: FPopoverMenu(
-            control: FPopoverControl.managed(
-              controller: _controller,
-            ),
+            control: FPopoverControl.managed(controller: _controller),
             menuAnchor: Alignment.topLeft,
             childAnchor: Alignment.topLeft,
             spacing: FPortalSpacing.zero,
@@ -126,15 +123,13 @@ class _DriveBackgroundContextMenuOverlayState
                 divider: FItemDivider.full,
                 children: [
                   FItem(
-                    onPress: () =>
-                        _close(DriveBackgroundAction.createFolder),
+                    onPress: () => _close(DriveBackgroundAction.createFolder),
                     prefix: const Icon(FIcons.folderPlus, size: 18),
                     title: const Text('New folder'),
                   ),
                   FItem(
                     onPress: () => _close(DriveBackgroundAction.uploadFiles),
-                    prefix:
-                        const Icon(Icons.cloud_upload_rounded, size: 18),
+                    prefix: const Icon(Icons.cloud_upload_rounded, size: 18),
                     title: const Text('Upload files'),
                   ),
                 ],
