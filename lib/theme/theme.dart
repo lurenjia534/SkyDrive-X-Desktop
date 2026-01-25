@@ -41,6 +41,32 @@ FThemeData get zincLight {
   return FThemeData(colors: colors, typography: typography, style: style);
 }
 
+FThemeData get zincDark {
+  const colors = FColors(
+    brightness: Brightness.dark,
+    systemOverlayStyle: SystemUiOverlayStyle.light,
+    barrier: Color(0x99000000),
+    background: Color(0xFF09090B),
+    foreground: Color(0xFFFAFAFA),
+    primary: Color(0xFFFAFAFA),
+    primaryForeground: Color(0xFF09090B),
+    secondary: Color(0xFF27272A),
+    secondaryForeground: Color(0xFFFAFAFA),
+    muted: Color(0xFF27272A),
+    mutedForeground: Color(0xFFA1A1AA),
+    destructive: Color(0xFF7F1D1D),
+    destructiveForeground: Color(0xFFFAFAFA),
+    error: Color(0xFFEF4444),
+    errorForeground: Color(0xFFFAFAFA),
+    border: Color(0xFF27272A),
+  );
+
+  final typography = _typography(colors: colors);
+  final style = _style(colors: colors, typography: typography);
+
+  return FThemeData(colors: colors, typography: typography, style: style);
+}
+
 FTypography _typography({
   required FColors colors,
   String defaultFontFamily = 'packages/forui/Inter',

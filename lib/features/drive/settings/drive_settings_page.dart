@@ -8,6 +8,7 @@ import 'package:skydrivex/features/drive/providers/download_concurrency_provider
 import 'package:skydrivex/features/drive/providers/download_directory_provider.dart';
 import 'package:skydrivex/features/drive/providers/drive_info_provider.dart';
 import 'package:skydrivex/features/drive/utils/drive_item_formatters.dart';
+import 'package:skydrivex/theme/app_theme_provider.dart';
 import 'package:skydrivex/utils/download_destination.dart';
 import 'package:skydrivex/utils/toast.dart';
 
@@ -22,6 +23,8 @@ class DriveSettingsPage extends ConsumerStatefulWidget {
 class _DriveSettingsPageState extends ConsumerState<DriveSettingsPage> {
   @override
   Widget build(BuildContext context) {
+    final themeState = ref.watch(appThemeProvider);
+    final themeController = ref.read(appThemeProvider.notifier);
     return CustomScrollView(
       slivers: [
         const SliverToBoxAdapter(child: SizedBox(height: 8)),
@@ -32,9 +35,11 @@ class _DriveSettingsPageState extends ConsumerState<DriveSettingsPage> {
               [
                 const _DriveInfoTile(),
                 const SizedBox(height: 24),
-                const _FakeToggleTile(
-                  label: '跟随系统主题',
-                  description: '自动在浅色和深色主题间切换。',
+                _ThemeSettingsTile(
+                  followSystem: themeState.followSystem,
+                  manualMode: themeState.manualMode,
+                  onFollowSystemChanged: themeController.setFollowSystem,
+                  onManualModeChanged: themeController.setManualMode,
                 ),
                 const SizedBox(height: 24),
                 const _SettingsSyncTile(),
@@ -115,17 +120,26 @@ class _SettingsCardHeader extends StatelessWidget {
   }
 }
 
-class _FakeToggleTile extends StatelessWidget {
-  const _FakeToggleTile({required this.label, required this.description});
+class _ThemeSettingsTile extends StatelessWidget {
+  const _ThemeSettingsTile({
+    required this.followSystem,
+    required this.manualMode,
+    required this.onFollowSystemChanged,
+    required this.onManualModeChanged,
+  });
 
-  final String label;
-  final String description;
+  final bool followSystem;
+  final ThemeMode manualMode;
+  final ValueChanged<bool> onFollowSystemChanged;
+  final ValueChanged<ThemeMode> onManualModeChanged;
 
   @override
   Widget build(BuildContext context) {
     final theme = context.theme;
     final colors = theme.colors;
     final typography = theme.typography;
+    final pillBackground = colors.muted;
+    final pillForeground = colors.mutedForeground;
     return _SettingsCard(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -143,7 +157,7 @@ class _FakeToggleTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      label,
+                      '跟随系统主题',
                       style: typography.xl.copyWith(
                         fontWeight: FontWeight.w700,
                         color: colors.foreground,
@@ -151,7 +165,7 @@ class _FakeToggleTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      description,
+                      '自动在浅色和深色主题间切换。',
                       style: typography.sm.copyWith(
                         color: colors.mutedForeground,
                       ),
@@ -159,9 +173,43 @@ class _FakeToggleTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const FSwitch(value: true, enabled: false),
+              FSwitch(value: followSystem, onChange: onFollowSystemChanged),
             ],
           ),
+          if (!followSystem) ...[
+            const SizedBox(height: 16),
+            Text(
+              '主题模式',
+              style: typography.sm.copyWith(
+                color: colors.mutedForeground,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: FButton(
+                    onPress: () => onManualModeChanged(ThemeMode.light),
+                    style: manualMode == ThemeMode.light
+                        ? FButtonStyle.primary()
+                        : FButtonStyle.outline(),
+                    child: const Text('浅色'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FButton(
+                    onPress: () => onManualModeChanged(ThemeMode.dark),
+                    style: manualMode == ThemeMode.dark
+                        ? FButtonStyle.primary()
+                        : FButtonStyle.outline(),
+                    child: const Text('深色'),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -176,6 +224,8 @@ class _SettingsSyncTile extends StatelessWidget {
     final theme = context.theme;
     final colors = theme.colors;
     final typography = theme.typography;
+    final pillBackground = colors.muted;
+    final pillForeground = colors.mutedForeground;
     return _SettingsCard(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -221,13 +271,13 @@ class _SettingsSyncTile extends StatelessWidget {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6), // Light grey pill
+                        color: pillBackground,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         '上次同步 : 刚刚 · 计划间隔 : 15 分钟',
                         style: typography.sm.copyWith(
-                          color: const Color(0xFF6B7280), // Muted text
+                          color: pillForeground,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -496,13 +546,22 @@ class _QuotaMetricCard extends StatelessWidget {
     final colors = theme.colors;
     final typography = theme.typography;
     final hasProgress = progress != null;
-    final chipBg = const Color(0xFFDCFCE7);
-    final chipFg = const Color(0xFF16A34A);
+    final isDark = colors.brightness == Brightness.dark;
+    final cardBackground = isDark ? colors.secondary : const Color(0xFFF9FAFB);
+    final valueColor =
+        isDark ? colors.foreground : const Color(0xFF111827);
+    final labelColor =
+        isDark ? colors.mutedForeground : const Color(0xFF6B7280);
+    final chipBg =
+        isDark ? const Color(0xFF064E3B) : const Color(0xFFDCFCE7);
+    final chipFg =
+        isDark ? const Color(0xFF6EE7B7) : const Color(0xFF16A34A);
+    final trackColor = isDark ? colors.border : const Color(0xFFE5E7EB);
 
     return Container(
       height: 140, // Fixed height for uniformity
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB), // Very light grey/white
+        color: cardBackground,
         borderRadius: BorderRadius.circular(24),
         // border: Border.all(color: colors.border.withValues(alpha: 0.3)),
       ),
@@ -518,7 +577,7 @@ class _QuotaMetricCard extends StatelessWidget {
                 value,
                 style: typography.xl2.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF111827), // Dark text
+                  color: valueColor,
                   height: 1.2,
                 ),
               ),
@@ -526,7 +585,7 @@ class _QuotaMetricCard extends StatelessWidget {
               Text(
                 label,
                 style: typography.sm.copyWith(
-                  color: const Color(0xFF6B7280), // Muted text
+                  color: labelColor,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -563,7 +622,7 @@ class _QuotaMetricCard extends StatelessWidget {
                   style: (style) => style.copyWith(
                     constraints: const BoxConstraints.tightFor(height: 8),
                     trackDecoration: BoxDecoration(
-                      color: const Color(0xFFE5E7EB),
+                      color: trackColor,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     fillDecoration: BoxDecoration(

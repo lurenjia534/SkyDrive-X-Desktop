@@ -18,10 +18,12 @@ class AuthPrototypeView extends StatefulWidget {
     super.key,
     required this.uiState,
     required this.onSignIn,
+    this.onToggleTheme,
   });
 
   final AuthPrototypeUiState uiState;
   final Future<void> Function(String clientId) onSignIn;
+  final VoidCallback? onToggleTheme;
 
   @override
   State<AuthPrototypeView> createState() => _AuthPrototypeViewState();
@@ -62,7 +64,10 @@ class _AuthPrototypeViewState extends State<AuthPrototypeView> {
           Positioned(
             top: 16,
             right: 16,
-            child: ThemeToggleButton(colors: colors),
+            child: ThemeToggleButton(
+              colors: colors,
+              onPressed: widget.onToggleTheme,
+            ),
           ),
           Center(
             child: SingleChildScrollView(

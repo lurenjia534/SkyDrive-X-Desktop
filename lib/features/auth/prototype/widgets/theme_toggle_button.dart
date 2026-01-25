@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
 class ThemeToggleButton extends StatelessWidget {
-  const ThemeToggleButton({super.key, required this.colors});
+  const ThemeToggleButton({
+    super.key,
+    required this.colors,
+    this.onPressed,
+  });
 
   final FColors colors;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -27,10 +32,7 @@ class ThemeToggleButton extends StatelessWidget {
         ],
       ),
       child: IconButton(
-        onPressed: () {
-          // Theme toggle is typically handled at the app level
-          // This is just a visual placeholder
-        },
+        onPressed: onPressed,
         icon: Icon(
           isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
           size: 20,
