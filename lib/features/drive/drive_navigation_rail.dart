@@ -332,11 +332,15 @@ class _DriveRailToggle extends StatelessWidget {
         ),
         if (extended) ...[
           const SizedBox(width: 10),
-          Text(
-            'Collapse navigation',
-            style: typography.sm.copyWith(
-              color: colors.mutedForeground,
-              fontWeight: FontWeight.w600,
+          Expanded(
+            child: Text(
+              'Collapse navigation',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: typography.sm.copyWith(
+                color: colors.mutedForeground,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
