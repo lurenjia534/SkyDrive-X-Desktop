@@ -17,11 +17,33 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     env:
       CARGO_TERM_COLOR: always
+      PUB_CACHE: ${{ runner.home }}/.pub-cache
 
     steps:
       # 拉取代码
       - name: Checkout
         uses: actions/checkout@v4
+
+      # 缓存 Rust 构建产物与依赖
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.home }}/.cargo
+            target
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      # 缓存 Dart/Flutter 依赖
+      - name: Cache Pub packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PUB_CACHE }}
+          key: ${{ runner.os }}-pub-${{ hashFiles('pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
 
       # 读取应用版本号
       - name: Read app version
@@ -79,6 +101,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
       # Linux 桌面构建依赖
       - name: Install Linux desktop dependencies
