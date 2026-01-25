@@ -44,9 +44,7 @@ class DriveFileActionSheet extends ConsumerWidget {
               borderRadius: const BorderRadius.horizontal(
                 left: Radius.circular(24),
               ),
-              border: Border.all(
-                color: colors.border.withValues(alpha: 0.7),
-              ),
+              border: Border.all(color: colors.border.withValues(alpha: 0.7)),
               boxShadow: [
                 BoxShadow(
                   color: colors.barrier.withValues(alpha: 0.12),
@@ -121,30 +119,31 @@ class DriveFileActionSheet extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: FButton(
-                          onPress: onClose ??
-                              () => Navigator.of(context).maybePop(),
+                          onPress:
+                              onClose ?? () => Navigator.of(context).maybePop(),
                           style: FButtonStyle.outline(
                             (style) => style.copyWith(
                               decoration: style.decoration.map(
-                                (decoration) =>
-                                    decoration.copyWith(borderRadius: actionRadius),
+                                (decoration) => decoration.copyWith(
+                                  borderRadius: actionRadius,
+                                ),
                               ),
                               contentStyle: (contentStyle) =>
                                   contentStyle.copyWith(
-                                textStyle: FWidgetStateMap.all(
-                                  actionTextStyle.copyWith(
-                                    color: colors.foreground,
+                                    textStyle: FWidgetStateMap.all(
+                                      actionTextStyle.copyWith(
+                                        color: colors.foreground,
+                                      ),
+                                    ),
+                                    iconStyle: FWidgetStateMap.all(
+                                      IconThemeData(
+                                        size: 16,
+                                        color: colors.foreground,
+                                      ),
+                                    ),
+                                    padding: actionPadding,
+                                    spacing: 8,
                                   ),
-                                ),
-                                iconStyle: FWidgetStateMap.all(
-                                  IconThemeData(
-                                    size: 16,
-                                    color: colors.foreground,
-                                  ),
-                                ),
-                                padding: actionPadding,
-                                spacing: 8,
-                              ),
                             ),
                           ),
                           prefix: const Icon(FIcons.arrowLeft, size: 16),
@@ -158,25 +157,26 @@ class DriveFileActionSheet extends ConsumerWidget {
                           style: FButtonStyle.primary(
                             (style) => style.copyWith(
                               decoration: style.decoration.map(
-                                (decoration) =>
-                                    decoration.copyWith(borderRadius: actionRadius),
+                                (decoration) => decoration.copyWith(
+                                  borderRadius: actionRadius,
+                                ),
                               ),
                               contentStyle: (contentStyle) =>
                                   contentStyle.copyWith(
-                                textStyle: FWidgetStateMap.all(
-                                  actionTextStyle.copyWith(
-                                    color: colors.primaryForeground,
+                                    textStyle: FWidgetStateMap.all(
+                                      actionTextStyle.copyWith(
+                                        color: colors.primaryForeground,
+                                      ),
+                                    ),
+                                    iconStyle: FWidgetStateMap.all(
+                                      IconThemeData(
+                                        size: 16,
+                                        color: colors.primaryForeground,
+                                      ),
+                                    ),
+                                    padding: actionPadding,
+                                    spacing: 8,
                                   ),
-                                ),
-                                iconStyle: FWidgetStateMap.all(
-                                  IconThemeData(
-                                    size: 16,
-                                    color: colors.primaryForeground,
-                                  ),
-                                ),
-                                padding: actionPadding,
-                                spacing: 8,
-                              ),
                             ),
                           ),
                           prefix: const Icon(FIcons.download, size: 16),
@@ -294,7 +294,9 @@ class _DetailsSection extends ConsumerWidget {
     final fsCreated = details?.fileSystemCreatedAt;
     final fsModified = details?.fileSystemModifiedAt;
     final webUrl = details?.webUrl ?? 'Unknown';
-    final downloadUrl = details?.downloadUrl != null ? 'Available' : 'Unavailable';
+    final downloadUrl = details?.downloadUrl != null
+        ? 'Available'
+        : 'Unavailable';
     final etag = details?.etag ?? '—';
     final ctag = details?.ctag ?? '—';
     final parentPath = details?.parentPath ?? 'Unknown';
@@ -306,11 +308,7 @@ class _DetailsSection extends ConsumerWidget {
         label: 'File type',
         value: typeLabel,
       ),
-      _InfoRow(
-        icon: Icons.sd_storage_rounded,
-        label: 'Size',
-        value: sizeLabel,
-      ),
+      _InfoRow(icon: Icons.sd_storage_rounded, label: 'Size', value: sizeLabel),
       _InfoRow(
         icon: Icons.schedule_rounded,
         label: 'Updated',
@@ -339,26 +337,14 @@ class _DetailsSection extends ConsumerWidget {
           label: 'Child items',
           value: '$childCount',
         ),
-      _InfoRow(
-        icon: Icons.language_rounded,
-        label: 'Web link',
-        value: webUrl,
-      ),
+      _InfoRow(icon: Icons.language_rounded, label: 'Web link', value: webUrl),
       _InfoRow(
         icon: Icons.cloud_download_rounded,
         label: 'Download link',
         value: downloadUrl,
       ),
-      _InfoRow(
-        icon: Icons.tag_rounded,
-        label: 'ETag',
-        value: etag,
-      ),
-      _InfoRow(
-        icon: Icons.bookmark_border_rounded,
-        label: 'CTag',
-        value: ctag,
-      ),
+      _InfoRow(icon: Icons.tag_rounded, label: 'ETag', value: etag),
+      _InfoRow(icon: Icons.bookmark_border_rounded, label: 'CTag', value: ctag),
     ];
 
     if (detailsAsync.isLoading && details == null) {
@@ -426,19 +412,16 @@ class _InfoRow extends StatelessWidget with FItemMixin {
     required this.icon,
     required this.label,
     required this.value,
-    this.onTap,
   });
 
   final IconData icon;
   final String label;
   final String value;
-  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.theme.colors;
     return FItem(
-      onPress: onTap,
       prefix: Container(
         width: 32,
         height: 32,
