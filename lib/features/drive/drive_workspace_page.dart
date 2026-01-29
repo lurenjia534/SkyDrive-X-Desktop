@@ -13,7 +13,6 @@ import 'package:skydrivex/src/rust/api/auth/auth.dart' as auth_api;
 import 'package:skydrivex/utils/toast.dart';
 
 import 'drive_home_page.dart';
-import 'drive_navigation_rail.dart';
 
 class DriveWorkspacePage extends ConsumerStatefulWidget {
   const DriveWorkspacePage({super.key, required this.authPageBuilder});
@@ -25,7 +24,6 @@ class DriveWorkspacePage extends ConsumerStatefulWidget {
 }
 
 class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
-  static const double _railBreakpoint = 720;
   static const int _simpleUploadMaxBytes = 250 * 1024 * 1024;
 
   int _selectedSectionIndex = 0;
@@ -147,23 +145,22 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final showRail = constraints.maxWidth >= _railBreakpoint;
           final body = _DriveSectionStack(
             sections: _sections,
             activeIndex: _selectedSectionIndex,
           );
-          if (!showRail) {
-            return body;
-          }
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              DriveNavigationRail(
-                selectedIndex: _selectedSectionIndex,
-                onQuickAction: _handleQuickActionTap,
-                onDestinationSelected: _handleNavigationSelection,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                child: _DriveTopNavBar(
+                  selectedIndex: _selectedSectionIndex,
+                  onSelected: _handleNavigationSelection,
+                  onQuickAction: _handleQuickActionTap,
+                ),
               ),
-              const SizedBox(width: 32),
+              const SizedBox(height: 16),
               Expanded(child: body),
             ],
           );
@@ -247,6 +244,192 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
         });
       }
     }
+  }
+}
+
+class _DriveTopNavBar extends StatelessWidget {
+  const _DriveTopNavBar({
+    required this.selectedIndex,
+    required this.onSelected,
+    required this.onQuickAction,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+  final VoidCallback onQuickAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final colors = theme.colors;
+    final typography = theme.typography;
+    final destinations = const [
+      _NavDestination(index: 0, label: 'Files', icon: FIcons.folder),
+      _NavDestination(index: 1, label: 'Downloads', icon: FIcons.cloudDownload),
+      _NavDestination(index: 2, label: 'Uploads', icon: FIcons.cloudUpload),
+      _NavDestination(index: 3, label: 'Settings', icon: FIcons.settings),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: colors.background,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.border.withValues(alpha: 0.6)),
+        boxShadow: [
+          BoxShadow(
+            color: colors.barrier.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: destinations
+                    .map(
+                      (destination) => Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: _NavButton(
+                          destination: destination,
+                          selected: selectedIndex == destination.index,
+                          onTap: () => onSelected(destination.index),
+                          colors: colors,
+                          typography: typography,
+                        ),
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          FButton(
+            onPress: onQuickAction,
+            style: FButtonStyle.primary(
+              (style) => style.copyWith(
+                decoration: FWidgetStateMap.all(
+                  BoxDecoration(
+                    color: colors.foreground,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                contentStyle: (contentStyle) => contentStyle.copyWith(
+                  textStyle: FWidgetStateMap.all(
+                    typography.sm.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: colors.background,
+                    ),
+                  ),
+                  iconStyle: FWidgetStateMap.all(
+                    IconThemeData(
+                      color: colors.background,
+                      size: 18,
+                    ),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  spacing: 8,
+                ),
+              ),
+            ),
+            prefix: const Icon(FIcons.plus),
+            child: const Text('New'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavDestination {
+  const _NavDestination({
+    required this.index,
+    required this.label,
+    required this.icon,
+  });
+
+  final int index;
+  final String label;
+  final IconData icon;
+}
+
+class _NavButton extends StatelessWidget {
+  const _NavButton({
+    required this.destination,
+    required this.selected,
+    required this.onTap,
+    required this.colors,
+    required this.typography,
+  });
+
+  final _NavDestination destination;
+  final bool selected;
+  final VoidCallback onTap;
+  final FColors colors;
+  final FTypography typography;
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedStyle = FButtonStyle.primary(
+      (style) => style.copyWith(
+        decoration: FWidgetStateMap.all(
+          BoxDecoration(
+            color: colors.foreground,
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+        contentStyle: (contentStyle) => contentStyle.copyWith(
+          textStyle: FWidgetStateMap.all(
+            typography.sm.copyWith(
+              fontWeight: FontWeight.w600,
+              color: colors.background,
+            ),
+          ),
+          iconStyle: FWidgetStateMap.all(
+            IconThemeData(color: colors.background, size: 18),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          spacing: 8,
+        ),
+      ),
+    );
+
+    final idleStyle = FButtonStyle.outline(
+      (style) => style.copyWith(
+        decoration: FWidgetStateMap.all(
+          BoxDecoration(
+            color: colors.background,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: colors.border.withValues(alpha: 0.6)),
+          ),
+        ),
+        contentStyle: (contentStyle) => contentStyle.copyWith(
+          textStyle: FWidgetStateMap.all(
+            typography.sm.copyWith(
+              fontWeight: FontWeight.w600,
+              color: colors.foreground,
+            ),
+          ),
+          iconStyle: FWidgetStateMap.all(
+            IconThemeData(color: colors.mutedForeground, size: 18),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          spacing: 8,
+        ),
+      ),
+    );
+
+    return FButton(
+      onPress: onTap,
+      style: selected ? selectedStyle : idleStyle,
+      prefix: Icon(destination.icon),
+      child: Text(destination.label),
+    );
   }
 }
 

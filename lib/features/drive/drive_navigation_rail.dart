@@ -70,24 +70,32 @@ class _DriveNavigationRailState extends State<DriveNavigationRail> {
     final theme = context.theme;
     final colors = theme.colors;
     final typography = theme.typography;
-    final borderRadius = BorderRadius.circular(24);
-    final navShadowColor = colors.barrier.withValues(alpha: 0.1);
-    final width = _isExtended ? 212.0 : 68.0;
-    final horizontalPadding = _isExtended ? 16.0 : 10.0;
+    final borderRadius = BorderRadius.circular(22);
+    final navShadowColor = colors.barrier.withValues(alpha: 0.08);
+    final width = _isExtended ? 232.0 : 78.0;
+    final horizontalPadding = _isExtended ? 16.0 : 12.0;
+    final surfaceGradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        colors.background,
+        colors.secondary.withValues(alpha: 0.18),
+      ],
+    );
 
     final railContainer = AnimatedContainer(
       duration: _animationDuration,
       curve: Curves.easeOutCubic,
       width: width,
       decoration: BoxDecoration(
-        color: colors.background,
+        gradient: surfaceGradient,
         borderRadius: borderRadius,
         border: Border.all(color: colors.border.withValues(alpha: 0.7)),
         boxShadow: [
           BoxShadow(
             color: navShadowColor,
-            blurRadius: 28,
-            offset: const Offset(0, 16),
+            blurRadius: 22,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
@@ -103,25 +111,31 @@ class _DriveNavigationRailState extends State<DriveNavigationRail> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _DriveRailToggle(
+              _DriveRailHeader(
                 extended: _isExtended,
-                onPressed: _toggleExtended,
+                onToggle: _toggleExtended,
                 colors: colors,
                 typography: typography,
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               _DriveRailQuickAction(
                 extended: _isExtended,
                 onPressed: widget.onQuickAction,
                 colors: colors,
                 typography: typography,
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
+              Container(
+                height: 1,
+                margin: EdgeInsets.symmetric(horizontal: _isExtended ? 6 : 0),
+                color: colors.border.withValues(alpha: 0.5),
+              ),
+              const SizedBox(height: 16),
               Expanded(
                 child: ListView.separated(
                   padding: EdgeInsets.zero,
                   itemCount: _primaryDestinations.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final destination = _primaryDestinations[index];
                     return _DriveRailItem(
@@ -136,6 +150,12 @@ class _DriveNavigationRailState extends State<DriveNavigationRail> {
                 ),
               ),
               const SizedBox(height: 16),
+              Container(
+                height: 1,
+                margin: EdgeInsets.symmetric(horizontal: _isExtended ? 6 : 0),
+                color: colors.border.withValues(alpha: 0.5),
+              ),
+              const SizedBox(height: 12),
               _DriveRailItem(
                 destination: _settingsDestination,
                 extended: _isExtended,
@@ -156,17 +176,86 @@ class _DriveNavigationRailState extends State<DriveNavigationRail> {
           .animate(key: ValueKey('rail-$_isExtended'))
           .fade(begin: 0.7, end: 1, duration: 280.ms, curve: Curves.easeOutQuad)
           .slideX(
-            begin: _isExtended ? -0.05 : 0.05,
+            begin: _isExtended ? -0.04 : 0.04,
             end: 0,
             duration: 360.ms,
             curve: Curves.easeOutQuint,
           )
           .scaleXY(
-            begin: _isExtended ? 0.96 : 1.02,
+            begin: _isExtended ? 0.97 : 1.01,
             end: 1,
             duration: 420.ms,
             curve: Curves.easeOutBack,
           ),
+    );
+  }
+}
+
+class _DriveRailHeader extends StatelessWidget {
+  const _DriveRailHeader({
+    required this.extended,
+    required this.onToggle,
+    required this.colors,
+    required this.typography,
+  });
+
+  final bool extended;
+  final VoidCallback onToggle;
+  final FColors colors;
+  final FTypography typography;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = extended ? 'Collapse navigation' : 'Expand navigation';
+    return Row(
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: colors.secondary.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            FIcons.cloud,
+            size: 20,
+            color: colors.foreground,
+          ),
+        ),
+        if (extended) ...[
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Skydrivex',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: typography.base.copyWith(
+                color: colors.foreground,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+        Tooltip(
+          message: label,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: onToggle,
+              child: SizedBox(
+                width: 36,
+                height: 36,
+                child: Icon(
+                  extended ? FIcons.panelLeftClose : FIcons.panelLeftOpen,
+                  color: colors.mutedForeground,
+                  size: 18,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -208,26 +297,34 @@ class _DriveRailQuickAction extends StatelessWidget {
       key: ValueKey<bool>(extended),
       duration: const Duration(milliseconds: 320),
       curve: Curves.easeInOut,
-      width: extended ? 176 : 48,
-      height: 50,
+      width: extended ? double.infinity : 48,
+      height: 46,
       decoration: BoxDecoration(
         color: colors.primary,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colors.primary,
+            colors.primary.withValues(alpha: 0.86),
+          ],
+        ),
         boxShadow: [
           BoxShadow(
-            color: colors.barrier.withValues(alpha: 0.2),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            color: colors.barrier.withValues(alpha: 0.16),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(14),
           onTap: onPressed,
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: extended ? 20 : 0),
+            padding: EdgeInsets.symmetric(horizontal: extended ? 16 : 0),
             child: Row(
               mainAxisAlignment: extended
                   ? MainAxisAlignment.start
@@ -241,7 +338,7 @@ class _DriveRailQuickAction extends StatelessWidget {
                 if (extended) ...[
                   const SizedBox(width: 12),
                   Text(
-                    'Add',
+                    'New',
                     style: typography.base.copyWith(
                       color: colors.primaryForeground,
                       fontWeight: FontWeight.w600,
@@ -288,67 +385,6 @@ class _DriveRailQuickAction extends StatelessWidget {
   }
 }
 
-class _DriveRailToggle extends StatelessWidget {
-  const _DriveRailToggle({
-    required this.extended,
-    required this.onPressed,
-    required this.colors,
-    required this.typography,
-  });
-
-  final bool extended;
-  final VoidCallback onPressed;
-  final FColors colors;
-  final FTypography typography;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = extended ? 'Collapse navigation' : 'Expand navigation';
-    return Row(
-      children: [
-        Tooltip(
-          message: label,
-          child: Material(
-            color: colors.background,
-            shape: CircleBorder(
-              side: BorderSide(
-                color: colors.border.withValues(alpha: 0.7),
-              ),
-            ),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onPressed,
-              child: SizedBox(
-                width: 38,
-                height: 38,
-                child: Icon(
-                  extended ? FIcons.panelLeftClose : FIcons.panelLeftOpen,
-                  color: colors.foreground,
-                  size: 18,
-                ),
-              ),
-            ),
-          ),
-        ),
-        if (extended) ...[
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Collapse navigation',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: typography.sm.copyWith(
-                color: colors.mutedForeground,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
 class _DriveRailItem extends StatelessWidget {
   const _DriveRailItem({
     required this.destination,
@@ -369,13 +405,12 @@ class _DriveRailItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCompact = !extended;
-    final itemSize = isCompact ? 40.0 : 44.0;
-    final railRadius = BorderRadius.circular(16);
-    final iconColor =
-        selected ? colors.primaryForeground : colors.mutedForeground;
+    final itemSize = isCompact ? 46.0 : 48.0;
+    final railRadius = BorderRadius.circular(14);
+    final iconColor = selected ? colors.primaryForeground : colors.foreground;
     final textStyle = selected
         ? typography.sm.copyWith(
-            color: colors.primaryForeground,
+            color: colors.foreground,
             fontWeight: FontWeight.w600,
           )
         : typography.sm.copyWith(
@@ -383,40 +418,63 @@ class _DriveRailItem extends StatelessWidget {
             fontWeight: FontWeight.w500,
           );
 
+    final iconBadge = Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: selected
+            ? colors.primary.withValues(alpha: 0.2)
+            : colors.secondary.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(destination.icon, color: iconColor, size: 18),
+    );
+
     final item = Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: isCompact ? null : railRadius,
-        customBorder:
-            isCompact ? const CircleBorder() : RoundedRectangleBorder(borderRadius: railRadius),
+        borderRadius: railRadius,
+        customBorder: RoundedRectangleBorder(borderRadius: railRadius),
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 260),
           curve: Curves.easeOutCubic,
           height: itemSize,
           width: extended ? double.infinity : itemSize,
-          padding: EdgeInsets.symmetric(
-            horizontal: extended ? 12 : 0,
-            vertical: extended ? 8 : 0,
-          ),
+          padding: EdgeInsets.symmetric(horizontal: extended ? 10 : 0),
           decoration: isCompact
               ? BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: selected ? colors.primary : colors.background,
+                  color: selected
+                      ? colors.primary.withValues(alpha: 0.2)
+                      : colors.background,
+                  borderRadius: railRadius,
+                  border: Border.all(
+                    color: selected
+                        ? colors.primary.withValues(alpha: 0.35)
+                        : colors.border.withValues(alpha: 0.5),
+                  ),
                 )
               : BoxDecoration(
                   color: selected
-                      ? colors.primary
+                      ? colors.primary.withValues(alpha: 0.18)
                       : colors.secondary.withValues(alpha: 0.0),
                   borderRadius: railRadius,
+                  border: Border.all(
+                    color: selected
+                        ? colors.primary.withValues(alpha: 0.35)
+                        : colors.border.withValues(alpha: 0.0),
+                  ),
                 ),
           child: Row(
             mainAxisAlignment:
                 extended ? MainAxisAlignment.start : MainAxisAlignment.center,
             children: [
-              Icon(destination.icon, color: iconColor, size: 20),
               if (extended) ...[
+                iconBadge,
                 const SizedBox(width: 12),
+              ] else
+                Icon(destination.icon, color: iconColor, size: 20),
+              if (extended) ...[
                 Expanded(child: Text(destination.label, style: textStyle)),
               ],
             ],
