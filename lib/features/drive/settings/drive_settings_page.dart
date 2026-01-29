@@ -282,34 +282,42 @@ class _ThemeSettingsTile extends StatelessWidget {
     final theme = context.theme;
     final colors = theme.colors;
     final typography = theme.typography;
-    final pillBackground = colors.muted;
-    final pillForeground = colors.mutedForeground;
     return _SettingsCard(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Appearance',
-            style: typography.sm.copyWith(color: colors.mutedForeground),
-          ),
-          const SizedBox(height: 16),
-          Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 520;
+          final header = Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: colors.secondary.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  FIcons.palette,
+                  size: 20,
+                  color: colors.foreground,
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Follow system theme',
-                      style: typography.xl.copyWith(
-                        fontWeight: FontWeight.w700,
+                      'Appearance',
+                      style: typography.base.copyWith(
+                        fontWeight: FontWeight.w600,
                         color: colors.foreground,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Automatically switch between light and dark themes.',
+                      'Control the theme and keep it in sync with your system.',
                       style: typography.sm.copyWith(
                         color: colors.mutedForeground,
                       ),
@@ -317,52 +325,164 @@ class _ThemeSettingsTile extends StatelessWidget {
                   ],
                 ),
               ),
-              FSwitch(
-                value: followSystem,
-                enabled: enabled,
-                onChange: enabled ? onFollowSystemChanged : null,
-              ),
             ],
-          ),
-          if (!followSystem) ...[
-            const SizedBox(height: 16),
-            Text(
-              'Theme mode',
-              style: typography.sm.copyWith(
-                color: colors.mutedForeground,
-                fontWeight: FontWeight.w600,
-              ),
+          );
+
+          final followCard = Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: colors.secondary.withValues(alpha: 0.28),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colors.border.withValues(alpha: 0.4)),
             ),
-            const SizedBox(height: 12),
-            Row(
+            child: Row(
               children: [
                 Expanded(
-                  child: FButton(
-                    onPress: enabled
-                        ? () => onManualModeChanged(ThemeMode.light)
-                        : null,
-                    style: manualMode == ThemeMode.light
-                        ? FButtonStyle.primary()
-                        : FButtonStyle.outline(),
-                    child: const Text('Light'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Follow system theme',
+                        style: typography.base.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: colors.foreground,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Automatically match light or dark mode.',
+                        style: typography.sm.copyWith(
+                          color: colors.mutedForeground,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FButton(
-                    onPress: enabled
-                        ? () => onManualModeChanged(ThemeMode.dark)
-                        : null,
-                    style: manualMode == ThemeMode.dark
-                        ? FButtonStyle.primary()
-                        : FButtonStyle.outline(),
-                    child: const Text('Dark'),
-                  ),
+                FSwitch(
+                  value: followSystem,
+                  enabled: enabled,
+                  onChange: enabled ? onFollowSystemChanged : null,
                 ),
               ],
             ),
-          ],
-        ],
+          );
+
+          final modeButtons = Row(
+            children: [
+              Expanded(
+                child: FButton(
+                  onPress: enabled
+                      ? () => onManualModeChanged(ThemeMode.light)
+                      : null,
+                  style: manualMode == ThemeMode.light
+                      ? FButtonStyle.primary(
+                          (style) => style.copyWith(
+                            decoration: FWidgetStateMap.all(
+                              BoxDecoration(
+                                color: colors.foreground,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            contentStyle: (contentStyle) =>
+                                contentStyle.copyWith(
+                                  textStyle: FWidgetStateMap.all(
+                                    typography.sm.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      color: colors.background,
+                                    ),
+                                  ),
+                                ),
+                          ),
+                        )
+                      : FButtonStyle.outline(
+                          (style) => style.copyWith(
+                            decoration: FWidgetStateMap.all(
+                              BoxDecoration(
+                                color: colors.background,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: colors.border.withValues(alpha: 0.6),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                  child: const Text('Light'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FButton(
+                  onPress: enabled
+                      ? () => onManualModeChanged(ThemeMode.dark)
+                      : null,
+                  style: manualMode == ThemeMode.dark
+                      ? FButtonStyle.primary(
+                          (style) => style.copyWith(
+                            decoration: FWidgetStateMap.all(
+                              BoxDecoration(
+                                color: colors.foreground,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            contentStyle: (contentStyle) =>
+                                contentStyle.copyWith(
+                                  textStyle: FWidgetStateMap.all(
+                                    typography.sm.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      color: colors.background,
+                                    ),
+                                  ),
+                                ),
+                          ),
+                        )
+                      : FButtonStyle.outline(
+                          (style) => style.copyWith(
+                            decoration: FWidgetStateMap.all(
+                              BoxDecoration(
+                                color: colors.background,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: colors.border.withValues(alpha: 0.6),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                  child: const Text('Dark'),
+                ),
+              ),
+            ],
+          );
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              header,
+              const SizedBox(height: 16),
+              followCard,
+              if (!followSystem) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Theme mode',
+                  style: typography.sm.copyWith(
+                    color: colors.mutedForeground,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (compact)
+                  Column(
+                    children: [
+                      modeButtons,
+                    ],
+                  )
+                else
+                  modeButtons,
+              ],
+            ],
+          );
+        },
       ),
     );
   }
