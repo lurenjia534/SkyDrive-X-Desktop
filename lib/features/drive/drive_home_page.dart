@@ -196,6 +196,13 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
           item: item,
         );
         break;
+      case DriveContextAction.rename:
+        await DriveItemActionService.promptRename(
+          context: context,
+          ref: ref,
+          item: item,
+        );
+        break;
       case DriveContextAction.properties:
         await DriveItemActionService.showPropertiesSheet(
           context: context,

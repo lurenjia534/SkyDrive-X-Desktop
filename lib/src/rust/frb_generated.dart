@@ -14,6 +14,7 @@ import 'api/drive/info.dart';
 import 'api/drive/list.dart';
 import 'api/drive/models.dart';
 import 'api/drive/move_item.dart';
+import 'api/drive/rename.dart';
 import 'api/drive/share.dart';
 import 'api/drive/upload.dart';
 import 'api/drive/upload_manager.dart';
@@ -83,7 +84,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -1653033776;
+  int get rustContentHash => -1812367365;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -227,6 +228,12 @@ abstract class RustLibApi extends BaseApi {
 
   Future<UploadQueueState> crateApiDriveUploadManagerRemoveUploadTask({
     required String taskId,
+  });
+
+  Future<DriveItemSummary> crateApiDriveRenameRenameDriveItem({
+    required String itemId,
+    required String newName,
+    String? ifMatch,
   });
 
   Future<DownloadQueueState> crateApiDriveDownloadManagerResumeDownloadTask({
@@ -1425,6 +1432,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<DriveItemSummary> crateApiDriveRenameRenameDriveItem({
+    required String itemId,
+    required String newName,
+    String? ifMatch,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(itemId, serializer);
+          sse_encode_String(newName, serializer);
+          sse_encode_opt_String(ifMatch, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 36,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_drive_item_summary,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiDriveRenameRenameDriveItemConstMeta,
+        argValues: [itemId, newName, ifMatch],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDriveRenameRenameDriveItemConstMeta =>
+      const TaskConstMeta(
+        debugName: "rename_drive_item",
+        argNames: ["itemId", "newName", "ifMatch"],
+      );
+
+  @override
   Future<DownloadQueueState> crateApiDriveDownloadManagerResumeDownloadTask({
     required String itemId,
     required bool restart,
@@ -1438,7 +1482,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 36,
+            funcId: 37,
             port: port_,
           );
         },
@@ -1471,7 +1515,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 37,
+            funcId: 38,
             port: port_,
           );
         },
@@ -1506,7 +1550,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 38,
+            funcId: 39,
             port: port_,
           );
         },
@@ -1541,7 +1585,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 39,
+            funcId: 40,
             port: port_,
           );
         },
@@ -1574,7 +1618,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 40,
+            funcId: 41,
             port: port_,
           );
         },
@@ -1611,7 +1655,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 41,
+              funcId: 42,
               port: port_,
             );
           },
@@ -1643,7 +1687,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 42,
+            funcId: 43,
             port: port_,
           );
         },
@@ -1670,7 +1714,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 43,
+            funcId: 44,
             port: port_,
           );
         },
@@ -1709,7 +1753,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 44,
+            funcId: 45,
             port: port_,
           );
         },

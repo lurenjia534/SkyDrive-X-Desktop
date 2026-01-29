@@ -13,6 +13,7 @@ import 'package:skydrivex/features/drive/widgets/drive_share_dialog.dart';
 import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
 import 'package:skydrivex/src/rust/api/drive/delete.dart';
 import 'package:skydrivex/src/rust/api/drive/move_item.dart';
+import 'package:skydrivex/src/rust/api/drive/rename.dart';
 import 'package:skydrivex/utils/toast.dart';
 
 /// 封装文件/文件夹相关的常用操作，降低页面耦合。
@@ -290,6 +291,103 @@ class DriveItemActionService {
         );
       },
     );
+  }
+
+  static Future<void> promptRename({
+    required BuildContext context,
+    required WidgetRef ref,
+    required drive_api.DriveItemSummary item,
+  }) async {
+    final controller = TextEditingController(text: item.name);
+    controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: controller.text.length,
+    );
+    final result = await showFDialog<String>(
+      context: context,
+      barrierLabel: 'Rename',
+      builder: (dialogContext, style, animation) {
+        final theme = dialogContext.theme;
+        final colors = theme.colors;
+        final typography = theme.typography;
+        return FDialog(
+          animation: animation,
+          title: Text(
+            'Rename',
+            style: typography.lg.copyWith(
+              fontWeight: FontWeight.w700,
+              color: colors.foreground,
+            ),
+          ),
+          body: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Enter a new name for this item.',
+                style: typography.sm.copyWith(
+                  color: colors.mutedForeground,
+                ),
+              ),
+              const SizedBox(height: 12),
+              FTextField(
+                control: FTextFieldControl.managed(controller: controller),
+                autofocus: true,
+                textInputAction: TextInputAction.done,
+                onSubmit: (_) =>
+                    Navigator.of(dialogContext).pop(controller.text),
+              ),
+            ],
+          ),
+          direction: Axis.horizontal,
+          actions: [
+            FButton(
+              onPress: () => Navigator.of(dialogContext).pop(),
+              style: FButtonStyle.outline(),
+              child: const Text('Cancel'),
+            ),
+            FButton(
+              onPress: () =>
+                  Navigator.of(dialogContext).pop(controller.text),
+              style: FButtonStyle.primary(),
+              child: const Text('Rename'),
+            ),
+          ],
+        );
+      },
+    );
+
+    controller.dispose();
+
+    if (result == null) return;
+    final name = result.trim();
+    if (name.isEmpty) {
+      _showToast(context, 'Name cannot be empty');
+      return;
+    }
+    if (name == item.name) {
+      return;
+    }
+
+    try {
+      await renameDriveItem(
+        itemId: item.id,
+        newName: name,
+        ifMatch: null,
+      );
+    } catch (err) {
+      _showToast(context, 'Rename failed: $err');
+      return;
+    }
+
+    final controllerRef = ref.read(driveHomeControllerProvider.notifier);
+    try {
+      await controllerRef.refresh(showSkeleton: false);
+    } catch (err) {
+      _showToast(context, 'Renamed, but refresh failed: $err');
+      return;
+    }
+    _showToast(context, 'Renamed to: $name');
   }
 
   static Future<void> promptUploadFiles({
