@@ -26,38 +26,85 @@ class _DriveSettingsPageState extends ConsumerState<DriveSettingsPage> {
     final themeState = themeAsync.value ?? AppThemeState.defaults;
     final themeLoading = themeAsync.isLoading;
     final themeController = ref.read(appThemeProvider.notifier);
-    return CustomScrollView(
-      slivers: [
-        const SliverToBoxAdapter(child: SizedBox(height: 8)),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate([
-              const _DriveInfoTile(),
-              const SizedBox(height: 24),
-              _ThemeSettingsTile(
-                followSystem: themeState.followSystem,
-                manualMode: themeState.manualMode,
-                enabled: !themeLoading,
-                onFollowSystemChanged: (value) =>
-                    unawaited(themeController.setFollowSystem(value)),
-                onManualModeChanged: (mode) =>
-                    unawaited(themeController.setManualMode(mode)),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final contentWidth =
+            constraints.maxWidth >= 1200 ? 1080.0 : constraints.maxWidth;
+        return CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: contentWidth),
+                  child: const Padding(
+                    padding: EdgeInsets.fromLTRB(24, 20, 24, 4),
+                    child: _SettingsHeader(),
+                  ),
+                ),
               ),
-              const SizedBox(height: 24),
-              const _SettingsSyncTile(),
-              const SizedBox(height: 24),
-              const Column(
-                children: [
-                  _DownloadDirectoryTile(),
-                  SizedBox(height: 16),
-                  _DownloadConcurrencyTile(),
-                ],
+            ),
+            SliverToBoxAdapter(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: contentWidth),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const _SettingsSectionTitle(
+                          title: 'Account & storage',
+                          subtitle: 'Manage OneDrive quota and account details.',
+                        ),
+                        const SizedBox(height: 16),
+                        const _DriveInfoTile(),
+                        const SizedBox(height: 28),
+                        const _SettingsSectionTitle(
+                          title: 'Experience',
+                          subtitle:
+                              'Personalize visuals and monitor sync status.',
+                        ),
+                        const SizedBox(height: 16),
+                        _SettingsGrid(
+                          minTileWidth: 460,
+                          children: [
+                            _ThemeSettingsTile(
+                              followSystem: themeState.followSystem,
+                              manualMode: themeState.manualMode,
+                              enabled: !themeLoading,
+                              onFollowSystemChanged: (value) =>
+                                  unawaited(
+                                    themeController.setFollowSystem(value),
+                                  ),
+                              onManualModeChanged: (mode) =>
+                                  unawaited(themeController.setManualMode(mode)),
+                            ),
+                            const _SettingsSyncTile(),
+                          ],
+                        ),
+                        const SizedBox(height: 28),
+                        const _SettingsSectionTitle(
+                          title: 'Downloads',
+                          subtitle:
+                              'Control where files land and how many tasks run.',
+                        ),
+                        const SizedBox(height: 16),
+                        const _SettingsGrid(
+                          minTileWidth: 460,
+                          children: [
+                            _DownloadDirectoryTile(),
+                            _DownloadConcurrencyTile(),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            ]),
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -75,13 +122,13 @@ class _SettingsCard extends StatelessWidget {
       style: (style) => style.copyWith(
         decoration: BoxDecoration(
           color: colors.background,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: colors.border.withValues(alpha: 0.8)),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: colors.border.withValues(alpha: 0.6)),
           boxShadow: [
             BoxShadow(
-              color: colors.barrier.withValues(alpha: 0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
+              color: colors.barrier.withValues(alpha: 0.06),
+              blurRadius: 14,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -91,6 +138,98 @@ class _SettingsCard extends StatelessWidget {
             padding ?? const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         child: child,
       ),
+    );
+  }
+}
+
+class _SettingsHeader extends StatelessWidget {
+  const _SettingsHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final typography = context.theme.typography;
+    final colors = context.theme.colors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Settings',
+          style: typography.xl3.copyWith(
+            fontWeight: FontWeight.w700,
+            color: colors.foreground,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Tune your OneDrive workspace for desktop use.',
+          style: typography.sm.copyWith(color: colors.mutedForeground),
+        ),
+      ],
+    );
+  }
+}
+
+class _SettingsSectionTitle extends StatelessWidget {
+  const _SettingsSectionTitle({
+    required this.title,
+    required this.subtitle,
+  });
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final typography = context.theme.typography;
+    final colors = context.theme.colors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: typography.base.copyWith(
+            fontWeight: FontWeight.w600,
+            color: colors.foreground,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: typography.sm.copyWith(
+            color: colors.mutedForeground,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SettingsGrid extends StatelessWidget {
+  const _SettingsGrid({
+    required this.children,
+    this.minTileWidth = 420,
+    this.gap = 16,
+  });
+
+  final List<Widget> children;
+  final double minTileWidth;
+  final double gap;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final columns = (width / minTileWidth).floor().clamp(1, 2);
+        final tileWidth = (width - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: children
+              .map((child) => SizedBox(width: tileWidth, child: child))
+              .toList(growable: false),
+        );
+      },
     );
   }
 }
@@ -241,99 +380,114 @@ class _SettingsSyncTile extends StatelessWidget {
     final pillForeground = colors.mutedForeground;
     return _SettingsCard(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Sync',
-            style: typography.sm.copyWith(color: colors.mutedForeground),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Sync status',
-                          style: typography.xl.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: colors.foreground,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF34D399), // Green dot
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: pillBackground,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'Last sync: just now · Interval: 15 min',
-                        style: typography.sm.copyWith(
-                          color: pillForeground,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              FButton(
-                onPress: () {},
-                style: FButtonStyle.primary(
-                  (style) => style.copyWith(
-                    decoration: FWidgetStateMap.all(
-                      BoxDecoration(
-                        color: colors.foreground,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    contentStyle: (contentStyle) => contentStyle.copyWith(
-                      textStyle: FWidgetStateMap.all(
-                        typography.sm.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: colors.background,
-                          height: 1,
-                        ),
-                      ),
-                      iconStyle: FWidgetStateMap.all(
-                        IconThemeData(size: 16, color: colors.background),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      spacing: 8,
-                    ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 520;
+          final actionButton = FButton(
+            onPress: () {},
+            style: FButtonStyle.primary(
+              (style) => style.copyWith(
+                decoration: FWidgetStateMap.all(
+                  BoxDecoration(
+                    color: colors.foreground,
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                prefix: const Icon(FIcons.rotateCw),
-                child: const Text('Sync now'),
+                contentStyle: (contentStyle) => contentStyle.copyWith(
+                  textStyle: FWidgetStateMap.all(
+                    typography.sm.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: colors.background,
+                      height: 1,
+                    ),
+                  ),
+                  iconStyle: FWidgetStateMap.all(
+                    IconThemeData(size: 16, color: colors.background),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  spacing: 8,
+                ),
+              ),
+            ),
+            prefix: const Icon(FIcons.rotateCw),
+            child: const Text('Sync now'),
+          );
+
+          final status = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Sync status',
+                    style: typography.xl.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: colors.foreground,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF34D399), // Green dot
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: pillBackground,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Last sync: just now · Interval: 15 min',
+                  style: typography.sm.copyWith(
+                    color: pillForeground,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ],
-          ),
-        ],
+          );
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Sync',
+                style: typography.sm.copyWith(color: colors.mutedForeground),
+              ),
+              const SizedBox(height: 16),
+              if (compact) ...[
+                status,
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: actionButton,
+                ),
+              ] else
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(child: status),
+                    const SizedBox(width: 16),
+                    actionButton,
+                  ],
+                ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -716,38 +870,87 @@ class _DownloadDirectoryTile extends ConsumerWidget {
       );
     } else {
       final path = state.value ?? '';
-      body = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Download directory',
-            style: typography.base.copyWith(
-              fontWeight: FontWeight.w600,
-              color: colors.foreground,
+      body = LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 520;
+          final pathBox = Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: colors.secondary.withValues(alpha: 0.28),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colors.border.withValues(alpha: 0.4)),
             ),
-          ),
-          const SizedBox(height: 8),
-          SelectableText(
-            path,
-            style: typography.base.copyWith(
-              color: colors.foreground,
-              fontWeight: FontWeight.w600,
+            child: SelectableText(
+              path,
+              style: typography.base.copyWith(
+                color: colors.foreground,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 12,
-            runSpacing: 10,
+          );
+
+          final info = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: colors.secondary.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      FIcons.folderOpen,
+                      size: 20,
+                      color: colors.foreground,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Download directory',
+                          style: typography.base.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: colors.foreground,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Default location for all downloaded files.',
+                          style: typography.sm.copyWith(
+                            color: colors.mutedForeground,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              pathBox,
+            ],
+          );
+
+          final actions = Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               FButton(
                 onPress: () => _promptForPath(context, ref, path),
-                style: FButtonStyle.outline(),
+                style: FButtonStyle.primary(),
                 prefix: const Icon(FIcons.mapPin, size: 16),
                 child: Text(
                   'Change path',
                   style: typography.sm.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
+              const SizedBox(height: 10),
               FButton(
                 onPress: () => _restoreDefault(context, ref),
                 style: FButtonStyle.ghost(),
@@ -758,8 +961,28 @@ class _DownloadDirectoryTile extends ConsumerWidget {
                 ),
               ),
             ],
-          ),
-        ],
+          );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                info,
+                const SizedBox(height: 16),
+                actions,
+              ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: info),
+              const SizedBox(width: 20),
+              SizedBox(width: 180, child: actions),
+            ],
+          );
+        },
       );
     }
 
@@ -896,53 +1119,222 @@ class _DownloadConcurrencyTile extends ConsumerWidget {
       );
     } else {
       final value = state.value ?? _options.first;
-      body = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Concurrent download tasks',
-            style: typography.base.copyWith(
-              fontWeight: FontWeight.w600,
-              color: colors.foreground,
+      body = LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 560;
+          final accent = colors.primary.withValues(alpha: 0.12);
+
+          Widget buildQuickOption(int option) {
+            final selected = option == value;
+            return FButton(
+              onPress: () {
+                if (option == value) return;
+                unawaited(
+                  ref
+                      .read(downloadConcurrencyProvider.notifier)
+                      .updateLimit(option),
+                );
+              },
+              style: selected
+                  ? FButtonStyle.primary(
+                      (style) => style.copyWith(
+                        decoration: FWidgetStateMap.all(
+                          BoxDecoration(
+                            color: colors.primary.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: colors.primary.withValues(alpha: 0.35),
+                            ),
+                          ),
+                        ),
+                        contentStyle: (contentStyle) => contentStyle.copyWith(
+                          textStyle: FWidgetStateMap.all(
+                            typography.sm.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: colors.primary,
+                            ),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                        ),
+                      ),
+                    )
+                  : FButtonStyle.outline(
+                      (style) => style.copyWith(
+                        decoration: FWidgetStateMap.all(
+                          BoxDecoration(
+                            color: colors.background,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: colors.border.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ),
+                        contentStyle: (contentStyle) => contentStyle.copyWith(
+                          textStyle: FWidgetStateMap.all(
+                            typography.sm.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: colors.foreground,
+                            ),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                        ),
+                      ),
+                    ),
+              child: Text('$option tasks'),
+            );
+          }
+
+          final selector = FSelect<int>(
+            items: {
+              for (final option in _options)
+                '$option task${option == 1 ? '' : 's'}': option,
+            },
+            control: FSelectControl.lifted(
+              value: value,
+              onChange: (selected) {
+                if (selected != null && selected != value) {
+                  unawaited(
+                    ref
+                        .read(downloadConcurrencyProvider.notifier)
+                        .updateLimit(selected),
+                  );
+                }
+              },
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Limit background concurrent downloads to avoid saturating bandwidth.',
-            style: typography.sm.copyWith(color: colors.mutedForeground),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: FSelect<int>(
-                  items: {
-                    for (final option in _options)
-                      '$option task${option == 1 ? '' : 's'}': option,
-                  },
-                  control: FSelectControl.lifted(
-                    value: value,
-                    onChange: (selected) {
-                      if (selected != null && selected != value) {
-                        unawaited(
-                          ref
-                              .read(downloadConcurrencyProvider.notifier)
-                              .updateLimit(selected),
-                        );
-                      }
-                    },
+            hint: 'Select task count',
+          );
+
+          final statusCard = Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: accent,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colors.primary.withValues(alpha: 0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Current limit',
+                  style: typography.xs.copyWith(
+                    color: colors.mutedForeground,
+                    fontWeight: FontWeight.w600,
                   ),
-                  hint: 'Select task count',
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Text(
+                      '$value',
+                      style: typography.xl.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colors.foreground,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'tasks',
+                      style: typography.sm.copyWith(
+                        color: colors.mutedForeground,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+
+          final header = Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: colors.secondary.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  FIcons.layers,
+                  size: 20,
+                  color: colors.foreground,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Concurrent download tasks',
+                      style: typography.base.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colors.foreground,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Limit background concurrent downloads to avoid saturating bandwidth.',
+                      style: typography.sm.copyWith(
+                        color: colors.mutedForeground,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!compact) statusCard,
+            ],
+          );
+
+          final controls = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(
-                'Current: $value',
-                style: typography.sm.copyWith(color: colors.foreground),
+                'Limit',
+                style: typography.sm.copyWith(
+                  color: colors.mutedForeground,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              selector,
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [2, 4, 6, 8].map(buildQuickOption).toList(),
               ),
             ],
-          ),
-        ],
+          );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                header,
+                const SizedBox(height: 16),
+                statusCard,
+                const SizedBox(height: 16),
+                controls,
+              ],
+            );
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              header,
+              const SizedBox(height: 18),
+              controls,
+            ],
+          );
+        },
       );
     }
 
