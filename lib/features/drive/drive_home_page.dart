@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:skydrivex/features/drive/providers/drive_download_manager.dart';
 import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
+import 'package:skydrivex/features/drive/providers/drive_view_mode_provider.dart';
 import 'package:skydrivex/features/drive/services/drive_item_action_service.dart';
 import 'package:skydrivex/features/drive/utils/drive_item_formatters.dart';
 import 'package:skydrivex/features/drive/widgets/drive_background_context_menu.dart';
@@ -18,6 +19,7 @@ import 'package:skydrivex/features/drive/widgets/drive_inline_progress_indicator
 import 'package:skydrivex/features/drive/widgets/drive_item_tile.dart';
 import 'package:skydrivex/features/drive/widgets/drive_load_more_tile.dart';
 import 'package:skydrivex/features/drive/widgets/drive_loading_list.dart';
+import 'package:skydrivex/features/drive/widgets/drive_view_mode_toggle.dart';
 import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
 import 'package:skydrivex/utils/toast.dart';
 
@@ -59,6 +61,8 @@ class _DriveHomeLoadingView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(driveHomeControllerProvider.notifier);
+    final viewMode = ref.watch(driveItemViewModeProvider);
+    final viewModeController = ref.read(driveItemViewModeProvider.notifier);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -72,6 +76,11 @@ class _DriveHomeLoadingView extends ConsumerWidget {
                   onRootTap: () => controller.tapBreadcrumb(null),
                   onSegmentTap: (_) {},
                 ),
+              ),
+              const SizedBox(width: 12),
+              DriveViewModeToggle(
+                mode: viewMode,
+                onChanged: viewModeController.setMode,
               ),
               const SizedBox(width: 12),
               FButton(
@@ -226,17 +235,15 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
     final viewState = widget.state;
     final controller = ref.read(driveHomeControllerProvider.notifier);
     final downloadQueue = ref.watch(driveDownloadManagerProvider);
+    final viewMode = ref.watch(driveItemViewModeProvider);
+    final viewModeController = ref.read(driveItemViewModeProvider.notifier);
     final showInlineLoadingBar =
         (widget.isRefreshing || viewState.isRefreshing) &&
         viewState.items.isNotEmpty;
     final showLoadingState =
         viewState.items.isEmpty && (widget.isRefreshing || viewState.isRefreshing);
     final showEmptyState = viewState.items.isEmpty && !showLoadingState;
-    final listItemCount =
-        viewState.items.length +
-        (viewState.nextLink != null ? 1 : 0) +
-        (showEmptyState ? 1 : 0) +
-        (showLoadingState ? 1 : 0);
+    final hasMore = viewState.nextLink != null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -251,6 +258,11 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
                   onRootTap: () => controller.tapBreadcrumb(null),
                   onSegmentTap: controller.tapBreadcrumb,
                 ),
+              ),
+              const SizedBox(width: 12),
+              DriveViewModeToggle(
+                mode: viewMode,
+                onChanged: viewModeController.setMode,
               ),
               const SizedBox(width: 12),
               FButton(
@@ -269,64 +281,23 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
           child: Stack(
             children: [
               RefreshIndicator(
-                key: const ValueKey('drive-content'),
+                key: ValueKey('drive-content-${viewMode.name}'),
                 onRefresh: () => controller.refresh(),
                 child: Listener(
                   behavior: HitTestBehavior.translucent,
                   onPointerDown: _handleBackgroundPointerDown,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    itemCount: listItemCount,
-                    itemBuilder: (context, index) {
-                      if (showLoadingState && index == 0) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 120),
-                          child: DriveLoadingList(),
-                        );
-                      }
-                      if (showEmptyState && index == 0) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 48),
-                          child: DriveEmptyView(),
-                        );
-                      }
-                      if (index >= viewState.items.length) {
-                        return DriveLoadMoreTile(
-                          isLoading: viewState.isLoadingMore,
-                          onLoadMore: () async {
-                            try {
-                              await controller.loadMore();
-                            } catch (err) {
-                              if (!context.mounted) return;
-                              _showSnack(context, 'Failed to load more: $err');
-                            }
-                          },
-                        );
-                      }
-                      final item = viewState.items[index];
-                      final subtitle = buildDriveSubtitle(item);
-                      drive_api.DownloadTask? activeTask;
-                      for (final task in downloadQueue.active) {
-                        if (task.item.id == item.id &&
-                            task.status == DownloadStatus.inProgress) {
-                          activeTask = task;
-                          break;
-                        }
-                      }
-                      final trailing = item.isFolder
-                          ? null
-                          : DriveDownloadIndicator(
-                              isDownloading: activeTask != null,
-                              progress: activeTask?.progressRatio,
-                            );
-                      return DriveItemTile(
-                        item: item,
-                        subtitle: subtitle,
-                        onTap: () => _handleItemTap(item),
-                        onSecondaryTapDown: (details) =>
-                            _handleItemContextMenu(item, details),
-                        trailing: trailing,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return _buildDriveContent(
+                        context,
+                        constraints: constraints,
+                        controller: controller,
+                        viewState: viewState,
+                        downloadQueue: downloadQueue,
+                        viewMode: viewMode,
+                        showLoadingState: showLoadingState,
+                        showEmptyState: showEmptyState,
+                        hasMore: hasMore,
                       );
                     },
                   ),
@@ -344,6 +315,144 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
         ),
       ],
     );
+  }
+
+  Widget _buildDriveContent(
+    BuildContext context, {
+    required BoxConstraints constraints,
+    required DriveHomeController controller,
+    required DriveHomeState viewState,
+    required DownloadQueueState downloadQueue,
+    required DriveItemViewMode viewMode,
+    required bool showLoadingState,
+    required bool showEmptyState,
+    required bool hasMore,
+  }) {
+    if (showLoadingState) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 120),
+            child: DriveLoadingList(),
+          ),
+        ],
+      );
+    }
+
+    if (showEmptyState) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 48),
+            child: DriveEmptyView(),
+          ),
+        ],
+      );
+    }
+
+    if (viewMode == DriveItemViewMode.list) {
+      final itemCount = viewState.items.length + (hasMore ? 1 : 0);
+      return ListView.builder(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: itemCount,
+        itemBuilder: (context, index) {
+          if (index >= viewState.items.length) {
+            return DriveLoadMoreTile(
+              isLoading: viewState.isLoadingMore,
+              onLoadMore: () async {
+                try {
+                  await controller.loadMore();
+                } catch (err) {
+                  if (!context.mounted) return;
+                  _showSnack(context, 'Failed to load more: $err');
+                }
+              },
+            );
+          }
+          final item = viewState.items[index];
+          final subtitle = buildDriveSubtitle(item);
+          final activeTask = _findActiveTask(downloadQueue, item);
+          final trailing = item.isFolder
+              ? null
+              : DriveDownloadIndicator(
+                  isDownloading: activeTask != null,
+                  progress: activeTask?.progressRatio,
+                );
+          return DriveItemTile(
+            item: item,
+            subtitle: subtitle,
+            onTap: () => _handleItemTap(item),
+            onSecondaryTapDown: (details) =>
+                _handleItemContextMenu(item, details),
+            trailing: trailing,
+          );
+        },
+      );
+    }
+
+    final rawCount = (constraints.maxWidth / 160).floor();
+    final crossAxisCount = rawCount.clamp(3, 7).toInt();
+    final itemCount = viewState.items.length + (hasMore ? 1 : 0);
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      physics: const AlwaysScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 1.22,
+      ),
+      itemCount: itemCount,
+      itemBuilder: (context, index) {
+        if (index >= viewState.items.length) {
+          return DriveLoadMoreCard(
+            isLoading: viewState.isLoadingMore,
+            onLoadMore: () async {
+              try {
+                await controller.loadMore();
+              } catch (err) {
+                if (!context.mounted) return;
+                _showSnack(context, 'Failed to load more: $err');
+              }
+            },
+          );
+        }
+        final item = viewState.items[index];
+        final subtitle = buildDriveSubtitle(item);
+        final activeTask = _findActiveTask(downloadQueue, item);
+        final trailing = item.isFolder
+            ? null
+            : DriveDownloadIndicator(
+                isDownloading: activeTask != null,
+                progress: activeTask?.progressRatio,
+              );
+        return DriveItemGridTile(
+          item: item,
+          subtitle: subtitle,
+          onTap: () => _handleItemTap(item),
+          onSecondaryTapDown: (details) => _handleItemContextMenu(item, details),
+          trailing: trailing,
+        );
+      },
+    );
+  }
+
+  drive_api.DownloadTask? _findActiveTask(
+    DownloadQueueState queue,
+    drive_api.DriveItemSummary item,
+  ) {
+    for (final task in queue.active) {
+      if (task.item.id == item.id &&
+          task.status == DownloadStatus.inProgress) {
+        return task;
+      }
+    }
+    return null;
   }
 }
 

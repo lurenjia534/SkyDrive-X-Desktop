@@ -107,23 +107,141 @@ class DriveItemTile extends StatelessWidget {
       return content;
     }
 
-    return Listener(
-      behavior: HitTestBehavior.translucent,
-      onPointerDown: (event) {
-        if (event.kind != PointerDeviceKind.mouse) return;
-        if (event.buttons & kSecondaryMouseButton == 0) return;
-        final box = context.findRenderObject();
-        if (box is! RenderBox) return;
-        final localPosition = box.globalToLocal(event.position);
-        onSecondaryTapDown?.call(
-          TapDownDetails(
-            globalPosition: event.position,
-            localPosition: localPosition,
-            kind: event.kind,
-          ),
-        );
-      },
+    return _wrapSecondaryTap(
+      context: context,
       child: content,
+      onSecondaryTapDown: onSecondaryTapDown,
+    );
+  }
+}
+
+class DriveItemGridTile extends StatelessWidget {
+  const DriveItemGridTile({
+    super.key,
+    required this.item,
+    required this.subtitle,
+    required this.onTap,
+    this.onSecondaryTapDown,
+    this.trailing,
+  });
+
+  final drive_api.DriveItemSummary item;
+  final String subtitle;
+  final VoidCallback onTap;
+  final GestureTapDownCallback? onSecondaryTapDown;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    final colors = theme.colors;
+    final typography = theme.typography;
+    final isFolder = item.isFolder;
+    final hasThumbnail = _shouldShowThumbnail(item);
+    final thumbnailUrl = item.thumbnailUrl;
+    final iconData = isFolder
+        ? Icons.folder_rounded
+        : Icons.insert_drive_file_rounded;
+    final iconBackground = isFolder
+        ? colors.secondary.withValues(alpha: 0.7)
+        : colors.secondary.withValues(alpha: 0.45);
+    final iconColor = isFolder
+        ? colors.foreground
+        : colors.foreground.withValues(alpha: 0.9);
+
+    final fallback = SizedBox(
+      width: 40,
+      height: 40,
+      child: _DriveTileIcon(
+        icon: iconData,
+        background: iconBackground,
+        iconColor: iconColor,
+      ),
+    );
+
+    final preview = hasThumbnail
+        ? ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: _ThumbnailImage(
+                url: thumbnailUrl!,
+                itemId: item.id,
+                fallback: fallback,
+              ),
+            ),
+          )
+        : fallback;
+
+    final content = Material(
+      color: colors.background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: colors.border.withValues(alpha: 0.7)),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        hoverColor: colors.secondary.withValues(alpha: 0.4),
+        splashColor: colors.secondary.withValues(alpha: 0.35),
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: colors.secondary.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: preview,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                item.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: typography.sm.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colors.foreground,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: typography.xs.copyWith(
+                        color: colors.mutedForeground,
+                      ),
+                    ),
+                  ),
+                  if (trailing != null) ...[
+                    const SizedBox(width: 6),
+                    trailing!,
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (onSecondaryTapDown == null) {
+      return content;
+    }
+
+    return _wrapSecondaryTap(
+      context: context,
+      child: content,
+      onSecondaryTapDown: onSecondaryTapDown,
     );
   }
 }
@@ -172,6 +290,32 @@ class _ThumbnailImage extends StatelessWidget {
       },
     );
   }
+}
+
+Widget _wrapSecondaryTap({
+  required BuildContext context,
+  required Widget child,
+  required GestureTapDownCallback? onSecondaryTapDown,
+}) {
+  if (onSecondaryTapDown == null) return child;
+  return Listener(
+    behavior: HitTestBehavior.translucent,
+    onPointerDown: (event) {
+      if (event.kind != PointerDeviceKind.mouse) return;
+      if (event.buttons & kSecondaryMouseButton == 0) return;
+      final box = context.findRenderObject();
+      if (box is! RenderBox) return;
+      final localPosition = box.globalToLocal(event.position);
+      onSecondaryTapDown.call(
+        TapDownDetails(
+          globalPosition: event.position,
+          localPosition: localPosition,
+          kind: event.kind,
+        ),
+      );
+    },
+    child: child,
+  );
 }
 
 ///决定是否应该为此驱动器项目呈现远程缩略图。
