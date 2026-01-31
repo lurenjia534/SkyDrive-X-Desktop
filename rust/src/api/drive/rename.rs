@@ -55,8 +55,9 @@ pub fn rename_drive_item(
         ));
     }
 
-    let payload: RenameResponse =
-        response.json().map_err(|e| format!("failed to parse rename response: {e}"))?;
+    let payload: RenameResponse = response
+        .json()
+        .map_err(|e| format!("failed to parse rename response: {e}"))?;
 
     Ok(DriveItemSummary {
         id: payload.id,

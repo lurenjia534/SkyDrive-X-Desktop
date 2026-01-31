@@ -41,10 +41,7 @@ pub fn pause_download_task(item_id: String) -> Result<DownloadQueueState, String
 }
 
 #[flutter_rust_bridge::frb]
-pub fn resume_download_task(
-    item_id: String,
-    restart: bool,
-) -> Result<DownloadQueueState, String> {
+pub fn resume_download_task(item_id: String, restart: bool) -> Result<DownloadQueueState, String> {
     core_resume(&item_id, restart)
 }
 

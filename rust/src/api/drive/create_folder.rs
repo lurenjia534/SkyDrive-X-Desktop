@@ -19,7 +19,11 @@ pub fn create_drive_folder(
     if trimmed_name.is_empty() {
         return Err("folder name is required".to_string());
     }
-    if parent_id.as_ref().map(|s| s.trim().is_empty()).unwrap_or(false) {
+    if parent_id
+        .as_ref()
+        .map(|s| s.trim().is_empty())
+        .unwrap_or(false)
+    {
         return Err("parent id cannot be empty string".to_string());
     }
     if parent_path
@@ -40,9 +44,7 @@ pub fn create_drive_folder(
         "fail" => "fail",
         "replace" => "replace",
         _ => {
-            return Err(
-                "invalid conflict behavior (expected rename, fail, or replace)".to_string(),
-            )
+            return Err("invalid conflict behavior (expected rename, fail, or replace)".to_string())
         }
     };
 

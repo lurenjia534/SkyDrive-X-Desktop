@@ -208,18 +208,12 @@ fn map_download_task(row: &Row) -> rusqlite::Result<DownloadTaskRecord> {
         completed_at: row.get(10)?,
         target_dir: row.get::<_, Option<String>>(11)?.unwrap_or_default(),
         file_name: row.get::<_, Option<String>>(12)?.unwrap_or_default(),
-        overwrite: row
-            .get::<_, Option<i64>>(13)?
-            .unwrap_or(0)
-            != 0,
+        overwrite: row.get::<_, Option<i64>>(13)?.unwrap_or(0) != 0,
         saved_path: row.get(14)?,
         size_label: row.get(15)?,
         bytes_downloaded: row.get(16)?,
         etag: row.get(17)?,
-        can_resume: row
-            .get::<_, Option<i64>>(18)?
-            .unwrap_or(0)
-            != 0,
+        can_resume: row.get::<_, Option<i64>>(18)?.unwrap_or(0) != 0,
         error_message: row.get(19)?,
         updated_at_millis: row.get(20)?,
     })

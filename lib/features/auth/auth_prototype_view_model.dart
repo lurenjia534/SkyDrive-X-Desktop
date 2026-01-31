@@ -48,7 +48,7 @@ class AuthPrototypeViewModel extends Notifier<AuthPrototypeUiState> {
   }
 
   /// 触发登录流程（由 UI 提交 Client ID 调用）。
-  Future<void> signInWithClientId(String clientId) {
+  Future<bool> signInWithClientId(String clientId) {
     return ref
         .read(authSessionCoordinatorProvider.notifier)
         .authenticateWithClientId(clientId);

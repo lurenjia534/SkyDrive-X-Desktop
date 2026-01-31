@@ -1,12 +1,11 @@
-use crate::{api::auth::refresh_tokens, db};
+use crate::api::auth::{load_active_auth_record, refresh_tokens};
 use reqwest::{blocking::Client, redirect::Policy};
 use std::time::Duration;
 
 /// 负责提供 Graph API 所需的 access token。
 /// 该函数只做简单封装，调用方不需要直接操作数据库。
 pub(crate) fn current_access_token() -> Result<String, String> {
-    let record = db::load_auth_record()?
-        .ok_or_else(|| "no authentication state available; please sign in".to_string())?;
+    let record = load_active_auth_record()?;
     Ok(record.access_token)
 }
 
@@ -15,9 +14,7 @@ pub(crate) fn refresh_access_token() -> Result<String, String> {
     Ok(refreshed.tokens.access_token)
 }
 
-pub(crate) fn send_with_refresh<F>(
-    mut send: F,
-) -> Result<reqwest::blocking::Response, String>
+pub(crate) fn send_with_refresh<F>(mut send: F) -> Result<reqwest::blocking::Response, String>
 where
     F: FnMut(&str) -> Result<reqwest::blocking::Response, String>,
 {

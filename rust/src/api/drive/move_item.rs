@@ -19,10 +19,18 @@ pub fn move_drive_item(
     if item_id.trim().is_empty() {
         return Err("drive item id is required".to_string());
     }
-    if new_parent_id.as_ref().map(|s| s.trim().is_empty()).unwrap_or(false) {
+    if new_parent_id
+        .as_ref()
+        .map(|s| s.trim().is_empty())
+        .unwrap_or(false)
+    {
         return Err("new parent id cannot be empty string".to_string());
     }
-    if new_name.as_ref().map(|s| s.trim().is_empty()).unwrap_or(false) {
+    if new_name
+        .as_ref()
+        .map(|s| s.trim().is_empty())
+        .unwrap_or(false)
+    {
         return Err("new name cannot be empty string".to_string());
     }
 
@@ -60,8 +68,9 @@ pub fn move_drive_item(
         ));
     }
 
-    let payload: MoveResponse =
-        response.json().map_err(|e| format!("failed to parse move response: {e}"))?;
+    let payload: MoveResponse = response
+        .json()
+        .map_err(|e| format!("failed to parse move response: {e}"))?;
 
     Ok(DriveItemSummary {
         id: payload.id,

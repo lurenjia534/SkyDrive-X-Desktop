@@ -1,22 +1,30 @@
 use super::auth::{
-    persist_tokens, AuthTokens, StoredAuthState, TokenResponse, AUTHORITY, TOKEN_PATH,
+    load_active_auth_record, persist_tokens_for_account, AuthTokens, StoredAuthState,
+    TokenResponse, AUTHORITY, TOKEN_PATH,
 };
-use crate::db;
 use reqwest::blocking::Client;
 use std::time::Duration;
 
 #[flutter_rust_bridge::frb]
 pub fn refresh_tokens() -> Result<StoredAuthState, String> {
-    let record = db::load_auth_record()?.ok_or_else(|| {
-        "no persisted authentication state found; please sign in first".to_string()
-    })?;
+    let record = load_active_auth_record()?;
     let refresh_token = record.refresh_token.clone().ok_or_else(|| {
         "no refresh token available; interactive authentication required".to_string()
     })?;
 
     let tokens = exchange_refresh_token(&record.client_id, &refresh_token, record.scope.clone())?;
 
-    persist_tokens(&record.client_id, &tokens)
+    let account_id = record.account_id;
+    let client_id = record.client_id;
+    let display_name = record.display_name;
+    let user_principal_name = record.user_principal_name;
+    persist_tokens_for_account(
+        &account_id,
+        &client_id,
+        &tokens,
+        display_name,
+        user_principal_name,
+    )
 }
 
 fn exchange_refresh_token(

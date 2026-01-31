@@ -95,10 +95,7 @@ pub fn create_share_link(
     if response.status().as_u16() == 403 {
         return Err("Graph API 拒绝了分享请求，可能已被租户策略禁用".to_string());
     }
-    eprintln!(
-        "[share] createLink response status: {}",
-        response.status()
-    );
+    eprintln!("[share] createLink response status: {}", response.status());
     if !response.status().is_success() {
         return Err(format!(
             "graph api returned HTTP {} while creating share link",
@@ -111,8 +108,8 @@ pub fn create_share_link(
         .map_err(|e| format!("failed to read createLink response body: {e}"))?;
     eprintln!("[share] createLink raw response: {raw}");
 
-    let payload: PermissionDto =
-        serde_json::from_str(&raw).map_err(|e| format!("failed to parse createLink response: {e}"))?;
+    let payload: PermissionDto = serde_json::from_str(&raw)
+        .map_err(|e| format!("failed to parse createLink response: {e}"))?;
 
     ShareLinkResult::try_from(payload)
 }

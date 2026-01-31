@@ -11,8 +11,8 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
 };
-use std::time::Duration;
 use std::thread;
+use std::time::Duration;
 
 /// Graph 简易上传的官方上限（单请求），超出需走分片上传。
 const SIMPLE_UPLOAD_MAX_BYTES: usize = 250 * 1024 * 1024;
@@ -124,9 +124,7 @@ pub(crate) fn create_upload_session(
 
     let conflict = if overwrite { "replace" } else { "rename" };
     let url = if let Some(id) = encoded_parent {
-        format!(
-            "{GRAPH_BASE}/me/drive/items/{id}:/{encoded_name}:/createUploadSession"
-        )
+        format!("{GRAPH_BASE}/me/drive/items/{id}:/{encoded_name}:/createUploadSession")
     } else {
         format!("{GRAPH_BASE}/me/drive/root:/{encoded_name}:/createUploadSession")
     };
@@ -203,8 +201,8 @@ pub(crate) fn upload_large_file_with_hooks(
     mut progress: Option<Box<dyn FnMut(u64, Option<u64>) + Send>>,
 ) -> Result<DriveItemSummary, String> {
     align_chunk_size()?;
-    let mut file = File::open(local_path)
-        .map_err(|e| format!("failed to open file for upload: {e}"))?;
+    let mut file =
+        File::open(local_path).map_err(|e| format!("failed to open file for upload: {e}"))?;
     file.seek(SeekFrom::Start(offset))
         .map_err(|e| format!("failed to seek file: {e}"))?;
     let mut reader = BufReader::new(file);
@@ -239,15 +237,11 @@ pub(crate) fn upload_large_file_with_hooks(
         buffer.truncate(n);
         let end = offset + buffer.len() as u64 - 1;
 
-        match upload_chunk_with_retry(
-            &upload_url,
-            offset,
-            end,
-            total_size,
-            buffer,
-            &cancel_flag,
-        ) {
-            Ok(UploadChunkResult::Continue { next_offset, expire_at: _ }) => {
+        match upload_chunk_with_retry(&upload_url, offset, end, total_size, buffer, &cancel_flag) {
+            Ok(UploadChunkResult::Continue {
+                next_offset,
+                expire_at: _,
+            }) => {
                 offset = next_offset;
                 if let Some(cb) = progress.as_mut() {
                     cb(offset, Some(total_size));
@@ -319,9 +313,9 @@ fn upload_chunk_with_retry(
                 let status = r.status();
                 if status.is_success() {
                     if status.as_u16() == 201 || status.as_u16() == 200 {
-                        let dto: DriveItemUploadResponse = r
-                            .json()
-                            .map_err(|e| UploadChunkError::Fatal(format!("parse final response failed: {e}")))?;
+                        let dto: DriveItemUploadResponse = r.json().map_err(|e| {
+                            UploadChunkError::Fatal(format!("parse final response failed: {e}"))
+                        })?;
                         return Ok(UploadChunkResult::Completed { item: dto.into() });
                     }
                     // 202 Accepted: 继续上传
@@ -339,20 +333,34 @@ fn upload_chunk_with_retry(
                     });
                 }
                 match status.as_u16() {
-                    401 => return Err(UploadChunkError::Fatal("access token rejected by Graph API; please sign in again".to_string())),
+                    401 => {
+                        return Err(UploadChunkError::Fatal(
+                            "access token rejected by Graph API; please sign in again".to_string(),
+                        ))
+                    }
                     404 => return Err(UploadChunkError::SessionExpired),
-                    409 => return Err(UploadChunkError::Fatal("upload conflict: target file changed, please retry".to_string())),
-                    412 => return Err(UploadChunkError::Fatal("precondition failed while uploading; retry later".to_string())),
+                    409 => {
+                        return Err(UploadChunkError::Fatal(
+                            "upload conflict: target file changed, please retry".to_string(),
+                        ))
+                    }
+                    412 => {
+                        return Err(UploadChunkError::Fatal(
+                            "precondition failed while uploading; retry later".to_string(),
+                        ))
+                    }
                     416 => {
                         if let Ok(status) = get_upload_session_status(upload_url) {
-                            let next = parse_next_start(&status.next_expected_ranges).unwrap_or(start);
+                            let next =
+                                parse_next_start(&status.next_expected_ranges).unwrap_or(start);
                             return Err(UploadChunkError::RangeMismatch(next));
                         } else {
                             return Err(UploadChunkError::RangeMismatch(start));
                         }
                     }
                     _ => {
-                        last_err = format!("graph returned HTTP {status} for chunk {content_range}");
+                        last_err =
+                            format!("graph returned HTTP {status} for chunk {content_range}");
                     }
                 }
             }
@@ -405,12 +413,11 @@ fn parse_upload_session_response(
     let text = resp
         .text()
         .map_err(|e| format!("{context}: read body failed: {e} (http {status})"))?;
-    let parsed: UploadSessionResponse = serde_json::from_str::<UploadSessionResponse>(&text).map_err(|e| {
-        let snippet: String = text.chars().take(500).collect();
-        format!(
-            "{context}: parse failed ({e}) http {status}, body_snippet={snippet}"
-        )
-    })?;
+    let parsed: UploadSessionResponse = serde_json::from_str::<UploadSessionResponse>(&text)
+        .map_err(|e| {
+            let snippet: String = text.chars().take(500).collect();
+            format!("{context}: parse failed ({e}) http {status}, body_snippet={snippet}")
+        })?;
     if require_upload_url && parsed.upload_url.is_none() {
         return Err(format!(
             "{context}: missing uploadUrl field http {status}, body_snippet={}",

@@ -58,8 +58,7 @@ impl DownloadStore for SqliteDownloadStore {
         if let Err(err) = clear_finished_download_tasks(
             status_to_i64(&DownloadStatus::InProgress),
             status_to_i64(&DownloadStatus::Paused),
-        )
-        {
+        ) {
             eprintln!("[download-store] failed to clear download history: {err}");
         }
     }

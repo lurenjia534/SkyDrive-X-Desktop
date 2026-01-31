@@ -51,6 +51,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  AuthAccount dco_decode_auth_account(dynamic raw);
+
+  @protected
   AuthTokens dco_decode_auth_tokens(dynamic raw);
 
   @protected
@@ -133,6 +136,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<AuthAccount> dco_decode_list_auth_account(dynamic raw);
 
   @protected
   List<DownloadTask> dco_decode_list_download_task(dynamic raw);
@@ -228,6 +234,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
+  AuthAccount sse_decode_auth_account(SseDeserializer deserializer);
+
+  @protected
   AuthTokens sse_decode_auth_tokens(SseDeserializer deserializer);
 
   @protected
@@ -320,6 +329,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<AuthAccount> sse_decode_list_auth_account(SseDeserializer deserializer);
 
   @protected
   List<DownloadTask> sse_decode_list_download_task(
@@ -428,6 +440,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_auth_account(AuthAccount self, SseSerializer serializer);
 
   @protected
   void sse_encode_auth_tokens(AuthTokens self, SseSerializer serializer);
@@ -548,6 +563,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_auth_account(
+    List<AuthAccount> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_download_task(

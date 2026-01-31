@@ -33,9 +33,11 @@ class AuthPrototypePage extends ConsumerWidget {
       onToggleTheme: () => unawaited(
         ref.read(appThemeProvider.notifier).toggleManualMode(),
       ),
-      onSignIn: (clientId) => ref
-          .read(authPrototypeViewModelProvider.notifier)
-          .signInWithClientId(clientId),
+      onSignIn: (clientId) async {
+        await ref
+            .read(authPrototypeViewModelProvider.notifier)
+            .signInWithClientId(clientId);
+      },
     );
   }
 }

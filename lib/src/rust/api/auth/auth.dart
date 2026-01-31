@@ -6,9 +6,9 @@
 import '../../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `build_authorize_url`, `build_code_challenge`, `build_code_verifier`, `convert_expires_in`, `exchange_code_for_tokens`, `normalize_scopes`, `persist_tokens`, `random_string`, `record_from_tokens`, `send_browser_response`, `wait_for_code`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `TokenResponse`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`, `fmt`, `from`
+// These functions are ignored because they are not marked as `pub`: `account_id_from_claims`, `build_authorize_url`, `build_code_challenge`, `build_code_verifier`, `convert_expires_in`, `decode_id_token`, `exchange_code_for_tokens`, `get_active_account_id`, `load_active_auth_record`, `migrate_legacy_auth_record`, `normalize_scopes`, `persist_tokens_for_account`, `persist_tokens`, `random_string`, `record_from_tokens`, `resolve_account_identity`, `resolve_active_auth_record`, `send_browser_response`, `set_active_account_id`, `wait_for_code`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `AccountIdentity`, `IdTokenClaims`, `TokenResponse`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
 
 Future<AuthTokens> authenticateViaBrowser({
   required String clientId,
@@ -29,8 +29,60 @@ Future<void> persistAuthState({
 Future<StoredAuthState?> loadPersistedAuthState() =>
     RustLib.instance.api.crateApiAuthAuthLoadPersistedAuthState();
 
+Future<List<AuthAccount>> listAuthAccounts() =>
+    RustLib.instance.api.crateApiAuthAuthListAuthAccounts();
+
+Future<StoredAuthState> setActiveAuthAccount({required String accountId}) =>
+    RustLib.instance.api.crateApiAuthAuthSetActiveAuthAccount(
+      accountId: accountId,
+    );
+
+Future<StoredAuthState?> removeAuthAccount({required String accountId}) =>
+    RustLib.instance.api.crateApiAuthAuthRemoveAuthAccount(
+      accountId: accountId,
+    );
+
 Future<void> clearPersistedAuthState() =>
     RustLib.instance.api.crateApiAuthAuthClearPersistedAuthState();
+
+class AuthAccount {
+  final String accountId;
+  final String clientId;
+  final String? displayName;
+  final String? userPrincipalName;
+  final PlatformInt64 updatedAtMillis;
+  final bool isActive;
+
+  const AuthAccount({
+    required this.accountId,
+    required this.clientId,
+    this.displayName,
+    this.userPrincipalName,
+    required this.updatedAtMillis,
+    required this.isActive,
+  });
+
+  @override
+  int get hashCode =>
+      accountId.hashCode ^
+      clientId.hashCode ^
+      displayName.hashCode ^
+      userPrincipalName.hashCode ^
+      updatedAtMillis.hashCode ^
+      isActive.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AuthAccount &&
+          runtimeType == other.runtimeType &&
+          accountId == other.accountId &&
+          clientId == other.clientId &&
+          displayName == other.displayName &&
+          userPrincipalName == other.userPrincipalName &&
+          updatedAtMillis == other.updatedAtMillis &&
+          isActive == other.isActive;
+}
 
 class AuthTokens {
   final String accessToken;
@@ -72,11 +124,13 @@ class AuthTokens {
 }
 
 class StoredAuthState {
+  final String accountId;
   final String clientId;
   final AuthTokens tokens;
   final PlatformInt64 updatedAtMillis;
 
   const StoredAuthState({
+    required this.accountId,
     required this.clientId,
     required this.tokens,
     required this.updatedAtMillis,
@@ -84,13 +138,17 @@ class StoredAuthState {
 
   @override
   int get hashCode =>
-      clientId.hashCode ^ tokens.hashCode ^ updatedAtMillis.hashCode;
+      accountId.hashCode ^
+      clientId.hashCode ^
+      tokens.hashCode ^
+      updatedAtMillis.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is StoredAuthState &&
           runtimeType == other.runtimeType &&
+          accountId == other.accountId &&
           clientId == other.clientId &&
           tokens == other.tokens &&
           updatedAtMillis == other.updatedAtMillis;

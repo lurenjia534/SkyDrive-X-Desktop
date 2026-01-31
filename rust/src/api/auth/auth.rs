@@ -1,4 +1,4 @@
-use crate::db::{self, AuthTokenRecord};
+use crate::db::{self, AuthAccountRecord};
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::time::Duration;
@@ -8,12 +8,15 @@ use base64::Engine as _;
 use rand::{distr::Alphanumeric, Rng};
 use reqwest::blocking::Client;
 use serde::Deserialize;
+use serde_json::from_slice as from_json_slice;
 use sha2::{Digest, Sha256};
 use url::Url;
+use uuid::Uuid;
 
 pub(super) const AUTHORITY: &str = "https://login.microsoftonline.com/common/oauth2/v2.0";
 const AUTHORIZE_PATH: &str = "authorize";
 pub(super) const TOKEN_PATH: &str = "token";
+const ACTIVE_ACCOUNT_KEY: &str = "active_account_id";
 
 #[flutter_rust_bridge::frb]
 #[derive(Clone, Debug)]
@@ -29,14 +32,27 @@ pub struct AuthTokens {
 #[flutter_rust_bridge::frb]
 #[derive(Clone, Debug)]
 pub struct StoredAuthState {
+    pub account_id: String,
     pub client_id: String,
     pub tokens: AuthTokens,
     pub updated_at_millis: i64,
 }
 
-impl From<AuthTokenRecord> for StoredAuthState {
-    fn from(record: AuthTokenRecord) -> Self {
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug)]
+pub struct AuthAccount {
+    pub account_id: String,
+    pub client_id: String,
+    pub display_name: Option<String>,
+    pub user_principal_name: Option<String>,
+    pub updated_at_millis: i64,
+    pub is_active: bool,
+}
+
+impl From<AuthAccountRecord> for StoredAuthState {
+    fn from(record: AuthAccountRecord) -> Self {
         StoredAuthState {
+            account_id: record.account_id,
             client_id: record.client_id,
             tokens: AuthTokens {
                 access_token: record.access_token,
@@ -61,6 +77,24 @@ pub(super) struct TokenResponse {
     pub(super) token_type: Option<String>,
     pub(super) error: Option<String>,
     pub(super) error_description: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct IdTokenClaims {
+    oid: Option<String>,
+    sub: Option<String>,
+    tid: Option<String>,
+    name: Option<String>,
+    preferred_username: Option<String>,
+    upn: Option<String>,
+    email: Option<String>,
+}
+
+#[derive(Debug)]
+struct AccountIdentity {
+    account_id: String,
+    display_name: Option<String>,
+    user_principal_name: Option<String>,
 }
 
 #[flutter_rust_bridge::frb]
@@ -216,12 +250,79 @@ pub fn persist_auth_state(client_id: String, tokens: AuthTokens) -> Result<(), S
 
 #[flutter_rust_bridge::frb]
 pub fn load_persisted_auth_state() -> Result<Option<StoredAuthState>, String> {
-    db::load_auth_record().map(|record| record.map(StoredAuthState::from))
+    if let Some(record) = resolve_active_auth_record()? {
+        return Ok(Some(StoredAuthState::from(record)));
+    }
+    if let Some(migrated) = migrate_legacy_auth_record()? {
+        return Ok(Some(migrated));
+    }
+    Ok(None)
+}
+
+#[flutter_rust_bridge::frb]
+pub fn list_auth_accounts() -> Result<Vec<AuthAccount>, String> {
+    let records = db::list_auth_accounts()?;
+    let mut active_id = get_active_account_id()?;
+    let has_active = active_id
+        .as_ref()
+        .map(|id| records.iter().any(|record| record.account_id == *id))
+        .unwrap_or(false);
+    if !has_active {
+        if let Some(record) = records.first() {
+            set_active_account_id(Some(&record.account_id))?;
+            active_id = Some(record.account_id.clone());
+        } else {
+            set_active_account_id(None)?;
+            active_id = None;
+        }
+    }
+    let active_ref = active_id.as_deref();
+    Ok(records
+        .into_iter()
+        .map(|record| {
+            let account_id = record.account_id;
+            let is_active = active_ref == Some(account_id.as_str());
+            AuthAccount {
+                account_id,
+                client_id: record.client_id,
+                display_name: record.display_name,
+                user_principal_name: record.user_principal_name,
+                updated_at_millis: record.updated_at_millis,
+                is_active,
+            }
+        })
+        .collect())
+}
+
+#[flutter_rust_bridge::frb]
+pub fn set_active_auth_account(account_id: String) -> Result<StoredAuthState, String> {
+    let record = db::load_auth_account(&account_id)?
+        .ok_or_else(|| "target account does not exist".to_string())?;
+    set_active_account_id(Some(&record.account_id))?;
+    Ok(StoredAuthState::from(record))
+}
+
+#[flutter_rust_bridge::frb]
+pub fn remove_auth_account(account_id: String) -> Result<Option<StoredAuthState>, String> {
+    let active_id = get_active_account_id()?;
+    db::delete_auth_account(&account_id)?;
+    if active_id.as_deref() == Some(&account_id) {
+        let records = db::list_auth_accounts()?;
+        if let Some(next) = records.first() {
+            set_active_account_id(Some(&next.account_id))?;
+            return Ok(Some(StoredAuthState::from(next.clone())));
+        }
+        set_active_account_id(None)?;
+        return Ok(None);
+    }
+    Ok(None)
 }
 
 #[flutter_rust_bridge::frb]
 pub fn clear_persisted_auth_state() -> Result<(), String> {
-    db::clear_auth_record()
+    db::clear_auth_accounts()?;
+    db::clear_legacy_auth_record()?;
+    set_active_account_id(None)
 }
 
 fn wait_for_code(listener: TcpListener) -> Result<(String, Option<String>), String> {
@@ -312,17 +413,113 @@ fn random_string(len: usize) -> String {
         .collect()
 }
 
+fn get_active_account_id() -> Result<Option<String>, String> {
+    let stored = db::get_setting(ACTIVE_ACCOUNT_KEY)?;
+    Ok(stored.and_then(|value| {
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    }))
+}
+
+fn set_active_account_id(account_id: Option<&str>) -> Result<(), String> {
+    match account_id {
+        Some(value) => db::set_setting(ACTIVE_ACCOUNT_KEY, value),
+        None => db::set_setting(ACTIVE_ACCOUNT_KEY, ""),
+    }
+}
+
+fn resolve_active_auth_record() -> Result<Option<AuthAccountRecord>, String> {
+    if let Some(active_id) = get_active_account_id()? {
+        if let Some(record) = db::load_auth_account(&active_id)? {
+            return Ok(Some(record));
+        }
+    }
+    let records = db::list_auth_accounts()?;
+    if let Some(record) = records.first() {
+        set_active_account_id(Some(&record.account_id))?;
+        return Ok(Some(record.clone()));
+    }
+    Ok(None)
+}
+
+pub(crate) fn load_active_auth_record() -> Result<AuthAccountRecord, String> {
+    if let Some(record) = resolve_active_auth_record()? {
+        return Ok(record);
+    }
+    if migrate_legacy_auth_record()?.is_some() {
+        if let Some(record) = resolve_active_auth_record()? {
+            return Ok(record);
+        }
+    }
+    Err("no authentication state available; please sign in".to_string())
+}
+
+fn migrate_legacy_auth_record() -> Result<Option<StoredAuthState>, String> {
+    let legacy = db::load_legacy_auth_record()?;
+    let record = match legacy {
+        Some(record) => record,
+        None => return Ok(None),
+    };
+    let tokens = AuthTokens {
+        access_token: record.access_token,
+        refresh_token: record.refresh_token,
+        expires_in: convert_expires_in(record.expires_in_seconds),
+        id_token: record.id_token,
+        scope: record.scope,
+        token_type: record.token_type,
+    };
+    let state = persist_tokens(&record.client_id, &tokens)?;
+    db::clear_legacy_auth_record()?;
+    Ok(Some(state))
+}
+
 pub(super) fn persist_tokens(
     client_id: &str,
     tokens: &AuthTokens,
 ) -> Result<StoredAuthState, String> {
-    let record = record_from_tokens(client_id, tokens);
-    db::upsert_auth_record(&record)?;
+    let identity = resolve_account_identity(tokens);
+    persist_tokens_for_account(
+        &identity.account_id,
+        client_id,
+        tokens,
+        identity.display_name,
+        identity.user_principal_name,
+    )
+}
+
+pub(super) fn persist_tokens_for_account(
+    account_id: &str,
+    client_id: &str,
+    tokens: &AuthTokens,
+    display_name: Option<String>,
+    user_principal_name: Option<String>,
+) -> Result<StoredAuthState, String> {
+    let record = record_from_tokens(
+        account_id,
+        client_id,
+        tokens,
+        display_name,
+        user_principal_name,
+    );
+    db::upsert_auth_account(&record)?;
+    set_active_account_id(Some(&record.account_id))?;
     Ok(StoredAuthState::from(record))
 }
 
-pub(super) fn record_from_tokens(client_id: &str, tokens: &AuthTokens) -> AuthTokenRecord {
-    db::build_record(
+pub(super) fn record_from_tokens(
+    account_id: &str,
+    client_id: &str,
+    tokens: &AuthTokens,
+    display_name: Option<String>,
+    user_principal_name: Option<String>,
+) -> AuthAccountRecord {
+    let identity = resolve_account_identity(tokens);
+    db::build_account_record(
+        account_id.to_string(),
         client_id.to_string(),
         tokens.access_token.clone(),
         tokens.refresh_token.clone(),
@@ -330,9 +527,67 @@ pub(super) fn record_from_tokens(client_id: &str, tokens: &AuthTokens) -> AuthTo
         tokens.id_token.clone(),
         tokens.scope.clone(),
         tokens.token_type.clone(),
+        display_name.or(identity.display_name),
+        user_principal_name.or(identity.user_principal_name),
     )
 }
 
 fn convert_expires_in(value: Option<i64>) -> Option<u64> {
     value.and_then(|v| if v < 0 { None } else { Some(v as u64) })
+}
+
+fn resolve_account_identity(tokens: &AuthTokens) -> AccountIdentity {
+    if let Some(id_token) = tokens.id_token.as_deref() {
+        if let Some(claims) = decode_id_token(id_token) {
+            let account_id = account_id_from_claims(&claims);
+            let display_name = claims.name.clone();
+            let user_principal_name = claims
+                .preferred_username
+                .clone()
+                .or(claims.upn.clone())
+                .or(claims.email.clone());
+            if let Some(account_id) = account_id {
+                return AccountIdentity {
+                    account_id,
+                    display_name,
+                    user_principal_name,
+                };
+            }
+        }
+    }
+    AccountIdentity {
+        account_id: Uuid::new_v4().to_string(),
+        display_name: None,
+        user_principal_name: None,
+    }
+}
+
+fn decode_id_token(id_token: &str) -> Option<IdTokenClaims> {
+    let mut parts = id_token.split('.');
+    let _header = parts.next()?;
+    let payload = parts.next()?;
+    let decoded = URL_SAFE_NO_PAD.decode(payload.as_bytes()).ok()?;
+    from_json_slice(&decoded).ok()
+}
+
+fn account_id_from_claims(claims: &IdTokenClaims) -> Option<String> {
+    if let (Some(tid), Some(oid)) = (claims.tid.as_ref(), claims.oid.as_ref()) {
+        return Some(format!("{tid}:{oid}"));
+    }
+    if let Some(oid) = claims.oid.as_ref() {
+        return Some(oid.clone());
+    }
+    if let (Some(tid), Some(sub)) = (claims.tid.as_ref(), claims.sub.as_ref()) {
+        return Some(format!("{tid}:{sub}"));
+    }
+    if let Some(sub) = claims.sub.as_ref() {
+        return Some(sub.clone());
+    }
+    if let Some(username) = claims.preferred_username.as_ref() {
+        return Some(username.clone());
+    }
+    if let Some(upn) = claims.upn.as_ref() {
+        return Some(upn.clone());
+    }
+    claims.email.as_ref().cloned()
 }

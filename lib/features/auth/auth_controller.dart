@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/src/rust/api/auth/auth.dart' as auth_api;
 import 'package:skydrivex/src/rust/api/auth/refresh.dart' as auth_refresh;
 
 typedef AuthTokens = auth_api.AuthTokens;
+typedef AuthAccount = auth_api.AuthAccount;
 
 const List<String> kRequiredAuthScopes = [
   'Files.ReadWrite',
@@ -24,6 +27,8 @@ class AuthState {
     this.isAuthenticating = false,
     this.updatedAtMillis,
     this.expiresInSeconds,
+    this.accounts = const [],
+    this.isLoadingAccounts = false,
   });
 
   final AuthTokens? tokens;
@@ -31,6 +36,8 @@ class AuthState {
   final bool isAuthenticating;
   final int? updatedAtMillis;
   final int? expiresInSeconds;
+  final List<AuthAccount> accounts;
+  final bool isLoadingAccounts;
 
   /// 便捷的状态拷贝方法，可同时清空旧 token/错误。
   AuthState copyWith({
@@ -39,6 +46,8 @@ class AuthState {
     String? error,
     int? updatedAtMillis,
     int? expiresInSeconds,
+    List<AuthAccount>? accounts,
+    bool? isLoadingAccounts,
     bool clearTokens = false,
     bool clearError = false,
   }) {
@@ -49,6 +58,8 @@ class AuthState {
       updatedAtMillis: clearTokens ? null : (updatedAtMillis ?? this.updatedAtMillis),
       expiresInSeconds:
           clearTokens ? null : (expiresInSeconds ?? this.expiresInSeconds),
+      accounts: accounts ?? this.accounts,
+      isLoadingAccounts: isLoadingAccounts ?? this.isLoadingAccounts,
     );
   }
 }
@@ -61,29 +72,36 @@ class AuthController extends Notifier<AuthState> {
   // 每次认证/刷新递增，用于丢弃过期的延迟更新。
   int _refreshGeneration = 0;
   Future<bool>? _refreshInFlight;
+  bool _hasLoadedAccounts = false;
 
   @override
-  AuthState build() => const AuthState();
+  AuthState build() {
+    if (!_hasLoadedAccounts) {
+      _hasLoadedAccounts = true;
+      Future.microtask(_loadAccounts);
+    }
+    return const AuthState();
+  }
 
   void setValidationError(String message) {
     state = state.copyWith(
       error: message,
-      clearTokens: true,
       isAuthenticating: false,
     );
   }
 
   /// 主动触发浏览器认证流程。
-  Future<void> authenticate({
+  Future<bool> authenticate({
     required String clientId,
     required List<String> scopes,
   }) async {
     _refreshGeneration++;
     _pendingRefreshState = null;
+    final preserveTokens = state.tokens != null;
     state = state.copyWith(
       isAuthenticating: true,
       clearError: true,
-      clearTokens: true,
+      clearTokens: !preserveTokens,
     );
 
     try {
@@ -91,14 +109,14 @@ class AuthController extends Notifier<AuthState> {
         clientId: clientId,
         scopes: scopes,
       );
-      if (!ref.mounted) return;
+      if (!ref.mounted) return false;
       auth_api.StoredAuthState? persisted;
       try {
         persisted = await auth_api.loadPersistedAuthState();
       } catch (_) {
         persisted = null;
       }
-      if (!ref.mounted) return;
+      if (!ref.mounted) return false;
       final nextTokens = persisted?.tokens ?? tokens;
       state = state.copyWith(
         tokens: nextTokens,
@@ -108,9 +126,15 @@ class AuthController extends Notifier<AuthState> {
         expiresInSeconds: _expiresInSeconds(nextTokens),
         clearError: true,
       );
+      unawaited(_loadAccounts());
+      return true;
     } catch (err) {
-      if (!ref.mounted) return;
-      state = state.copyWith(error: err.toString(), clearTokens: true);
+      if (!ref.mounted) return false;
+      state = state.copyWith(
+        error: err.toString(),
+        clearTokens: !preserveTokens,
+      );
+      return false;
     } finally {
       if (ref.mounted) {
         state = state.copyWith(isAuthenticating: false);
@@ -119,13 +143,13 @@ class AuthController extends Notifier<AuthState> {
   }
 
   /// UI 调用入口：先校验 Client ID，再走统一的 authenticate 逻辑。
-  Future<void> authenticateWithClientId(String clientId) async {
+  Future<bool> authenticateWithClientId(String clientId) async {
     final trimmed = clientId.trim();
     if (trimmed.isEmpty) {
       setValidationError('Client ID is required.');
-      return;
+      return false;
     }
-    await authenticate(clientId: trimmed, scopes: kRequiredAuthScopes);
+    return authenticate(clientId: trimmed, scopes: kRequiredAuthScopes);
   }
 
   /// 尝试从本地持久化状态恢复 Session。
@@ -142,13 +166,54 @@ class AuthController extends Notifier<AuthState> {
     if (persisted == null) return;
     _refreshGeneration++;
     _pendingRefreshState = null;
-    state = state.copyWith(
-      tokens: persisted.tokens,
-      updatedAtMillis: persisted.updatedAtMillis.toInt(),
-      expiresInSeconds: _expiresInSeconds(persisted.tokens),
-      clearError: true,
-      isAuthenticating: false,
-    );
+    _applyStoredState(persisted);
+    unawaited(_loadAccounts());
+  }
+
+  Future<void> refreshAccounts() => _loadAccounts();
+
+  Future<bool> setActiveAccount(String accountId) async {
+    state = state.copyWith(isAuthenticating: true, clearError: true);
+    try {
+      final nextState = await auth_api.setActiveAuthAccount(
+        accountId: accountId,
+      );
+      if (!ref.mounted) return false;
+      _refreshGeneration++;
+      _pendingRefreshState = null;
+      _applyStoredState(nextState);
+      unawaited(_loadAccounts());
+      return true;
+    } catch (err) {
+      if (!ref.mounted) return false;
+      state = state.copyWith(error: err.toString(), isAuthenticating: false);
+      return false;
+    }
+  }
+
+  Future<bool> removeAccount(String accountId, {required bool wasActive}) async {
+    state = state.copyWith(isAuthenticating: true, clearError: true);
+    try {
+      final nextState = await auth_api.removeAuthAccount(
+        accountId: accountId,
+      );
+      if (!ref.mounted) return false;
+      if (nextState != null) {
+        _refreshGeneration++;
+        _pendingRefreshState = null;
+        _applyStoredState(nextState);
+      } else if (wasActive) {
+        state = state.copyWith(clearTokens: true, isAuthenticating: false);
+      } else {
+        state = state.copyWith(isAuthenticating: false);
+      }
+      await _loadAccounts();
+      return true;
+    } catch (err) {
+      if (!ref.mounted) return false;
+      state = state.copyWith(error: err.toString(), isAuthenticating: false);
+      return false;
+    }
   }
 
   /// 静默刷新 token，返回是否刷新成功。
@@ -208,6 +273,29 @@ class AuthController extends Notifier<AuthState> {
       }
       return false;
     }
+  }
+
+  Future<void> _loadAccounts() async {
+    if (!ref.mounted) return;
+    state = state.copyWith(isLoadingAccounts: true);
+    try {
+      final accounts = await auth_api.listAuthAccounts();
+      if (!ref.mounted) return;
+      state = state.copyWith(accounts: accounts, isLoadingAccounts: false);
+    } catch (err) {
+      if (!ref.mounted) return;
+      state = state.copyWith(error: err.toString(), isLoadingAccounts: false);
+    }
+  }
+
+  void _applyStoredState(auth_api.StoredAuthState persisted) {
+    state = state.copyWith(
+      tokens: persisted.tokens,
+      updatedAtMillis: persisted.updatedAtMillis.toInt(),
+      expiresInSeconds: _expiresInSeconds(persisted.tokens),
+      clearError: true,
+      isAuthenticating: false,
+    );
   }
 
   int? _expiresInSeconds(AuthTokens tokens) {

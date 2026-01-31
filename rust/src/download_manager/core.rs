@@ -1,5 +1,6 @@
 use super::storage::{DownloadStore, SqliteDownloadStore};
 use crate::api::drive::{
+    current_access_token,
     download::{
         fetch_download_metadata, prepare_destination, sanitize_file_name, stream_download,
         DownloadError, CONTROL_FLAG_CANCEL, CONTROL_FLAG_NONE, CONTROL_FLAG_PAUSE,
@@ -8,7 +9,6 @@ use crate::api::drive::{
         DownloadProgressUpdate, DownloadQueueState, DownloadStatus, DownloadTask,
         DriveDownloadResult, DriveItemSummary,
     },
-    current_access_token,
     GRAPH_BASE,
 };
 use crate::settings::download_concurrency::{
@@ -38,7 +38,6 @@ const PROGRESS_PERSIST_BYTES_THRESHOLD: u64 = 256 * 1024;
 const PROGRESS_PERSIST_INTERVAL: Duration = Duration::from_secs(1);
 /// 速度采样的最小时间间隔，避免因为瞬时回调过于密集而产生虚高速率。
 const SPEED_SAMPLE_MIN_INTERVAL: Duration = Duration::from_millis(300);
-
 
 /// 核心状态机：负责调度、下载线程管理、速度计算与事件广播。
 #[derive(Clone)]
@@ -206,7 +205,12 @@ impl DownloadManager {
                 Some(Box::new(move |downloaded: u64, expected: Option<u64>| {
                     progress_manager.report_progress(&progress_item_id, downloaded, expected);
                 }));
-            let result = manager.execute_download(&task, resume_from, &mut progress_callback, control_token.clone());
+            let result = manager.execute_download(
+                &task,
+                resume_from,
+                &mut progress_callback,
+                control_token.clone(),
+            );
             match result {
                 Ok(done) => manager.mark_success(&item_id, done),
                 Err(DownloadError::Paused) => manager.mark_paused(&item_id),
@@ -263,19 +267,16 @@ impl DownloadManager {
                 Some(file_name.clone()),
             );
         } else {
-            self.update_task_metadata(
-                &task.item.id,
-                metadata.size,
-                metadata.etag.clone(),
-                None,
-            );
+            self.update_task_metadata(&task.item.id, metadata.size, metadata.etag.clone(), None);
         }
 
         let fallback_token = if metadata.download_url.is_none() {
-            Some(current_access_token().map_err(|message| DownloadError::Failed {
-                message,
-                recoverable: false,
-            })?)
+            Some(
+                current_access_token().map_err(|message| DownloadError::Failed {
+                    message,
+                    recoverable: false,
+                })?,
+            )
         } else {
             None
         };
@@ -295,8 +296,8 @@ impl DownloadManager {
             if raw_destination.exists() {
                 if let Ok(meta) = fs::metadata(&raw_destination) {
                     if meta.len() == expected {
-                        let temp_path = Path::new(&task.target_dir)
-                            .join(format!("{}.part", file_name));
+                        let temp_path =
+                            Path::new(&task.target_dir).join(format!("{}.part", file_name));
                         let _ = fs::remove_file(&temp_path);
                         let saved_path = raw_destination
                             .canonicalize()
@@ -549,11 +550,7 @@ impl DownloadManager {
         let mut resume_from: Option<u64> = None;
 
         let mut state = self.state.lock().unwrap_or_else(|p| p.into_inner());
-        if let Some(position) = state
-            .active
-            .iter()
-            .position(|task| task.item.id == item_id)
-        {
+        if let Some(position) = state.active.iter().position(|task| task.item.id == item_id) {
             let mut task = state.active[position].clone();
             if task.status != DownloadStatus::Paused {
                 return Err("任务当前无法继续下载".to_string());
@@ -568,10 +565,7 @@ impl DownloadManager {
             state.active[position] = task.clone();
             resume_from = Some(task.bytes_downloaded.unwrap_or(0));
             task_to_resume = Some(task);
-        } else if let Some(position) = state
-            .failed
-            .iter()
-            .position(|task| task.item.id == item_id)
+        } else if let Some(position) = state.failed.iter().position(|task| task.item.id == item_id)
         {
             let mut task = state.failed.remove(position);
             if !restart && !task.can_resume {
@@ -615,13 +609,16 @@ impl DownloadManager {
         if task.target_dir.trim().is_empty() || task.file_name.trim().is_empty() {
             return Ok(());
         }
-        let temp_path = Path::new(&task.target_dir)
-            .join(format!("{}.part", task.file_name));
+        let temp_path = Path::new(&task.target_dir).join(format!("{}.part", task.file_name));
         if !temp_path.exists() {
             return Ok(());
         }
-        fs::remove_file(&temp_path)
-            .map_err(|e| format!("failed to remove temp file {}: {e}", temp_path.to_string_lossy()))
+        fs::remove_file(&temp_path).map_err(|e| {
+            format!(
+                "failed to remove temp file {}: {e}",
+                temp_path.to_string_lossy()
+            )
+        })
     }
 
     /// 仅清理失败任务，保留 active/completed 队列，方便 UI 一键清扫失败记录。

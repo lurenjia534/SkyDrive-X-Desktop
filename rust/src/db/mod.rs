@@ -10,7 +10,9 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub use auth::{
-    build_record, clear_auth_record, load_auth_record, upsert_auth_record, AuthTokenRecord,
+    build_account_record, clear_auth_accounts, clear_legacy_auth_record, delete_auth_account,
+    list_auth_accounts, load_auth_account, load_legacy_auth_record, upsert_auth_account,
+    AuthAccountRecord, LegacyAuthTokenRecord,
 };
 pub use download_tasks::{
     clear_finished_download_tasks, delete_download_task, load_download_tasks, upsert_download_task,
@@ -23,7 +25,7 @@ pub use upload_tasks::{
 };
 
 /// DB 模块：提供统一的 sqlite 连接管理，同时 re-export 领域级 API。
-/// 目前支持 auth_tokens 与 download_tasks，两者共用同一数据库文件，便于部署。
+/// 目前支持 auth_accounts 与 download_tasks，两者共用同一数据库文件，便于部署。
 
 const QUALIFIER: &str = "com";
 const ORGANIZATION: &str = "Skydrivex";
@@ -67,8 +69,8 @@ fn open_connection() -> StorageResult<Connection> {
 }
 
 fn apply_migrations(conn: &Connection) -> StorageResult<()> {
-    conn.execute_batch(auth::AUTH_TABLE_SCHEMA)
-        .map_err(|e| format!("failed to initialize auth_tokens schema: {e}"))?;
+    conn.execute_batch(auth::AUTH_ACCOUNTS_TABLE_SCHEMA)
+        .map_err(|e| format!("failed to initialize auth_accounts schema: {e}"))?;
     conn.execute_batch(download_tasks::DOWNLOAD_TABLE_SCHEMA)
         .map_err(|e| format!("failed to initialize download_tasks schema: {e}"))?;
     conn.execute_batch(upload_tasks::UPLOAD_TABLE_SCHEMA)

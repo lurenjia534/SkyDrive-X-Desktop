@@ -69,7 +69,7 @@ class AuthSessionCoordinator extends Notifier<AuthSessionState>
   }
 
   /// UI 提交 Client ID 时调用，委托给 AuthController。
-  Future<void> authenticateWithClientId(String clientId) {
+  Future<bool> authenticateWithClientId(String clientId) {
     return ref
         .read(authControllerProvider.notifier)
         .authenticateWithClientId(clientId);

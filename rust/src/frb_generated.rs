@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1812367365;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -311869333;
 
 // Section: executor
 
@@ -1002,6 +1002,38 @@ fn wire__crate__api__simple__init_app_impl(
         },
     )
 }
+fn wire__crate__api__auth__auth__list_auth_accounts_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "list_auth_accounts",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::auth::auth::list_auth_accounts()?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__drive__list__list_drive_children_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1215,6 +1247,39 @@ fn wire__crate__api__auth__refresh__refresh_tokens_impl(
         },
     )
 }
+fn wire__crate__api__auth__auth__remove_auth_account_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "remove_auth_account",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_account_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::auth::auth::remove_auth_account(api_account_id)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__drive__download_manager__remove_download_task_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1353,6 +1418,40 @@ fn wire__crate__api__drive__download_manager__resume_download_task_impl(
                         api_item_id,
                         api_restart,
                     )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__auth__auth__set_active_auth_account_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_active_auth_account",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_account_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::auth::auth::set_active_auth_account(api_account_id)?;
                     Ok(output_ok)
                 })())
             }
@@ -1688,6 +1787,26 @@ impl SseDecode for String {
     }
 }
 
+impl SseDecode for crate::api::auth::auth::AuthAccount {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_accountId = <String>::sse_decode(deserializer);
+        let mut var_clientId = <String>::sse_decode(deserializer);
+        let mut var_displayName = <Option<String>>::sse_decode(deserializer);
+        let mut var_userPrincipalName = <Option<String>>::sse_decode(deserializer);
+        let mut var_updatedAtMillis = <i64>::sse_decode(deserializer);
+        let mut var_isActive = <bool>::sse_decode(deserializer);
+        return crate::api::auth::auth::AuthAccount {
+            account_id: var_accountId,
+            client_id: var_clientId,
+            display_name: var_displayName,
+            user_principal_name: var_userPrincipalName,
+            updated_at_millis: var_updatedAtMillis,
+            is_active: var_isActive,
+        };
+    }
+}
+
 impl SseDecode for crate::api::auth::auth::AuthTokens {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1998,6 +2117,20 @@ impl SseDecode for Vec<String> {
     }
 }
 
+impl SseDecode for Vec<crate::api::auth::auth::AuthAccount> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::auth::auth::AuthAccount>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::drive::models::DownloadTask> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2200,10 +2333,12 @@ impl SseDecode for crate::api::drive::models::ShareLinkResult {
 impl SseDecode for crate::api::auth::auth::StoredAuthState {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_accountId = <String>::sse_decode(deserializer);
         let mut var_clientId = <String>::sse_decode(deserializer);
         let mut var_tokens = <crate::api::auth::auth::AuthTokens>::sse_decode(deserializer);
         let mut var_updatedAtMillis = <i64>::sse_decode(deserializer);
         return crate::api::auth::auth::StoredAuthState {
+            account_id: var_accountId,
             client_id: var_clientId,
             tokens: var_tokens,
             updated_at_millis: var_updatedAtMillis,
@@ -2478,103 +2613,118 @@ fn pde_ffi_dispatcher_primary_impl(
             data_len,
         ),
         27 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        28 => wire__crate__api__drive__list__list_drive_children_impl(
+        28 => {
+            wire__crate__api__auth__auth__list_auth_accounts_impl(port, ptr, rust_vec_len, data_len)
+        }
+        29 => wire__crate__api__drive__list__list_drive_children_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        29 => wire__crate__api__auth__auth__load_persisted_auth_state_impl(
+        30 => wire__crate__api__auth__auth__load_persisted_auth_state_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        30 => wire__crate__api__drive__move_item__move_drive_item_impl(
+        31 => wire__crate__api__drive__move_item__move_drive_item_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        31 => wire__crate__api__drive__download_manager__pause_download_task_impl(
+        32 => wire__crate__api__drive__download_manager__pause_download_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        32 => {
+        33 => {
             wire__crate__api__auth__auth__persist_auth_state_impl(port, ptr, rust_vec_len, data_len)
         }
-        33 => {
+        34 => {
             wire__crate__api__auth__refresh__refresh_tokens_impl(port, ptr, rust_vec_len, data_len)
         }
-        34 => wire__crate__api__drive__download_manager__remove_download_task_impl(
+        35 => wire__crate__api__auth__auth__remove_auth_account_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        35 => wire__crate__api__drive__upload_manager__remove_upload_task_impl(
+        36 => wire__crate__api__drive__download_manager__remove_download_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        36 => wire__crate__api__drive__rename__rename_drive_item_impl(
+        37 => wire__crate__api__drive__upload_manager__remove_upload_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        37 => wire__crate__api__drive__download_manager__resume_download_task_impl(
+        38 => wire__crate__api__drive__rename__rename_drive_item_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        38 => wire__crate__api__settings__download_concurrency__set_download_concurrency_impl(
+        39 => wire__crate__api__drive__download_manager__resume_download_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        39 => wire__crate__api__settings__download_directory__set_download_directory_impl(
+        40 => wire__crate__api__auth__auth__set_active_auth_account_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        40 => wire__crate__api__settings__theme__set_theme_follow_system_impl(
+        41 => wire__crate__api__settings__download_concurrency__set_download_concurrency_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        41 => wire__crate__api__settings__theme__set_theme_manual_mode_impl(
+        42 => wire__crate__api__settings__download_directory__set_download_directory_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        42 => wire__crate__api__drive__upload_manager__upload_progress_stream_impl(
+        43 => wire__crate__api__settings__theme__set_theme_follow_system_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        43 => wire__crate__api__drive__upload_manager__upload_queue_state_impl(
+        44 => wire__crate__api__settings__theme__set_theme_manual_mode_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        44 => wire__crate__api__drive__models__upload_queue_state_default_impl(
+        45 => wire__crate__api__drive__upload_manager__upload_progress_stream_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        45 => wire__crate__api__drive__upload__upload_small_file_impl(
+        46 => wire__crate__api__drive__upload_manager__upload_queue_state_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        47 => wire__crate__api__drive__models__upload_queue_state_default_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        48 => wire__crate__api__drive__upload__upload_small_file_impl(
             port,
             ptr,
             rust_vec_len,
@@ -2599,6 +2749,31 @@ fn pde_ffi_dispatcher_sync_impl(
 
 // Section: rust2dart
 
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::auth::auth::AuthAccount {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.account_id.into_into_dart().into_dart(),
+            self.client_id.into_into_dart().into_dart(),
+            self.display_name.into_into_dart().into_dart(),
+            self.user_principal_name.into_into_dart().into_dart(),
+            self.updated_at_millis.into_into_dart().into_dart(),
+            self.is_active.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::auth::auth::AuthAccount
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::auth::auth::AuthAccount>
+    for crate::api::auth::auth::AuthAccount
+{
+    fn into_into_dart(self) -> crate::api::auth::auth::AuthAccount {
+        self
+    }
+}
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::auth::auth::AuthTokens {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
@@ -2997,6 +3172,7 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::drive::models::ShareLinkResul
 impl flutter_rust_bridge::IntoDart for crate::api::auth::auth::StoredAuthState {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
+            self.account_id.into_into_dart().into_dart(),
             self.client_id.into_into_dart().into_dart(),
             self.tokens.into_into_dart().into_dart(),
             self.updated_at_millis.into_into_dart().into_dart(),
@@ -3152,6 +3328,18 @@ impl SseEncode for String {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <Vec<u8>>::sse_encode(self.into_bytes(), serializer);
+    }
+}
+
+impl SseEncode for crate::api::auth::auth::AuthAccount {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.account_id, serializer);
+        <String>::sse_encode(self.client_id, serializer);
+        <Option<String>>::sse_encode(self.display_name, serializer);
+        <Option<String>>::sse_encode(self.user_principal_name, serializer);
+        <i64>::sse_encode(self.updated_at_millis, serializer);
+        <bool>::sse_encode(self.is_active, serializer);
     }
 }
 
@@ -3379,6 +3567,16 @@ impl SseEncode for Vec<String> {
     }
 }
 
+impl SseEncode for Vec<crate::api::auth::auth::AuthAccount> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::auth::auth::AuthAccount>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::drive::models::DownloadTask> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3536,6 +3734,7 @@ impl SseEncode for crate::api::drive::models::ShareLinkResult {
 impl SseEncode for crate::api::auth::auth::StoredAuthState {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.account_id, serializer);
         <String>::sse_encode(self.client_id, serializer);
         <crate::api::auth::auth::AuthTokens>::sse_encode(self.tokens, serializer);
         <i64>::sse_encode(self.updated_at_millis, serializer);

@@ -1,5 +1,7 @@
 use super::{
-    client::{build_blocking_client, current_access_token, refresh_access_token, send_with_refresh},
+    client::{
+        build_blocking_client, current_access_token, refresh_access_token, send_with_refresh,
+    },
     models::DriveDownloadResult,
     GRAPH_BASE,
 };
@@ -123,10 +125,12 @@ fn download_drive_item_internal(
     let mut attempts = 0;
     let bytes_downloaded = loop {
         let fallback_token = if metadata.download_url.is_none() {
-            Some(current_access_token().map_err(|message| DownloadError::Failed {
-                message,
-                recoverable: false,
-            })?)
+            Some(
+                current_access_token().map_err(|message| DownloadError::Failed {
+                    message,
+                    recoverable: false,
+                })?,
+            )
         } else {
             None
         };
@@ -149,11 +153,10 @@ fn download_drive_item_internal(
         };
 
         let result = {
-            let mut progress_guard =
-                progress_cell.as_ref().map(|cell| cell.borrow_mut());
-            let progress_ref = progress_guard.as_deref_mut().map(|cb| {
-                cb.as_mut() as &mut (dyn FnMut(u64, Option<u64>) + Send)
-            });
+            let mut progress_guard = progress_cell.as_ref().map(|cell| cell.borrow_mut());
+            let progress_ref = progress_guard
+                .as_deref_mut()
+                .map(|cb| cb.as_mut() as &mut (dyn FnMut(u64, Option<u64>) + Send));
             stream_download(
                 &download_endpoint,
                 bearer_token,
@@ -197,7 +200,9 @@ fn download_drive_item_internal(
     })
 }
 
-pub(crate) fn fetch_download_metadata(item_id: &str) -> Result<DriveItemDownloadDto, DownloadError> {
+pub(crate) fn fetch_download_metadata(
+    item_id: &str,
+) -> Result<DriveItemDownloadDto, DownloadError> {
     // 单次请求只关心必要字段，避免传输冗余信息。
     let client = build_blocking_client(Duration::from_secs(30)).map_err(|message| {
         DownloadError::Failed {
@@ -378,11 +383,12 @@ fn stream_download_internal<'a>(
     control_flag: Option<&Arc<AtomicU8>>,
     allow_refresh: bool,
 ) -> Result<u64, DownloadError> {
-    let client =
-        build_blocking_client(Duration::from_secs(600)).map_err(|message| DownloadError::Failed {
+    let client = build_blocking_client(Duration::from_secs(600)).map_err(|message| {
+        DownloadError::Failed {
             message,
             recoverable: true,
-        })?;
+        }
+    })?;
     let temp_path = PathBuf::from(format!("{}.part", destination.to_string_lossy()));
 
     let mut start_from = 0u64;
@@ -416,12 +422,10 @@ fn stream_download_internal<'a>(
     if start_from > 0 {
         request = request.header("Range", format!("bytes={start_from}-"));
     }
-    let mut response = request
-        .send()
-        .map_err(|e| DownloadError::Failed {
-            message: format!("failed to download file: {e}"),
-            recoverable: true,
-        })?;
+    let mut response = request.send().map_err(|e| DownloadError::Failed {
+        message: format!("failed to download file: {e}"),
+        recoverable: true,
+    })?;
 
     let status = response.status();
     if status.as_u16() == 401 {
@@ -540,12 +544,10 @@ fn stream_download_internal<'a>(
             cb(downloaded, total_size);
         }
     }
-    writer
-        .flush()
-        .map_err(|e| DownloadError::Failed {
-            message: format!("failed to flush file: {e}"),
-            recoverable: false,
-        })?;
+    writer.flush().map_err(|e| DownloadError::Failed {
+        message: format!("failed to flush file: {e}"),
+        recoverable: false,
+    })?;
 
     fs::rename(&temp_path, destination).map_err(|e| DownloadError::Failed {
         message: format!(

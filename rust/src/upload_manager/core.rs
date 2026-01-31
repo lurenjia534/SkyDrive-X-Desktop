@@ -233,8 +233,8 @@ impl UploadManager {
         if file_name.trim().is_empty() {
             return Err("file name is required".to_string());
         }
-        let file_meta = std::fs::metadata(&local_path)
-            .map_err(|e| format!("无法读取文件大小: {e}"))?;
+        let file_meta =
+            std::fs::metadata(&local_path).map_err(|e| format!("无法读取文件大小: {e}"))?;
         let total_size = file_meta.len();
         let task_id = Uuid::new_v4().to_string();
         let mut state = self.state.lock().unwrap_or_else(|p| p.into_inner());
