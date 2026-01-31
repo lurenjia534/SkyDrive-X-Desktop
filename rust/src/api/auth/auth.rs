@@ -319,6 +319,18 @@ pub fn remove_auth_account(account_id: String) -> Result<Option<StoredAuthState>
 }
 
 #[flutter_rust_bridge::frb]
+pub fn update_auth_account_profile(
+    account_id: String,
+    display_name: Option<String>,
+    user_principal_name: Option<String>,
+) -> Result<(), String> {
+    let name = normalize_optional(display_name);
+    let upn = normalize_optional(user_principal_name);
+    db::update_auth_account_profile(&account_id, name.as_deref(), upn.as_deref())?;
+    Ok(())
+}
+
+#[flutter_rust_bridge::frb]
 pub fn clear_persisted_auth_state() -> Result<(), String> {
     db::clear_auth_accounts()?;
     db::clear_legacy_auth_record()?;
@@ -560,6 +572,17 @@ fn resolve_account_identity(tokens: &AuthTokens) -> AccountIdentity {
         display_name: None,
         user_principal_name: None,
     }
+}
+
+fn normalize_optional(value: Option<String>) -> Option<String> {
+    value.and_then(|raw| {
+        let trimmed = raw.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    })
 }
 
 fn decode_id_token(id_token: &str) -> Option<IdTokenClaims> {

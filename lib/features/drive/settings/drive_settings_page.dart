@@ -11,7 +11,9 @@ import 'package:skydrivex/features/drive/providers/drive_download_manager.dart';
 import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
 import 'package:skydrivex/features/drive/providers/drive_info_provider.dart';
 import 'package:skydrivex/features/drive/providers/drive_upload_manager.dart';
+import 'package:skydrivex/features/drive/services/drive_info_service.dart';
 import 'package:skydrivex/features/drive/utils/drive_item_formatters.dart';
+import 'package:skydrivex/src/rust/api/auth/auth.dart' as auth_api;
 import 'package:skydrivex/theme/app_theme_provider.dart';
 import 'package:skydrivex/utils/download_destination.dart';
 import 'package:skydrivex/utils/toast.dart';
@@ -633,6 +635,9 @@ class _AccountManagementTileState extends ConsumerState<_AccountManagementTile> 
   String? _busyAccountId;
   _AccountAction? _busyAction;
   late final TextEditingController _addAccountController;
+  final DriveInfoService _driveInfoService = const DriveInfoService();
+  String? _hydratedAccountId;
+  bool _isHydratingProfile = false;
 
   @override
   void initState() {
@@ -719,6 +724,7 @@ class _AccountManagementTileState extends ConsumerState<_AccountManagementTile> 
       showToast(context, message);
       return;
     }
+    await _hydrateActiveAccountProfile();
     _invalidateDriveCaches();
   }
 
@@ -742,6 +748,7 @@ class _AccountManagementTileState extends ConsumerState<_AccountManagementTile> 
       showToast(context, message);
       return;
     }
+    await _hydrateActiveAccountProfile(accountId: account.accountId);
     _invalidateDriveCaches();
   }
 
@@ -815,6 +822,47 @@ class _AccountManagementTileState extends ConsumerState<_AccountManagementTile> 
     }
   }
 
+  Future<void> _hydrateActiveAccountProfile({String? accountId}) async {
+    if (_isHydratingProfile) return;
+    final activeId = accountId ?? await _loadActiveAccountId();
+    if (activeId == null) return;
+    if (_hydratedAccountId == activeId) return;
+    _isHydratingProfile = true;
+    try {
+      final info = await _driveInfoService.fetchOverview();
+      final owner = info.owner;
+      final name = owner?.displayName;
+      final upn = owner?.userPrincipalName;
+      if (name == null && upn == null) return;
+      await auth_api.updateAuthAccountProfile(
+        accountId: activeId,
+        displayName: name,
+        userPrincipalName: upn,
+      );
+      _hydratedAccountId = activeId;
+      await ref.read(authControllerProvider.notifier).refreshAccounts();
+    } catch (_) {
+      // Best-effort; ignore profile hydration failures.
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isHydratingProfile = false;
+        });
+      } else {
+        _isHydratingProfile = false;
+      }
+    }
+  }
+
+  Future<String?> _loadActiveAccountId() async {
+    try {
+      final persisted = await auth_api.loadPersistedAuthState();
+      return persisted?.accountId;
+    } catch (_) {
+      return null;
+    }
+  }
+
   void _invalidateDriveCaches() {
     ref.invalidate(driveHomeControllerProvider);
     ref.invalidate(driveInfoProvider);
@@ -839,6 +887,20 @@ class _AccountManagementTileState extends ConsumerState<_AccountManagementTile> 
     final accounts = authState.accounts;
     final isBusy =
         authState.isAuthenticating || authState.isLoadingAccounts;
+    final activeAccount = accounts
+        .cast<AuthAccount?>()
+        .firstWhere((account) => account?.isActive ?? false, orElse: () => null);
+    if (activeAccount != null &&
+        (activeAccount!.displayName == null ||
+            activeAccount.userPrincipalName == null) &&
+        !_isHydratingProfile &&
+        !isBusy) {
+      Future.microtask(() {
+        if (mounted) {
+          _hydrateActiveAccountProfile(accountId: activeAccount.accountId);
+        }
+      });
+    }
 
     Widget body;
     if (authState.isLoadingAccounts) {

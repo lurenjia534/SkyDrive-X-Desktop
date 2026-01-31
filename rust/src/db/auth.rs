@@ -192,6 +192,27 @@ pub fn delete_auth_account(account_id: &str) -> StorageResult<()> {
     })
 }
 
+pub fn update_auth_account_profile(
+    account_id: &str,
+    display_name: Option<&str>,
+    user_principal_name: Option<&str>,
+) -> StorageResult<()> {
+    if display_name.is_none() && user_principal_name.is_none() {
+        return Ok(());
+    }
+    with_connection(|conn| {
+        conn.execute(
+            "UPDATE auth_accounts
+             SET display_name = COALESCE(?, display_name),
+                 user_principal_name = COALESCE(?, user_principal_name)
+             WHERE account_id = ?",
+            params![display_name, user_principal_name, account_id],
+        )
+        .map_err(|e| format!("failed to update auth account profile: {e}"))?;
+        Ok(())
+    })
+}
+
 pub fn clear_auth_accounts() -> StorageResult<()> {
     with_connection(|conn| {
         conn.execute("DELETE FROM auth_accounts", [])

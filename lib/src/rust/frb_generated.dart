@@ -84,7 +84,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -311869333;
+  int get rustContentHash => 919273938;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -263,6 +263,12 @@ abstract class RustLibApi extends BaseApi {
 
   Future<String> crateApiSettingsThemeSetThemeManualMode({
     required String mode,
+  });
+
+  Future<void> crateApiAuthAuthUpdateAuthAccountProfile({
+    required String accountId,
+    String? displayName,
+    String? userPrincipalName,
   });
 
   Stream<UploadProgressUpdate> crateApiDriveUploadManagerUploadProgressStream();
@@ -1743,6 +1749,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<void> crateApiAuthAuthUpdateAuthAccountProfile({
+    required String accountId,
+    String? displayName,
+    String? userPrincipalName,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(accountId, serializer);
+          sse_encode_opt_String(displayName, serializer);
+          sse_encode_opt_String(userPrincipalName, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 45,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAuthAuthUpdateAuthAccountProfileConstMeta,
+        argValues: [accountId, displayName, userPrincipalName],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAuthAuthUpdateAuthAccountProfileConstMeta =>
+      const TaskConstMeta(
+        debugName: "update_auth_account_profile",
+        argNames: ["accountId", "displayName", "userPrincipalName"],
+      );
+
+  @override
   Stream<UploadProgressUpdate>
   crateApiDriveUploadManagerUploadProgressStream() {
     final streamSink = RustStreamSink<UploadProgressUpdate>();
@@ -1758,7 +1801,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 45,
+              funcId: 46,
               port: port_,
             );
           },
@@ -1790,7 +1833,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 46,
+            funcId: 47,
             port: port_,
           );
         },
@@ -1817,7 +1860,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 47,
+            funcId: 48,
             port: port_,
           );
         },
@@ -1856,7 +1899,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 48,
+            funcId: 49,
             port: port_,
           );
         },

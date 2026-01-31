@@ -6,7 +6,7 @@
 import '../../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `account_id_from_claims`, `build_authorize_url`, `build_code_challenge`, `build_code_verifier`, `convert_expires_in`, `decode_id_token`, `exchange_code_for_tokens`, `get_active_account_id`, `load_active_auth_record`, `migrate_legacy_auth_record`, `normalize_scopes`, `persist_tokens_for_account`, `persist_tokens`, `random_string`, `record_from_tokens`, `resolve_account_identity`, `resolve_active_auth_record`, `send_browser_response`, `set_active_account_id`, `wait_for_code`
+// These functions are ignored because they are not marked as `pub`: `account_id_from_claims`, `build_authorize_url`, `build_code_challenge`, `build_code_verifier`, `convert_expires_in`, `decode_id_token`, `exchange_code_for_tokens`, `get_active_account_id`, `load_active_auth_record`, `migrate_legacy_auth_record`, `normalize_optional`, `normalize_scopes`, `persist_tokens_for_account`, `persist_tokens`, `random_string`, `record_from_tokens`, `resolve_account_identity`, `resolve_active_auth_record`, `send_browser_response`, `set_active_account_id`, `wait_for_code`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `AccountIdentity`, `IdTokenClaims`, `TokenResponse`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`
 
@@ -41,6 +41,16 @@ Future<StoredAuthState?> removeAuthAccount({required String accountId}) =>
     RustLib.instance.api.crateApiAuthAuthRemoveAuthAccount(
       accountId: accountId,
     );
+
+Future<void> updateAuthAccountProfile({
+  required String accountId,
+  String? displayName,
+  String? userPrincipalName,
+}) => RustLib.instance.api.crateApiAuthAuthUpdateAuthAccountProfile(
+  accountId: accountId,
+  displayName: displayName,
+  userPrincipalName: userPrincipalName,
+);
 
 Future<void> clearPersistedAuthState() =>
     RustLib.instance.api.crateApiAuthAuthClearPersistedAuthState();

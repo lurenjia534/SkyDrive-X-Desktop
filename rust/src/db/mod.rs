@@ -11,8 +11,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 pub use auth::{
     build_account_record, clear_auth_accounts, clear_legacy_auth_record, delete_auth_account,
-    list_auth_accounts, load_auth_account, load_legacy_auth_record, upsert_auth_account,
-    AuthAccountRecord, LegacyAuthTokenRecord,
+    list_auth_accounts, load_auth_account, load_legacy_auth_record, update_auth_account_profile,
+    upsert_auth_account, AuthAccountRecord, LegacyAuthTokenRecord,
 };
 pub use download_tasks::{
     clear_finished_download_tasks, delete_download_task, load_download_tasks, upsert_download_task,
