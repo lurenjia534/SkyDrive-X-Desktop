@@ -22,11 +22,11 @@ jobs:
     steps:
       # 拉取代码
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # 缓存 Rust 构建产物与依赖
       - name: Cache Cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo
@@ -38,7 +38,7 @@ jobs:
 
       # 缓存 Dart/Flutter 依赖
       - name: Cache Pub packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.PUB_CACHE }}
           key: ${{ runner.os }}-pub-${{ hashFiles('pubspec.lock') }}
@@ -190,7 +190,7 @@ jobs:
       # 上传 Linux 构建工件
       - name: Upload artifact
         if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: skydrivex-linux
           path: dist/skydrivex-linux-${{ steps.app_version.outputs.version }}.tar.gz
@@ -198,7 +198,7 @@ jobs:
       # 上传 Windows 构建工件
       - name: Upload artifact
         if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: skydrivex-windows
           path: dist/skydrivex-windows-${{ steps.app_version.outputs.version }}.zip
@@ -207,7 +207,7 @@ jobs:
       # 上传 macOS 构建工件
       - name: Upload artifact
         if: matrix.os == 'macos-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: skydrivex-macos
           path: dist/skydrivex-macos-${{ steps.app_version.outputs.version }}.zip
@@ -221,7 +221,7 @@ jobs:
       contents: write
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: dist
 
