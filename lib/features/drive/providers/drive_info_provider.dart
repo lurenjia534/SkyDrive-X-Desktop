@@ -9,11 +9,10 @@ final driveInfoProvider =
 );
 
 class DriveInfoController extends AsyncNotifier<drive_models.DriveInfo> {
-  late final DriveInfoService _service;
+  final DriveInfoService _service = const DriveInfoService();
 
   @override
   Future<drive_models.DriveInfo> build() async {
-    _service = const DriveInfoService();
     return _fetch();
   }
 

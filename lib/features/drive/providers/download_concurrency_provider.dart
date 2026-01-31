@@ -8,11 +8,10 @@ final downloadConcurrencyProvider =
 );
 
 class DownloadConcurrencyController extends AsyncNotifier<int> {
-  late final DownloadConcurrencyService _service;
+  final DownloadConcurrencyService _service = const DownloadConcurrencyService();
 
   @override
   Future<int> build() async {
-    _service = const DownloadConcurrencyService();
     return _fetch();
   }
 

@@ -7,11 +7,10 @@ final downloadDirectoryProvider = AsyncNotifierProvider.autoDispose<
 >(DownloadDirectoryController.new);
 
 class DownloadDirectoryController extends AsyncNotifier<String> {
-  late final DownloadDirectoryService _service;
+  final DownloadDirectoryService _service = const DownloadDirectoryService();
 
   @override
   Future<String> build() async {
-    _service = const DownloadDirectoryService();
     return _fetch();
   }
 

@@ -10,11 +10,10 @@ final driveMoveBrowserProvider =
     );
 
 class DriveMoveController extends Notifier<DriveMoveState> {
-  late final DriveMoveService _service;
+  final DriveMoveService _service = const DriveMoveService();
 
   @override
   DriveMoveState build() {
-    _service = const DriveMoveService();
     final initial = const DriveMoveState.initial();
     Future.microtask(
       () => _loadFolder(folderId: null, breadcrumbs: const []),

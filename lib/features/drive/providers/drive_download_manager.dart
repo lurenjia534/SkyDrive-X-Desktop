@@ -21,7 +21,7 @@ class DriveDownloadManager extends Notifier<drive_api.DownloadQueueState> {
   // 主更新路径改成 Stream 推送，轮询仅作为兜底机制即可。
   static const _pollInterval = Duration(seconds: 5);
 
-  late final DriveDownloadService _service;
+  final DriveDownloadService _service = const DriveDownloadService();
   Timer? _pollTimer;
   StreamSubscription<drive_api.DownloadProgressUpdate>? _progressSub;
   /// 缓存每个任务最近一次的速度估算，UI 读取即可得到实时速率。
@@ -34,7 +34,8 @@ class DriveDownloadManager extends Notifier<drive_api.DownloadQueueState> {
 
   @override
   drive_api.DownloadQueueState build() {
-    _service = const DriveDownloadService();
+    _pollTimer?.cancel();
+    _progressSub?.cancel();
     _startPolling();
     _subscribeProgressStream();
     ref.onDispose(() {
