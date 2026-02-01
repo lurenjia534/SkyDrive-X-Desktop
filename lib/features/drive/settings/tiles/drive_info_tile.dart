@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:skydrivex/features/drive/providers/drive_info_provider.dart';
+import 'package:skydrivex/features/drive/settings/widgets/settings_async_body.dart';
 import 'package:skydrivex/features/drive/settings/widgets/settings_card.dart';
 import 'package:skydrivex/features/drive/utils/drive_item_formatters.dart';
 
@@ -23,41 +24,8 @@ class DriveInfoTile extends ConsumerWidget {
       child: const Icon(FIcons.rotateCw, size: 16),
     );
 
-    Widget body;
-    if (state.isLoading) {
-      body = Center(
-        child: FCircularProgress.loader(
-          style: (style) => style.copyWith(
-            iconStyle: IconThemeData(color: colors.primary, size: 20),
-          ),
-        ),
-      );
-    } else if (state.hasError) {
-      body = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Unable to fetch OneDrive info',
-            style: typography.base.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            state.error.toString(),
-            style: typography.sm.copyWith(color: colors.error),
-          ),
-          const SizedBox(height: 12),
-          FButton(
-            onPress: () => ref.read(driveInfoProvider.notifier).refreshInfo(),
-            style: FButtonStyle.outline(),
-            prefix: const Icon(FIcons.rotateCcw, size: 16),
-            child: Text(
-              'Retry',
-              style: typography.sm.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      );
-    } else {
+    Widget content = const SizedBox.shrink();
+    if (state.hasValue) {
       final info = state.value!;
       final owner = info.owner;
       final ownerName =
@@ -74,7 +42,7 @@ class DriveInfoTile extends ConsumerWidget {
           ? (quota!.used!.toDouble() / quota.total!.toDouble())
           : null;
 
-      body = Column(
+      content = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -195,6 +163,15 @@ class DriveInfoTile extends ConsumerWidget {
         ],
       );
     }
+
+    final body = SettingsAsyncBody(
+      isLoading: state.isLoading,
+      error: state.hasError ? state.error : null,
+      errorTitle: 'Unable to fetch OneDrive info',
+      onRetry: () => ref.read(driveInfoProvider.notifier).refreshInfo(),
+      retryIcon: FIcons.rotateCcw,
+      child: content,
+    );
 
     return SettingsCard(padding: const EdgeInsets.all(24), child: body);
   }

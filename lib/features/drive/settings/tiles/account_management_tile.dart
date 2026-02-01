@@ -1,19 +1,10 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:skydrivex/features/auth/auth_controller.dart';
-import 'package:skydrivex/features/drive/providers/drive_download_manager.dart';
-import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
-import 'package:skydrivex/features/drive/providers/drive_info_provider.dart';
-import 'package:skydrivex/features/drive/providers/drive_upload_manager.dart';
-import 'package:skydrivex/features/drive/services/drive_info_service.dart';
+import 'package:skydrivex/features/drive/providers/account_management_controller.dart';
 import 'package:skydrivex/features/drive/settings/widgets/settings_card.dart';
-import 'package:skydrivex/src/rust/api/auth/auth.dart' as auth_api;
 import 'package:skydrivex/utils/toast.dart';
-
-enum _AccountAction { activate, remove }
 
 class AccountManagementTile extends ConsumerStatefulWidget {
   const AccountManagementTile();
@@ -24,12 +15,7 @@ class AccountManagementTile extends ConsumerStatefulWidget {
 }
 
 class _AccountManagementTileState extends ConsumerState<AccountManagementTile> {
-  String? _busyAccountId;
-  _AccountAction? _busyAction;
   late final TextEditingController _addAccountController;
-  final DriveInfoService _driveInfoService = const DriveInfoService();
-  String? _hydratedAccountId;
-  bool _isHydratingProfile = false;
 
   @override
   void initState() {
@@ -107,8 +93,8 @@ class _AccountManagementTileState extends ConsumerState<AccountManagementTile> {
       return;
     }
     final ok = await ref
-        .read(authControllerProvider.notifier)
-        .authenticateWithClientId(trimmed);
+        .read(accountManagementControllerProvider.notifier)
+        .addAccount(trimmed);
     if (!mounted) return;
     if (!ok) {
       final message =
@@ -116,36 +102,21 @@ class _AccountManagementTileState extends ConsumerState<AccountManagementTile> {
       showToast(context, message);
       return;
     }
-    await _hydrateActiveAccountProfile();
-    _invalidateDriveCaches();
   }
 
   Future<void> _activateAccount(AuthAccount account) async {
-    if (_busyAccountId != null) return;
-    setState(() {
-      _busyAccountId = account.accountId;
-      _busyAction = _AccountAction.activate;
-    });
     final ok = await ref
-        .read(authControllerProvider.notifier)
-        .setActiveAccount(account.accountId);
+        .read(accountManagementControllerProvider.notifier)
+        .activateAccount(account);
     if (!mounted) return;
-    setState(() {
-      _busyAccountId = null;
-      _busyAction = null;
-    });
     if (!ok) {
       final message =
           ref.read(authControllerProvider).error ?? 'Failed to switch account.';
       showToast(context, message);
-      return;
     }
-    await _hydrateActiveAccountProfile(accountId: account.accountId);
-    _invalidateDriveCaches();
   }
 
   Future<void> _removeAccount(AuthAccount account) async {
-    if (_busyAccountId != null) return;
     final confirmed = await showFDialog<bool>(
       context: context,
       barrierLabel: 'Remove account',
@@ -186,18 +157,10 @@ class _AccountManagementTileState extends ConsumerState<AccountManagementTile> {
       },
     );
     if (confirmed != true || !mounted) return;
-    setState(() {
-      _busyAccountId = account.accountId;
-      _busyAction = _AccountAction.remove;
-    });
     final ok = await ref
-        .read(authControllerProvider.notifier)
-        .removeAccount(account.accountId, wasActive: account.isActive);
+        .read(accountManagementControllerProvider.notifier)
+        .removeAccount(account);
     if (!mounted) return;
-    setState(() {
-      _busyAccountId = null;
-      _busyAction = null;
-    });
     if (!ok) {
       final message =
           ref.read(authControllerProvider).error ?? 'Failed to remove account.';
@@ -209,57 +172,6 @@ class _AccountManagementTileState extends ConsumerState<AccountManagementTile> {
       Navigator.of(context).pushNamedAndRemoveUntil('/auth', (_) => false);
       return;
     }
-    if (account.isActive) {
-      _invalidateDriveCaches();
-    }
-  }
-
-  Future<void> _hydrateActiveAccountProfile({String? accountId}) async {
-    if (_isHydratingProfile) return;
-    final activeId = accountId ?? await _loadActiveAccountId();
-    if (activeId == null) return;
-    if (_hydratedAccountId == activeId) return;
-    _isHydratingProfile = true;
-    try {
-      final info = await _driveInfoService.fetchOverview();
-      final owner = info.owner;
-      final name = owner?.displayName;
-      final upn = owner?.userPrincipalName;
-      if (name == null && upn == null) return;
-      await auth_api.updateAuthAccountProfile(
-        accountId: activeId,
-        displayName: name,
-        userPrincipalName: upn,
-      );
-      _hydratedAccountId = activeId;
-      await ref.read(authControllerProvider.notifier).refreshAccounts();
-    } catch (_) {
-      // Best-effort; ignore profile hydration failures.
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isHydratingProfile = false;
-        });
-      } else {
-        _isHydratingProfile = false;
-      }
-    }
-  }
-
-  Future<String?> _loadActiveAccountId() async {
-    try {
-      final persisted = await auth_api.loadPersistedAuthState();
-      return persisted?.accountId;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  void _invalidateDriveCaches() {
-    ref.invalidate(driveHomeControllerProvider);
-    ref.invalidate(driveInfoProvider);
-    ref.invalidate(driveDownloadManagerProvider);
-    ref.invalidate(driveUploadManagerProvider);
   }
 
   String _accountTitle(AuthAccount account) {
@@ -273,26 +185,16 @@ class _AccountManagementTileState extends ConsumerState<AccountManagementTile> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
+    final managementState = ref.watch(accountManagementControllerProvider);
+    final managementController =
+        ref.read(accountManagementControllerProvider.notifier);
     final theme = context.theme;
     final colors = theme.colors;
     final typography = theme.typography;
     final accounts = authState.accounts;
     final isBusy =
         authState.isAuthenticating || authState.isLoadingAccounts;
-    final activeAccount = accounts
-        .cast<AuthAccount?>()
-        .firstWhere((account) => account?.isActive ?? false, orElse: () => null);
-    if (activeAccount != null &&
-        (activeAccount!.displayName == null ||
-            activeAccount.userPrincipalName == null) &&
-        !_isHydratingProfile &&
-        !isBusy) {
-      Future.microtask(() {
-        if (mounted) {
-          _hydrateActiveAccountProfile(accountId: activeAccount.accountId);
-        }
-      });
-    }
+    managementController.ensureActiveProfileHydrated(authState);
 
     Widget body;
     if (authState.isLoadingAccounts) {
@@ -320,12 +222,14 @@ class _AccountManagementTileState extends ConsumerState<AccountManagementTile> {
       );
     } else {
       final items = accounts.map((account) {
-      final isActive = account.isActive;
-      final isRowBusy = _busyAccountId == account.accountId;
-      final isRemoving = isRowBusy && _busyAction == _AccountAction.remove;
-      final isSwitching = isRowBusy && _busyAction == _AccountAction.activate;
-      final subtitle = account.userPrincipalName ??
-          'Client ID: ${account.clientId}';
+        final isActive = account.isActive;
+        final isRowBusy = managementState.busyAccountId == account.accountId;
+        final isRemoving = isRowBusy &&
+            managementState.busyAction == AccountManagementAction.remove;
+        final isSwitching = isRowBusy &&
+            managementState.busyAction == AccountManagementAction.activate;
+        final subtitle = account.userPrincipalName ??
+            'Client ID: ${account.clientId}';
         return FItem(
           enabled: !isBusy && !isRowBusy,
           onPress: isActive || isBusy || isRowBusy

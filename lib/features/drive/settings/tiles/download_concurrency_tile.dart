@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:skydrivex/features/drive/providers/download_concurrency_provider.dart';
+import 'package:skydrivex/features/drive/settings/widgets/settings_async_body.dart';
 import 'package:skydrivex/features/drive/settings/widgets/settings_card.dart';
 import 'package:skydrivex/features/drive/settings/widgets/settings_card_header.dart';
 
@@ -27,44 +28,10 @@ class DownloadConcurrencyTile extends ConsumerWidget {
       child: const Icon(FIcons.refreshCcw, size: 16),
     );
 
-    Widget body;
-    if (state.isLoading) {
-      body = Center(
-        child: FCircularProgress.loader(
-          style: (style) => style.copyWith(
-            iconStyle: IconThemeData(color: colors.primary, size: 20),
-          ),
-        ),
-      );
-    } else if (state.hasError) {
-      body = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Unable to fetch download concurrency',
-            style: typography.base.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            state.error.toString(),
-            style: typography.sm.copyWith(color: colors.error),
-          ),
-          const SizedBox(height: 12),
-          FButton(
-            onPress: () =>
-                ref.read(downloadConcurrencyProvider.notifier).refreshLimit(),
-            style: FButtonStyle.outline(),
-            prefix: const Icon(FIcons.refreshCcw, size: 16),
-            child: Text(
-              'Retry',
-              style: typography.sm.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      );
-    } else {
+    Widget content = const SizedBox.shrink();
+    if (state.hasValue) {
       final value = state.value ?? _options.first;
-      body = LayoutBuilder(
+      content = LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 560;
           final accent = colors.primary.withValues(alpha: 0.12);
@@ -282,6 +249,16 @@ class DownloadConcurrencyTile extends ConsumerWidget {
         },
       );
     }
+
+    final body = SettingsAsyncBody(
+      isLoading: state.isLoading,
+      error: state.hasError ? state.error : null,
+      errorTitle: 'Unable to fetch download concurrency',
+      onRetry: () =>
+          ref.read(downloadConcurrencyProvider.notifier).refreshLimit(),
+      retryIcon: FIcons.refreshCcw,
+      child: content,
+    );
 
     return SettingsCard(
       child: Column(

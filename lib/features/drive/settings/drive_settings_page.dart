@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:skydrivex/features/drive/settings/drive_settings_tiles.dart';
-import 'package:skydrivex/features/drive/settings/widgets/settings_grid.dart';
+import 'package:skydrivex/features/drive/settings/sections/account_section.dart';
+import 'package:skydrivex/features/drive/settings/sections/downloads_section.dart';
+import 'package:skydrivex/features/drive/settings/sections/experience_section.dart';
 import 'package:skydrivex/features/drive/settings/widgets/settings_header.dart';
-import 'package:skydrivex/features/drive/settings/widgets/settings_section_title.dart';
 import 'package:skydrivex/theme/app_theme_provider.dart';
 
 class DriveSettingsPage extends ConsumerStatefulWidget {
@@ -48,52 +48,19 @@ class _DriveSettingsPageState extends ConsumerState<DriveSettingsPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const SettingsSectionTitle(
-                          title: 'Account & storage',
-                          subtitle: 'Manage OneDrive quota and account details.',
-                        ),
-                        const SizedBox(height: 16),
-                        const AccountManagementTile(),
-                        const SizedBox(height: 16),
-                        const DriveInfoTile(),
+                        const AccountSection(),
                         const SizedBox(height: 28),
-                        const SettingsSectionTitle(
-                          title: 'Experience',
-                          subtitle:
-                              'Personalize visuals and monitor sync status.',
-                        ),
-                        const SizedBox(height: 16),
-                        SettingsGrid(
-                          minTileWidth: 460,
-                          children: [
-                            ThemeSettingsTile(
-                              followSystem: themeState.followSystem,
-                              manualMode: themeState.manualMode,
-                              enabled: !themeLoading,
-                              onFollowSystemChanged: (value) =>
-                                  unawaited(
-                                    themeController.setFollowSystem(value),
-                                  ),
-                              onManualModeChanged: (mode) =>
-                                  unawaited(themeController.setManualMode(mode)),
-                            ),
-                            const SettingsSyncTile(),
-                          ],
+                        ExperienceSection(
+                          followSystem: themeState.followSystem,
+                          manualMode: themeState.manualMode,
+                          enabled: !themeLoading,
+                          onFollowSystemChanged: (value) =>
+                              unawaited(themeController.setFollowSystem(value)),
+                          onManualModeChanged: (mode) =>
+                              unawaited(themeController.setManualMode(mode)),
                         ),
                         const SizedBox(height: 28),
-                        const SettingsSectionTitle(
-                          title: 'Downloads',
-                          subtitle:
-                              'Control where files land and how many tasks run.',
-                        ),
-                        const SizedBox(height: 16),
-                        const SettingsGrid(
-                          minTileWidth: 460,
-                          children: [
-                            DownloadDirectoryTile(),
-                            DownloadConcurrencyTile(),
-                          ],
-                        ),
+                        const DownloadsSection(),
                       ],
                     ),
                   ),
