@@ -70,7 +70,7 @@ class AuthFormPanel extends StatelessWidget {
             textCapitalization: TextCapitalization.none,
             autocorrect: false,
             enableSuggestions: false,
-            prefixBuilder: (_, __, ___) => Padding(
+            prefixBuilder: (context, style, states) => Padding(
               padding: const EdgeInsets.only(left: 14, right: 10),
               child: Icon(
                 Icons.badge_outlined,

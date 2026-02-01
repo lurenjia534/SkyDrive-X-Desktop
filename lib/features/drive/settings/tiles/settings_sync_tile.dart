@@ -3,7 +3,7 @@ import 'package:forui/forui.dart';
 import 'package:skydrivex/features/drive/settings/widgets/settings_card.dart';
 
 class SettingsSyncTile extends StatelessWidget {
-  const SettingsSyncTile();
+  const SettingsSyncTile({super.key});
 
   @override
   Widget build(BuildContext context) {

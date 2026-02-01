@@ -135,7 +135,8 @@ class _DriveNavigationRailState extends State<DriveNavigationRail> {
                 child: ListView.separated(
                   padding: EdgeInsets.zero,
                   itemCount: _primaryDestinations.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final destination = _primaryDestinations[index];
                     return _DriveRailItem(

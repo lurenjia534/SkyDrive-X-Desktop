@@ -123,6 +123,7 @@ class DriveItemActionService {
 
     controller.dispose();
 
+    if (!context.mounted) return;
     if (result == null) return;
     final name = result.trim();
     if (name.isEmpty) {
@@ -156,15 +157,21 @@ class DriveItemActionService {
     try {
       targetDir = await ref.read(downloadDirectoryProvider.future);
     } catch (err) {
-      _showToast(context, 'Unable to fetch download folder: $err');
+      if (context.mounted) {
+        _showToast(context, 'Unable to fetch download folder: $err');
+      }
       return false;
     }
+    if (!context.mounted) return false;
     try {
       await manager.enqueue(item, targetDirectory: targetDir);
     } catch (err) {
-      _showToast(context, 'Failed to add to download queue: $err');
+      if (context.mounted) {
+        _showToast(context, 'Failed to add to download queue: $err');
+      }
       return false;
     }
+    if (!context.mounted) return false;
     _showToast(context, 'Added to download queue: ${item.name}');
     return true;
   }
@@ -198,7 +205,9 @@ class DriveItemActionService {
     try {
       await deleteDriveItem(itemId: item.id, ifMatch: null, bypassLocks: false);
     } catch (err) {
-      _showToast(context, 'Delete failed: $err');
+      if (context.mounted) {
+        _showToast(context, 'Delete failed: $err');
+      }
       return;
     }
 
@@ -206,10 +215,14 @@ class DriveItemActionService {
     try {
       await controller.refresh(showSkeleton: false);
     } catch (err) {
-      _showToast(context, 'Deleted, but refresh failed: $err');
+      if (context.mounted) {
+        _showToast(context, 'Deleted, but refresh failed: $err');
+      }
       return;
     }
-    _showToast(context, 'Deleted: ${item.name}');
+    if (context.mounted) {
+      _showToast(context, 'Deleted: ${item.name}');
+    }
   }
 
   static Future<void> showShareDialog({
@@ -359,6 +372,7 @@ class DriveItemActionService {
 
     controller.dispose();
 
+    if (!context.mounted) return;
     if (result == null) return;
     final name = result.trim();
     if (name.isEmpty) {
@@ -376,7 +390,9 @@ class DriveItemActionService {
         ifMatch: null,
       );
     } catch (err) {
-      _showToast(context, 'Rename failed: $err');
+      if (context.mounted) {
+        _showToast(context, 'Rename failed: $err');
+      }
       return;
     }
 
@@ -384,10 +400,14 @@ class DriveItemActionService {
     try {
       await controllerRef.refresh(showSkeleton: false);
     } catch (err) {
-      _showToast(context, 'Renamed, but refresh failed: $err');
+      if (context.mounted) {
+        _showToast(context, 'Renamed, but refresh failed: $err');
+      }
       return;
     }
-    _showToast(context, 'Renamed to: $name');
+    if (context.mounted) {
+      _showToast(context, 'Renamed to: $name');
+    }
   }
 
   static Future<void> promptUploadFiles({
@@ -439,6 +459,7 @@ class DriveItemActionService {
       _showToast(context, 'Added to upload queue: $uploadedCount files');
       await ref.read(driveHomeControllerProvider.notifier).refresh();
     }
+    if (!context.mounted) return;
     if (failures.isNotEmpty) {
       _showToast(context, 'Some files failed to upload: ${failures.join('、')}');
     }

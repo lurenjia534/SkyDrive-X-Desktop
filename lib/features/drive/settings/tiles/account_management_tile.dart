@@ -7,7 +7,7 @@ import 'package:skydrivex/features/drive/settings/widgets/settings_card.dart';
 import 'package:skydrivex/utils/toast.dart';
 
 class AccountManagementTile extends ConsumerStatefulWidget {
-  const AccountManagementTile();
+  const AccountManagementTile({super.key});
 
   @override
   ConsumerState<AccountManagementTile> createState() =>
@@ -86,6 +86,8 @@ class _AccountManagementTileState extends ConsumerState<AccountManagementTile> {
         );
       },
     );
+    if (!mounted) return;
+    if (!mounted) return;
     if (result == null) return;
     final trimmed = result.trim();
     if (trimmed.isEmpty) {

@@ -9,7 +9,7 @@ import 'package:skydrivex/utils/download_destination.dart';
 import 'package:skydrivex/utils/toast.dart';
 
 class DownloadDirectoryTile extends ConsumerWidget {
-  const DownloadDirectoryTile();
+  const DownloadDirectoryTile({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

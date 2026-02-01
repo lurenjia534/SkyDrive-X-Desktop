@@ -25,9 +25,7 @@ class DriveHomeController extends AsyncNotifier<DriveHomeState> {
     final breadcrumbs = current.breadcrumbs;
     final folderId = breadcrumbs.isEmpty ? null : breadcrumbs.last.id;
     if (showSkeleton) {
-      state = const AsyncLoading<DriveHomeState>().copyWithPrevious(
-        AsyncData(_loadingState(breadcrumbs)),
-      );
+      state = AsyncData(_loadingState(breadcrumbs));
     } else {
       state = AsyncData(current.copyWith(isRefreshing: true));
     }
@@ -106,9 +104,7 @@ class DriveHomeController extends AsyncNotifier<DriveHomeState> {
     required String? folderId,
     required List<DriveBreadcrumbSegment> breadcrumbs,
   }) async {
-    state = const AsyncLoading<DriveHomeState>().copyWithPrevious(
-      AsyncData(_loadingState(breadcrumbs)),
-    );
+    state = AsyncData(_loadingState(breadcrumbs));
     try {
       final data = await _fetchFolder(
         folderId: folderId,

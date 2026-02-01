@@ -4,6 +4,7 @@ import 'package:skydrivex/features/drive/settings/widgets/settings_card.dart';
 
 class ThemeSettingsTile extends StatelessWidget {
   const ThemeSettingsTile({
+    super.key,
     required this.followSystem,
     required this.manualMode,
     required this.onFollowSystemChanged,

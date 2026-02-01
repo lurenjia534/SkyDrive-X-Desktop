@@ -9,7 +9,7 @@ import 'package:skydrivex/features/drive/settings/widgets/settings_card.dart';
 import 'package:skydrivex/features/drive/settings/widgets/settings_card_header.dart';
 
 class DownloadConcurrencyTile extends ConsumerWidget {
-  const DownloadConcurrencyTile();
+  const DownloadConcurrencyTile({super.key});
 
   static const _options = [1, 2, 3, 4, 5, 6, 7, 8];
 

@@ -7,7 +7,7 @@ import 'package:skydrivex/features/drive/settings/widgets/settings_card.dart';
 import 'package:skydrivex/features/drive/utils/drive_item_formatters.dart';
 
 class DriveInfoTile extends ConsumerWidget {
-  const DriveInfoTile();
+  const DriveInfoTile({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

@@ -133,7 +133,7 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
               ),
               label: const Text('Password (optional, personal only)'),
               obscureText: true,
-              prefixBuilder: (_, __, ___) => const Padding(
+              prefixBuilder: (context, style, states) => const Padding(
                 padding: EdgeInsets.only(left: 14, right: 10),
                 child: Icon(Icons.lock_outline_rounded, size: 18),
               ),
@@ -146,7 +146,7 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
                 controller: _recipientsController,
               ),
               label: const Text('Recipient emails (comma-separated)'),
-              prefixBuilder: (_, __, ___) => const Padding(
+              prefixBuilder: (context, style, states) => const Padding(
                 padding: EdgeInsets.only(left: 14, right: 10),
                 child: Icon(Icons.mail_outline_rounded, size: 18),
               ),
@@ -193,7 +193,7 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
         FButton(
           onPress: _creating || capsAsync.isLoading || capsAsync.hasError
               ? null
-              : () => _handleCreate(context, ref),
+              : () => _handleCreate(ref),
           style: FButtonStyle.primary(),
           prefix: _creating
               ? FCircularProgress.loader(
@@ -211,7 +211,7 @@ class _DriveShareDialogState extends ConsumerState<DriveShareDialog> {
     );
   }
 
-  Future<void> _handleCreate(BuildContext context, WidgetRef ref) async {
+  Future<void> _handleCreate(WidgetRef ref) async {
     setState(() {
       _creating = true;
       _resultUrl = null;

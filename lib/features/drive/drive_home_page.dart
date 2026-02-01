@@ -153,7 +153,7 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
     );
 
     if (selected == null) return;
-    if (!context.mounted) return;
+    if (!mounted) return;
     switch (selected) {
       case DriveContextAction.createFolder:
         await DriveItemActionService.promptCreateFolder(
