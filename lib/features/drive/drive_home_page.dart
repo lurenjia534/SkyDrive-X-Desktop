@@ -115,6 +115,8 @@ class _DriveHomeView extends ConsumerStatefulWidget {
 
 class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
   DateTime? _suppressBackgroundMenuUntil;
+  bool _selectionMode = false;
+  final Set<String> _selectedIds = <String>{};
 
   bool get _isBackgroundMenuSuppressed {
     final until = _suppressBackgroundMenuUntil;
@@ -125,6 +127,87 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
   void _markSuppressBackgroundMenu() {
     _suppressBackgroundMenuUntil =
         DateTime.now().add(const Duration(milliseconds: 120));
+  }
+
+  @override
+  void didUpdateWidget(covariant _DriveHomeView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final previousFolderId = _folderIdFor(oldWidget.state);
+    final nextFolderId = _folderIdFor(widget.state);
+    if (previousFolderId != nextFolderId) {
+      _exitSelectionMode();
+      return;
+    }
+    if (_selectedIds.isEmpty) return;
+    final ids = widget.state.items.map((item) => item.id).toSet();
+    final removed = _selectedIds.where((id) => !ids.contains(id)).toList();
+    if (removed.isNotEmpty) {
+      setState(() {
+        _selectedIds.removeAll(removed);
+      });
+    }
+  }
+
+  String? _folderIdFor(DriveHomeState state) {
+    if (state.breadcrumbs.isEmpty) return null;
+    return state.breadcrumbs.last.id;
+  }
+
+  void _enterSelectionMode() {
+    if (_selectionMode) return;
+    setState(() {
+      _selectionMode = true;
+      _selectedIds.clear();
+    });
+  }
+
+  void _exitSelectionMode() {
+    if (!_selectionMode && _selectedIds.isEmpty) return;
+    setState(() {
+      _selectionMode = false;
+      _selectedIds.clear();
+    });
+  }
+
+  void _toggleSelection(drive_api.DriveItemSummary item) {
+    _setSelected(item, !_selectedIds.contains(item.id));
+  }
+
+  void _setSelected(drive_api.DriveItemSummary item, bool selected) {
+    setState(() {
+      if (selected) {
+        _selectedIds.add(item.id);
+      } else {
+        _selectedIds.remove(item.id);
+      }
+    });
+  }
+
+  Future<void> _handleBatchDelete(DriveHomeState viewState) async {
+    final selectedItems = viewState.items
+        .where((item) => _selectedIds.contains(item.id))
+        .toList();
+    if (selectedItems.isEmpty) {
+      _showSnack(context, 'No items selected');
+      return;
+    }
+    final failedIds = await DriveItemActionService.confirmAndDeleteBatch(
+      context: context,
+      ref: ref,
+      items: selectedItems,
+    );
+    if (!mounted || failedIds == null) return;
+    setState(() {
+      if (failedIds.isEmpty) {
+        _selectionMode = false;
+        _selectedIds.clear();
+      } else {
+        _selectionMode = true;
+        _selectedIds
+          ..clear()
+          ..addAll(failedIds);
+      }
+    });
   }
 
   Future<void> _handleItemTap(drive_api.DriveItemSummary item) async {
@@ -214,6 +297,7 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
   }
 
   Future<void> _handleBackgroundPointerDown(PointerDownEvent event) async {
+    if (_selectionMode) return;
     if (event.buttons & kSecondaryMouseButton == 0) return;
     if (_isBackgroundMenuSuppressed) return;
     final selected = await showDriveBackgroundContextMenu(
@@ -244,6 +328,11 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
     final downloadQueue = ref.watch(driveDownloadManagerProvider);
     final viewMode = ref.watch(driveItemViewModeProvider);
     final viewModeController = ref.read(driveItemViewModeProvider.notifier);
+    final theme = context.theme;
+    final colors = theme.colors;
+    final typography = theme.typography;
+    final selectedCount = _selectedIds.length;
+    final canDelete = selectedCount > 0;
     final showInlineLoadingBar =
         (widget.isRefreshing || viewState.isRefreshing) &&
         viewState.items.isNotEmpty;
@@ -272,15 +361,46 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
                 onChanged: viewModeController.setMode,
               ),
               const SizedBox(width: 12),
-              FButton(
-                onPress: () => DriveItemActionService.promptCreateFolder(
-                  context: context,
-                  ref: ref,
+              if (!_selectionMode) ...[
+                FButton(
+                  onPress: () => DriveItemActionService.promptCreateFolder(
+                    context: context,
+                    ref: ref,
+                  ),
+                  style: FButtonStyle.outline(),
+                  prefix: const Icon(FIcons.folderPlus, size: 16),
+                  child: const Text('New folder'),
                 ),
-                style: FButtonStyle.outline(),
-                prefix: const Icon(FIcons.folderPlus, size: 16),
-                child: const Text('New folder'),
-              ),
+                const SizedBox(width: 12),
+                FButton(
+                  onPress: _enterSelectionMode,
+                  style: FButtonStyle.outline(),
+                  prefix: const Icon(FIcons.check, size: 16),
+                  child: const Text('Select'),
+                ),
+              ] else ...[
+                Text(
+                  '$selectedCount selected',
+                  style: typography.sm.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colors.mutedForeground,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                FButton(
+                  onPress: canDelete ? () => _handleBatchDelete(viewState) : null,
+                  style: FButtonStyle.destructive(),
+                  prefix: const Icon(FIcons.trash2, size: 16),
+                  child: const Text('Delete'),
+                ),
+                const SizedBox(width: 8),
+                FButton(
+                  onPress: _exitSelectionMode,
+                  style: FButtonStyle.outline(),
+                  prefix: const Icon(FIcons.x, size: 16),
+                  child: const Text('Cancel'),
+                ),
+              ],
             ],
           ),
         ),
@@ -390,13 +510,20 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
                   isDownloading: activeTask != null,
                   progress: activeTask?.progressRatio,
                 );
+          final isSelected = _selectedIds.contains(item.id);
           return DriveItemTile(
             item: item,
             subtitle: subtitle,
-            onTap: () => _handleItemTap(item),
-            onSecondaryTapDown: (details) =>
-                _handleItemContextMenu(item, details),
+            onTap: _selectionMode
+                ? () => _toggleSelection(item)
+                : () => _handleItemTap(item),
+            onSecondaryTapDown: _selectionMode
+                ? null
+                : (details) => _handleItemContextMenu(item, details),
             trailing: trailing,
+            selectionMode: _selectionMode,
+            isSelected: isSelected,
+            onSelected: (value) => _setSelected(item, value),
           );
         },
       );
@@ -438,12 +565,20 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
                 isDownloading: activeTask != null,
                 progress: activeTask?.progressRatio,
               );
+        final isSelected = _selectedIds.contains(item.id);
         return DriveItemGridTile(
           item: item,
           subtitle: subtitle,
-          onTap: () => _handleItemTap(item),
-          onSecondaryTapDown: (details) => _handleItemContextMenu(item, details),
+          onTap: _selectionMode
+              ? () => _toggleSelection(item)
+              : () => _handleItemTap(item),
+          onSecondaryTapDown: _selectionMode
+              ? null
+              : (details) => _handleItemContextMenu(item, details),
           trailing: trailing,
+          selectionMode: _selectionMode,
+          isSelected: isSelected,
+          onSelected: (value) => _setSelected(item, value),
         );
       },
     );

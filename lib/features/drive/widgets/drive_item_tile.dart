@@ -11,6 +11,9 @@ class DriveItemTile extends StatelessWidget {
     required this.onTap,
     this.onSecondaryTapDown,
     this.trailing,
+    this.selectionMode = false,
+    this.isSelected = false,
+    this.onSelected,
   });
 
   final drive_api.DriveItemSummary item;
@@ -18,6 +21,9 @@ class DriveItemTile extends StatelessWidget {
   final VoidCallback onTap;
   final GestureTapDownCallback? onSecondaryTapDown;
   final Widget? trailing;
+  final bool selectionMode;
+  final bool isSelected;
+  final ValueChanged<bool>? onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -37,14 +43,57 @@ class DriveItemTile extends StatelessWidget {
         ? colors.foreground
         : colors.foreground.withValues(alpha: 0.9);
 
+    final basePrefix = SizedBox(
+      width: 44,
+      height: 44,
+      child: hasThumbnail
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: _ThumbnailImage(
+                url: thumbnailUrl!,
+                itemId: item.id,
+                fallback: _DriveTileIcon(
+                  icon: iconData,
+                  background: iconBackground,
+                  iconColor: iconColor,
+                ),
+              ),
+            )
+          : _DriveTileIcon(
+              icon: iconData,
+              background: iconBackground,
+              iconColor: iconColor,
+            ),
+    );
+
+    final prefix = selectionMode
+        ? Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FCheckbox(
+                value: isSelected,
+                onChange: onSelected,
+              ),
+              const SizedBox(width: 8),
+              basePrefix,
+            ],
+          )
+        : basePrefix;
+
     final content = FTile(
       onPress: onTap,
+      selected: isSelected,
       style: (style) => style.copyWith(
         margin: const EdgeInsets.symmetric(vertical: 4),
         decoration: FWidgetStateMap({
           WidgetState.disabled: BoxDecoration(
             color: colors.disable(colors.background),
             borderRadius: BorderRadius.circular(16),
+          ),
+          WidgetState.selected: BoxDecoration(
+            color: colors.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.primary.withValues(alpha: 0.2)),
           ),
           WidgetState.hovered | WidgetState.pressed: BoxDecoration(
             color: colors.secondary.withValues(alpha: 0.6),
@@ -68,28 +117,7 @@ class DriveItemTile extends StatelessWidget {
           ),
         ),
       ),
-      prefix: SizedBox(
-        width: 44,
-        height: 44,
-        child: hasThumbnail
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: _ThumbnailImage(
-                  url: thumbnailUrl!,
-                  itemId: item.id,
-                  fallback: _DriveTileIcon(
-                    icon: iconData,
-                    background: iconBackground,
-                    iconColor: iconColor,
-                  ),
-                ),
-              )
-            : _DriveTileIcon(
-                icon: iconData,
-                background: iconBackground,
-                iconColor: iconColor,
-              ),
-      ),
+      prefix: prefix,
       title: Text(
         item.name,
         maxLines: 1,
@@ -123,6 +151,9 @@ class DriveItemGridTile extends StatelessWidget {
     required this.onTap,
     this.onSecondaryTapDown,
     this.trailing,
+    this.selectionMode = false,
+    this.isSelected = false,
+    this.onSelected,
   });
 
   final drive_api.DriveItemSummary item;
@@ -130,6 +161,9 @@ class DriveItemGridTile extends StatelessWidget {
   final VoidCallback onTap;
   final GestureTapDownCallback? onSecondaryTapDown;
   final Widget? trailing;
+  final bool selectionMode;
+  final bool isSelected;
+  final ValueChanged<bool>? onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -173,11 +207,14 @@ class DriveItemGridTile extends StatelessWidget {
           )
         : fallback;
 
+    final borderColor = isSelected
+        ? colors.primary.withValues(alpha: 0.45)
+        : colors.border.withValues(alpha: 0.7);
     final content = Material(
       color: colors.background,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: colors.border.withValues(alpha: 0.7)),
+        side: BorderSide(color: borderColor, width: isSelected ? 1.4 : 1),
       ),
       child: InkWell(
         onTap: onTap,
@@ -234,13 +271,29 @@ class DriveItemGridTile extends StatelessWidget {
       ),
     );
 
+    final wrapped = selectionMode
+        ? Stack(
+            children: [
+              Positioned.fill(child: content),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: FCheckbox(
+                  value: isSelected,
+                  onChange: onSelected,
+                ),
+              ),
+            ],
+          )
+        : content;
+
     if (onSecondaryTapDown == null) {
-      return content;
+      return wrapped;
     }
 
     return _wrapSecondaryTap(
       context: context,
-      child: content,
+      child: wrapped,
       onSecondaryTapDown: onSecondaryTapDown,
     );
   }

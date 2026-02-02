@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,6 +21,7 @@ import 'package:skydrivex/utils/toast.dart';
 /// 封装文件/文件夹相关的常用操作，降低页面耦合。
 class DriveItemActionService {
   static const int _simpleUploadMaxBytes = 250 * 1024 * 1024;
+  static const int _batchDeleteConcurrency = 4;
 
   static Future<void> showPropertiesSheet({
     required BuildContext context,
@@ -223,6 +226,115 @@ class DriveItemActionService {
     if (context.mounted) {
       _showToast(context, 'Deleted: ${item.name}');
     }
+  }
+
+  static Future<Set<String>?> confirmAndDeleteBatch({
+    required BuildContext context,
+    required WidgetRef ref,
+    required List<drive_api.DriveItemSummary> items,
+  }) async {
+    if (items.isEmpty) return <String>{};
+
+    final count = items.length;
+    final preview = items.take(4).map((item) => item.name).toList();
+    final confirmed = await showFDialog<bool>(
+      context: context,
+      barrierLabel: 'Confirm delete',
+      builder: (dialogContext, style, animation) {
+        final theme = dialogContext.theme;
+        final colors = theme.colors;
+        final typography = theme.typography;
+        final summary = count == 1
+            ? 'Move "${items.first.name}" to the recycle bin?'
+            : 'Move $count items to the recycle bin?';
+        return FDialog(
+          animation: animation,
+          title: Text(
+            'Confirm delete',
+            style: typography.lg.copyWith(
+              fontWeight: FontWeight.w700,
+              color: colors.foreground,
+            ),
+          ),
+          body: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                summary,
+                style: typography.sm.copyWith(
+                  color: colors.mutedForeground,
+                ),
+              ),
+              if (count > 1) ...[
+                const SizedBox(height: 12),
+                ...preview.map(
+                  (name) => Text(
+                    '- $name',
+                    style: typography.xs.copyWith(
+                      color: colors.mutedForeground,
+                    ),
+                  ),
+                ),
+                if (count > preview.length)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      '...and ${count - preview.length} more',
+                      style: typography.xs.copyWith(
+                        color: colors.mutedForeground,
+                      ),
+                    ),
+                  ),
+              ],
+            ],
+          ),
+          direction: Axis.horizontal,
+          actions: [
+            FButton(
+              onPress: () => Navigator.of(dialogContext).pop(false),
+              style: FButtonStyle.outline(),
+              child: const Text('Cancel'),
+            ),
+            FButton(
+              onPress: () => Navigator.of(dialogContext).pop(true),
+              style: FButtonStyle.destructive(),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !context.mounted) return null;
+
+    final (failures, failedNames) = await _deleteItemsConcurrently(items);
+
+    final controller = ref.read(driveHomeControllerProvider.notifier);
+    try {
+      await controller.refresh(showSkeleton: false);
+    } catch (err) {
+      if (context.mounted) {
+        _showToast(context, 'Deleted, but refresh failed: $err');
+      }
+    }
+
+    if (!context.mounted) return failures;
+
+    if (failures.isEmpty) {
+      _showToast(
+        context,
+        count == 1 ? 'Deleted: ${items.first.name}' : 'Deleted $count items',
+      );
+    } else {
+      final failedPreview = _formatNamePreview(failedNames, max: 3);
+      _showToast(
+        context,
+        'Deleted ${count - failures.length}/$count items. Failed: $failedPreview',
+      );
+    }
+
+    return failures;
   }
 
   static Future<void> showShareDialog({
@@ -467,5 +579,61 @@ class DriveItemActionService {
 
   static void _showToast(BuildContext context, String message) {
     showToast(context, message);
+  }
+
+  static Future<(Set<String>, List<String>)> _deleteItemsConcurrently(
+    List<drive_api.DriveItemSummary> items,
+  ) async {
+    if (items.isEmpty) return (<String>{}, <String>[]);
+    if (items.length == 1) {
+      final item = items.first;
+      try {
+        await deleteDriveItem(
+          itemId: item.id,
+          ifMatch: null,
+          bypassLocks: false,
+        );
+        return (<String>{}, <String>[]);
+      } catch (_) {
+        return ({item.id}, [item.name]);
+      }
+    }
+
+    final failures = <String>{};
+    final failedNames = <String>[];
+    final maxConcurrent = math.min(_batchDeleteConcurrency, items.length);
+    var nextIndex = 0;
+
+    Future<void> worker() async {
+      while (true) {
+        final index = nextIndex;
+        if (index >= items.length) return;
+        nextIndex = index + 1;
+        final item = items[index];
+        try {
+          await deleteDriveItem(
+            itemId: item.id,
+            ifMatch: null,
+            bypassLocks: false,
+          );
+        } catch (_) {
+          failures.add(item.id);
+          failedNames.add(item.name);
+        }
+      }
+    }
+
+    await Future.wait(List.generate(maxConcurrent, (_) => worker()));
+    return (failures, failedNames);
+  }
+
+  static String _formatNamePreview(List<String> names, {int max = 3}) {
+    if (names.isEmpty) return 'Unknown';
+    final head = names.take(max).toList();
+    final remaining = names.length - head.length;
+    if (remaining > 0) {
+      return '${head.join(', ')} and $remaining more';
+    }
+    return head.join(', ');
   }
 }
