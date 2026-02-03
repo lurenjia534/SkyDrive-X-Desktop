@@ -107,7 +107,7 @@ class DownloadDirectoryTile extends ConsumerWidget {
                 prefix: const Icon(FIcons.mapPin, size: 16),
                 child: Text(
                   'Change path',
-                  style: typography.sm.copyWith(fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
               const SizedBox(height: 10),
@@ -117,7 +117,7 @@ class DownloadDirectoryTile extends ConsumerWidget {
                 prefix: const Icon(FIcons.undo, size: 16),
                 child: Text(
                   'Restore default',
-                  style: typography.sm.copyWith(fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
             ],
