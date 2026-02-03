@@ -14,7 +14,7 @@ pub mod upload;
 pub mod upload_manager;
 
 pub use create_folder::create_drive_folder;
-pub use delete::delete_drive_item;
+pub use delete::{delete_drive_item, delete_drive_items_batch};
 pub use details::get_drive_item_details;
 pub use download::download_drive_item;
 pub use download_manager::{

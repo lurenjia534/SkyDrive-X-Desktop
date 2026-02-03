@@ -53,6 +53,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  HttpStatusExt dco_decode_TraitDef_HttpStatusExt(dynamic raw);
+
+  @protected
   AuthAccount dco_decode_auth_account(dynamic raw);
 
   @protected

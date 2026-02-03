@@ -21,7 +21,7 @@ import 'package:skydrivex/utils/toast.dart';
 /// 封装文件/文件夹相关的常用操作，降低页面耦合。
 class DriveItemActionService {
   static const int _simpleUploadMaxBytes = 250 * 1024 * 1024;
-  static const int _batchDeleteConcurrency = 4;
+  static const int _batchDeleteLimit = 20;
 
   static Future<void> showPropertiesSheet({
     required BuildContext context,
@@ -308,7 +308,7 @@ class DriveItemActionService {
 
     if (confirmed != true || !context.mounted) return null;
 
-    final (failures, failedNames) = await _deleteItemsConcurrently(items);
+    final (failures, failedNames) = await _deleteItemsWithBatch(items);
 
     final controller = ref.read(driveHomeControllerProvider.notifier);
     try {
@@ -581,49 +581,34 @@ class DriveItemActionService {
     showToast(context, message);
   }
 
-  static Future<(Set<String>, List<String>)> _deleteItemsConcurrently(
+  static Future<(Set<String>, List<String>)> _deleteItemsWithBatch(
     List<drive_api.DriveItemSummary> items,
   ) async {
     if (items.isEmpty) return (<String>{}, <String>[]);
-    if (items.length == 1) {
-      final item = items.first;
-      try {
-        await deleteDriveItem(
-          itemId: item.id,
-          ifMatch: null,
-          bypassLocks: false,
-        );
-        return (<String>{}, <String>[]);
-      } catch (_) {
-        return ({item.id}, [item.name]);
-      }
-    }
-
     final failures = <String>{};
     final failedNames = <String>[];
-    final maxConcurrent = math.min(_batchDeleteConcurrency, items.length);
-    var nextIndex = 0;
-
-    Future<void> worker() async {
-      while (true) {
-        final index = nextIndex;
-        if (index >= items.length) return;
-        nextIndex = index + 1;
-        final item = items[index];
-        try {
-          await deleteDriveItem(
-            itemId: item.id,
-            ifMatch: null,
-            bypassLocks: false,
-          );
-        } catch (_) {
+    for (var start = 0; start < items.length; start += _batchDeleteLimit) {
+      final end = math.min(start + _batchDeleteLimit, items.length);
+      final chunk = items.sublist(start, end);
+      final idToName = {
+        for (final item in chunk) item.id: item.name,
+      };
+      try {
+        final failedIds = await deleteDriveItemsBatch(
+          itemIds: chunk.map((item) => item.id).toList(),
+          bypassLocks: false,
+        );
+        for (final id in failedIds) {
+          failures.add(id);
+          failedNames.add(idToName[id] ?? id);
+        }
+      } catch (_) {
+        for (final item in chunk) {
           failures.add(item.id);
           failedNames.add(item.name);
         }
       }
     }
-
-    await Future.wait(List.generate(maxConcurrent, (_) => worker()));
     return (failures, failedNames);
   }
 
