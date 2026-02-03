@@ -134,6 +134,8 @@ class DriveDownloadsPage extends ConsumerWidget {
             ref: ref,
             colors: colors,
             typography: typography,
+            onClear: () => _handleClearDownloadHistory(context, ref),
+            clearLabel: 'Clear history',
           ),
       ],
     );
@@ -150,6 +152,8 @@ class _DownloadSection extends StatelessWidget {
     this.showError = false,
     this.showPath = false,
     this.onClear,
+    this.clearLabel = 'Clear failed',
+    this.clearIcon = FIcons.trash2,
   });
 
   final String title;
@@ -160,6 +164,8 @@ class _DownloadSection extends StatelessWidget {
   final bool showError;
   final bool showPath;
   final AsyncCallback? onClear;
+  final String clearLabel;
+  final IconData clearIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -190,9 +196,9 @@ class _DownloadSection extends StatelessWidget {
                 onPress: () => unawaited(onClear!()),
                 style: FButtonStyle.ghost(),
                 mainAxisSize: MainAxisSize.min,
-                prefix: const Icon(FIcons.trash2, size: 16),
+                prefix: Icon(clearIcon, size: 16),
                 child: Text(
-                  'Clear failed',
+                  clearLabel,
                   style: typography.sm.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
@@ -630,4 +636,72 @@ String? _formatSpeed(double? bytesPerSecond) {
 
 void _showToast(BuildContext context, String message) {
   showToast(context, message);
+}
+
+Future<void> _handleClearDownloadHistory(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final confirmed = await _confirmClearHistory(
+    context: context,
+    title: 'Clear download history',
+    description:
+        'Remove all completed and failed download records from this device. Active downloads stay intact.',
+    actionLabel: 'Clear history',
+  );
+  if (!confirmed || !context.mounted) return;
+  try {
+    await ref.read(driveDownloadManagerProvider.notifier).clearHistory();
+  } catch (err) {
+    if (context.mounted) {
+      _showToast(context, 'Clear history failed: $err');
+    }
+  }
+}
+
+Future<bool> _confirmClearHistory({
+  required BuildContext context,
+  required String title,
+  required String description,
+  required String actionLabel,
+}) async {
+  final confirmed = await showFDialog<bool>(
+    context: context,
+    barrierLabel: title,
+    builder: (dialogContext, style, animation) {
+      final theme = dialogContext.theme;
+      final colors = theme.colors;
+      final typography = theme.typography;
+      return FDialog(
+        animation: animation,
+        title: Text(
+          title,
+          style: typography.lg.copyWith(
+            fontWeight: FontWeight.w700,
+            color: colors.foreground,
+          ),
+        ),
+        body: Text(
+          description,
+          style: typography.sm.copyWith(
+            color: colors.mutedForeground,
+          ),
+        ),
+        direction: Axis.horizontal,
+        actions: [
+          FButton(
+            onPress: () => Navigator.of(dialogContext).pop(false),
+            style: FButtonStyle.outline(),
+            child: const Text('Cancel'),
+          ),
+          FButton(
+            onPress: () => Navigator.of(dialogContext).pop(true),
+            style: FButtonStyle.primary(),
+            child: Text(actionLabel),
+          ),
+        ],
+      );
+    },
+  );
+  return confirmed ?? false;
 }
