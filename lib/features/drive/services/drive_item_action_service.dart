@@ -308,11 +308,131 @@ class DriveItemActionService {
 
     if (confirmed != true || !context.mounted) return null;
 
-    final (failures, failedNames) = await _deleteItemsWithBatch(items);
+    final failures = <String>{};
+    final failedNames = <String>[];
+    var completed = 0;
+    var cancelled = false;
+
+    if (count > _batchDeleteLimit) {
+      var cancelRequested = false;
+      var started = false;
+      await showFDialog<void>(
+        context: context,
+        barrierLabel: 'Deleting items',
+        barrierDismissible: false,
+        builder: (dialogContext, style, animation) {
+          final theme = dialogContext.theme;
+          final colors = theme.colors;
+          final typography = theme.typography;
+          return StatefulBuilder(
+            builder: (context, setState) {
+              if (!started) {
+                started = true;
+                Future.microtask(() async {
+                  final result = await _deleteItemsWithBatch(
+                    items,
+                    onProgress: (value) {
+                      if (!dialogContext.mounted) return;
+                      setState(() => completed = value);
+                    },
+                    isCancelled: () => cancelRequested,
+                  );
+                  failures
+                    ..clear()
+                    ..addAll(result.$1);
+                  failedNames
+                    ..clear()
+                    ..addAll(result.$2);
+                  completed = result.$3;
+                  cancelled = result.$4;
+                  if (dialogContext.mounted) {
+                    Navigator.of(dialogContext).pop();
+                  }
+                });
+              }
+
+              final progress = count == 0 ? 0.0 : completed / count;
+              return FDialog(
+                animation: animation,
+                title: Text(
+                  'Deleting items',
+                  style: typography.lg.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colors.foreground,
+                  ),
+                ),
+                body: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Deleting $completed/$count',
+                      style: typography.sm.copyWith(
+                        color: colors.mutedForeground,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    FDeterminateProgress(
+                      value: progress.clamp(0, 1),
+                      style: (style) => style.copyWith(
+                        constraints: const BoxConstraints.tightFor(height: 8),
+                        trackDecoration: BoxDecoration(
+                          color: colors.secondary.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        fillDecoration: BoxDecoration(
+                          color: colors.primary,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    if (cancelRequested) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Cancelling... will stop after the current batch.',
+                        style: typography.xs.copyWith(
+                          color: colors.mutedForeground,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                direction: Axis.horizontal,
+                actions: [
+                  FButton(
+                    onPress: cancelRequested
+                        ? null
+                        : () => setState(() => cancelRequested = true),
+                    style: FButtonStyle.outline(),
+                    child: const Text('Cancel'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    } else {
+      final result = await _deleteItemsWithBatch(
+        items,
+        onProgress: (value) => completed = value,
+        isCancelled: () => false,
+      );
+      failures
+        ..clear()
+        ..addAll(result.$1);
+      failedNames
+        ..clear()
+        ..addAll(result.$2);
+      completed = result.$3;
+      cancelled = result.$4;
+    }
 
     final controller = ref.read(driveHomeControllerProvider.notifier);
     try {
-      await controller.refresh(showSkeleton: false);
+      if (completed > 0) {
+        await controller.refresh(showSkeleton: false);
+      }
     } catch (err) {
       if (context.mounted) {
         _showToast(context, 'Deleted, but refresh failed: $err');
@@ -320,6 +440,11 @@ class DriveItemActionService {
     }
 
     if (!context.mounted) return failures;
+
+    if (cancelled) {
+      _showToast(context, 'Delete cancelled: $completed/$count processed');
+      return failures;
+    }
 
     if (failures.isEmpty) {
       _showToast(
@@ -581,13 +706,25 @@ class DriveItemActionService {
     showToast(context, message);
   }
 
-  static Future<(Set<String>, List<String>)> _deleteItemsWithBatch(
-    List<drive_api.DriveItemSummary> items,
-  ) async {
-    if (items.isEmpty) return (<String>{}, <String>[]);
+  static Future<(Set<String>, List<String>, int, bool)> _deleteItemsWithBatch(
+    List<drive_api.DriveItemSummary> items, {
+    required ValueChanged<int> onProgress,
+    required bool Function() isCancelled,
+  }) async {
+    if (items.isEmpty) return (<String>{}, <String>[], 0, false);
     final failures = <String>{};
     final failedNames = <String>[];
+    var completed = 0;
+    var cancelled = false;
     for (var start = 0; start < items.length; start += _batchDeleteLimit) {
+      if (isCancelled()) {
+        cancelled = true;
+        for (final item in items.sublist(start)) {
+          failures.add(item.id);
+          failedNames.add(item.name);
+        }
+        break;
+      }
       final end = math.min(start + _batchDeleteLimit, items.length);
       final chunk = items.sublist(start, end);
       final idToName = {
@@ -608,8 +745,10 @@ class DriveItemActionService {
           failedNames.add(item.name);
         }
       }
+      completed += chunk.length;
+      onProgress(completed);
     }
-    return (failures, failedNames);
+    return (failures, failedNames, completed, cancelled);
   }
 
   static String _formatNamePreview(List<String> names, {int max = 3}) {
