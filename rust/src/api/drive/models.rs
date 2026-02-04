@@ -31,6 +31,17 @@ pub struct DriveDownloadResult {
     pub expected_size: Option<u64>,
 }
 
+/// 批量下载入队结果，包含更新后的队列与跳过/失败列表。
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug)]
+pub struct BatchDownloadResult {
+    pub queue: DownloadQueueState,
+    /// 跳过的 item ids（如已在下载队列或为文件夹）。
+    pub skipped: Vec<String>,
+    /// 入队失败的 item ids。
+    pub failed: Vec<String>,
+}
+
 /// 下载任务状态，迁移至 Rust 端统一管理。
 #[flutter_rust_bridge::frb]
 #[derive(Clone, Debug, PartialEq, Eq)]

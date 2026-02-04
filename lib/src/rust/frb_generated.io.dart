@@ -60,6 +60,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AuthTokens dco_decode_auth_tokens(dynamic raw);
 
   @protected
+  BatchDownloadResult dco_decode_batch_download_result(dynamic raw);
+
+  @protected
   bool dco_decode_bool(dynamic raw);
 
   @protected
@@ -241,6 +244,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   AuthTokens sse_decode_auth_tokens(SseDeserializer deserializer);
+
+  @protected
+  BatchDownloadResult sse_decode_batch_download_result(
+    SseDeserializer deserializer,
+  );
 
   @protected
   bool sse_decode_bool(SseDeserializer deserializer);
@@ -449,6 +457,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_auth_tokens(AuthTokens self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_batch_download_result(
+    BatchDownloadResult self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_bool(bool self, SseSerializer serializer);

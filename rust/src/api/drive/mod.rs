@@ -19,15 +19,15 @@ pub use details::get_drive_item_details;
 pub use download::download_drive_item;
 pub use download_manager::{
     clear_download_history, download_progress_stream, download_queue_state, enqueue_download_task,
-    pause_download_task, remove_download_task, resume_download_task,
+    enqueue_download_tasks_batch, pause_download_task, remove_download_task, resume_download_task,
 };
 pub use info::get_drive_overview;
 pub use list::list_drive_children;
 pub use models::{
-    DownloadQueueState, DownloadStatus, DownloadTask, DriveDownloadResult, DriveInfo,
-    DriveItemDetails, DriveItemSummary, DriveOwner, DrivePage, DriveQuota, LinkScope, LinkType,
-    ShareCapabilities, ShareLinkResult, UploadProgressUpdate, UploadQueueState, UploadStatus,
-    UploadTask,
+    BatchDownloadResult, DownloadQueueState, DownloadStatus, DownloadTask, DriveDownloadResult,
+    DriveInfo, DriveItemDetails, DriveItemSummary, DriveOwner, DrivePage, DriveQuota, LinkScope,
+    LinkType, ShareCapabilities, ShareLinkResult, UploadProgressUpdate, UploadQueueState,
+    UploadStatus, UploadTask,
 };
 pub use move_item::move_drive_item;
 pub use rename::rename_drive_item;

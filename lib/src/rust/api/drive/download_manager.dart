@@ -20,6 +20,17 @@ Future<DownloadQueueState> enqueueDownloadTask({
   overwrite: overwrite,
 );
 
+Future<BatchDownloadResult> enqueueDownloadTasksBatch({
+  required List<DriveItemSummary> items,
+  required String targetDir,
+  required bool overwrite,
+}) =>
+    RustLib.instance.api.crateApiDriveDownloadManagerEnqueueDownloadTasksBatch(
+      items: items,
+      targetDir: targetDir,
+      overwrite: overwrite,
+    );
+
 Future<DownloadQueueState> removeDownloadTask({required String itemId}) =>
     RustLib.instance.api.crateApiDriveDownloadManagerRemoveDownloadTask(
       itemId: itemId,

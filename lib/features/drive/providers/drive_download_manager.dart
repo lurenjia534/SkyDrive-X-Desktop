@@ -13,6 +13,7 @@ final driveDownloadManagerProvider =
 typedef DownloadQueueState = drive_api.DownloadQueueState;
 typedef DownloadTask = drive_api.DownloadTask;
 typedef DownloadStatus = drive_api.DownloadStatus;
+typedef BatchDownloadResult = drive_api.BatchDownloadResult;
 
 /// 下载队列的前端状态管理器：负责连接 Rust 服务、接收进度流并向 UI 分发最新状态。
 class DriveDownloadManager extends Notifier<drive_api.DownloadQueueState> {
@@ -68,6 +69,22 @@ class DriveDownloadManager extends Notifier<drive_api.DownloadQueueState> {
       debugPrint('enqueue download failed: $err\n$stack');
       rethrow;
     }
+  }
+
+  /// 批量入队下载任务，返回跳过/失败列表用于 UI 提示。
+  Future<BatchDownloadResult> enqueueBatch(
+    List<drive_api.DriveItemSummary> items, {
+    required String targetDirectory,
+    bool overwrite = false,
+  }) async {
+    final result = await _service.enqueueBatch(
+      items: items,
+      targetDir: targetDirectory,
+      overwrite: overwrite,
+    );
+    _pruneSpeeds(result.queue.active);
+    state = result.queue;
+    return result;
   }
 
   /// 清理所有历史记录（完成/失败），Active 列表保持不动。

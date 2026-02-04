@@ -179,6 +179,117 @@ class DriveItemActionService {
     return true;
   }
 
+  static Future<Set<String>?> enqueueBatchDownload({
+    required BuildContext context,
+    required WidgetRef ref,
+    required List<drive_api.DriveItemSummary> items,
+  }) async {
+    if (items.isEmpty) return <String>{};
+
+    final folderItems = <drive_api.DriveItemSummary>[];
+    final fileItems = <drive_api.DriveItemSummary>[];
+    for (final item in items) {
+      if (item.isFolder) {
+        folderItems.add(item);
+      } else {
+        fileItems.add(item);
+      }
+    }
+
+    if (fileItems.isEmpty) {
+      if (context.mounted) {
+        _showToast(context, 'Selected items are folders. Choose files to download.');
+      }
+      return folderItems.map((item) => item.id).toSet();
+    }
+
+    String targetDir;
+    try {
+      targetDir = await ref.read(downloadDirectoryProvider.future);
+    } catch (err) {
+      if (context.mounted) {
+        _showToast(context, 'Unable to fetch download folder: $err');
+      }
+      return items.map((item) => item.id).toSet();
+    }
+    if (!context.mounted) return null;
+
+    final manager = ref.read(driveDownloadManagerProvider.notifier);
+    drive_api.BatchDownloadResult result;
+    try {
+      result = await manager.enqueueBatch(
+        fileItems,
+        targetDirectory: targetDir,
+      );
+    } catch (err) {
+      if (context.mounted) {
+        _showToast(context, 'Failed to add downloads: $err');
+      }
+      return items.map((item) => item.id).toSet();
+    }
+
+    if (!context.mounted) return null;
+
+    final skippedIds = result.skipped.toSet();
+    final failedIds = result.failed.toSet();
+    final folderIds = folderItems.map((item) => item.id).toSet();
+    final remainingIds = <String>{
+      ...skippedIds,
+      ...failedIds,
+      ...folderIds,
+    };
+
+    final idToName = {
+      for (final item in fileItems) item.id: item.name,
+    };
+    final queuedNames = fileItems
+        .where(
+          (item) =>
+              !skippedIds.contains(item.id) && !failedIds.contains(item.id),
+        )
+        .map((item) => item.name)
+        .toList();
+    final skippedNames =
+        skippedIds.map((id) => idToName[id] ?? id).toList();
+    final failedNames = failedIds.map((id) => idToName[id] ?? id).toList();
+    final folderNames = folderItems.map((item) => item.name).toList();
+
+    if (queuedNames.isNotEmpty) {
+      if (queuedNames.length == 1) {
+        _showToast(context, 'Added to download queue: ${queuedNames.first}');
+      } else {
+        _showToast(context, 'Added to download queue: ${queuedNames.length} items');
+      }
+    }
+    if (skippedNames.isNotEmpty) {
+      _showToast(
+        context,
+        'Skipped ${skippedNames.length} already downloading: ${_formatNamePreview(skippedNames)}',
+      );
+    }
+    if (folderNames.isNotEmpty) {
+      _showToast(
+        context,
+        'Skipped ${folderNames.length} folders: ${_formatNamePreview(folderNames)}',
+      );
+    }
+    if (failedNames.isNotEmpty) {
+      _showToast(
+        context,
+        'Failed to add: ${_formatNamePreview(failedNames)}',
+      );
+    }
+
+    if (queuedNames.isEmpty &&
+        skippedNames.isEmpty &&
+        failedNames.isEmpty &&
+        folderNames.isEmpty) {
+      _showToast(context, 'No files added to the download queue.');
+    }
+
+    return remainingIds;
+  }
+
   static Future<void> confirmAndDelete({
     required BuildContext context,
     required WidgetRef ref,

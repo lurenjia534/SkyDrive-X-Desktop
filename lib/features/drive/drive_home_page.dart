@@ -210,6 +210,33 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
     });
   }
 
+  Future<void> _handleBatchDownload(DriveHomeState viewState) async {
+    final selectedItems = viewState.items
+        .where((item) => _selectedIds.contains(item.id))
+        .toList();
+    if (selectedItems.isEmpty) {
+      _showSnack(context, 'No items selected');
+      return;
+    }
+    final remainingIds = await DriveItemActionService.enqueueBatchDownload(
+      context: context,
+      ref: ref,
+      items: selectedItems,
+    );
+    if (!mounted || remainingIds == null) return;
+    setState(() {
+      if (remainingIds.isEmpty) {
+        _selectionMode = false;
+        _selectedIds.clear();
+      } else {
+        _selectionMode = true;
+        _selectedIds
+          ..clear()
+          ..addAll(remainingIds);
+      }
+    });
+  }
+
   Future<void> _handleItemTap(drive_api.DriveItemSummary item) async {
     final controller = ref.read(driveHomeControllerProvider.notifier);
     if (item.isFolder) {
@@ -333,6 +360,7 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
     final typography = theme.typography;
     final selectedCount = _selectedIds.length;
     final canDelete = selectedCount > 0;
+    final canDownload = selectedCount > 0;
     final showInlineLoadingBar =
         (widget.isRefreshing || viewState.isRefreshing) &&
         viewState.items.isNotEmpty;
@@ -387,6 +415,14 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
                   ),
                 ),
                 const SizedBox(width: 12),
+                FButton(
+                  onPress:
+                      canDownload ? () => _handleBatchDownload(viewState) : null,
+                  style: FButtonStyle.outline(),
+                  prefix: const Icon(FIcons.cloudDownload, size: 16),
+                  child: const Text('Download'),
+                ),
+                const SizedBox(width: 8),
                 FButton(
                   onPress: canDelete ? () => _handleBatchDelete(viewState) : null,
                   style: FButtonStyle.destructive(),

@@ -6,7 +6,36 @@
 import '../../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_receiver_is_total_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_receiver_is_total_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+
+/// 批量下载入队结果，包含更新后的队列与跳过/失败列表。
+class BatchDownloadResult {
+  final DownloadQueueState queue;
+
+  /// 跳过的 item ids（如已在下载队列或为文件夹）。
+  final List<String> skipped;
+
+  /// 入队失败的 item ids。
+  final List<String> failed;
+
+  const BatchDownloadResult({
+    required this.queue,
+    required this.skipped,
+    required this.failed,
+  });
+
+  @override
+  int get hashCode => queue.hashCode ^ skipped.hashCode ^ failed.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BatchDownloadResult &&
+          runtimeType == other.runtimeType &&
+          queue == other.queue &&
+          skipped == other.skipped &&
+          failed == other.failed;
+}
 
 /// 下载进度事件，通过 StreamSink 推送给 Flutter，供 UI 实时刷新进度与速度。
 class DownloadProgressUpdate {

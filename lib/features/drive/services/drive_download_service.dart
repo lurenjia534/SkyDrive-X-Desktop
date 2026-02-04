@@ -18,6 +18,18 @@ class DriveDownloadService {
     );
   }
 
+  Future<drive_api.BatchDownloadResult> enqueueBatch({
+    required List<drive_api.DriveItemSummary> items,
+    required String targetDir,
+    bool overwrite = false,
+  }) {
+    return drive_manager_api.enqueueDownloadTasksBatch(
+      items: items,
+      targetDir: targetDir,
+      overwrite: overwrite,
+    );
+  }
+
   Future<drive_api.DownloadQueueState> fetchQueue() {
     return drive_manager_api.downloadQueueState();
   }

@@ -6,8 +6,8 @@ use crate::api::drive::{
         DownloadError, CONTROL_FLAG_CANCEL, CONTROL_FLAG_NONE, CONTROL_FLAG_PAUSE,
     },
     models::{
-        DownloadProgressUpdate, DownloadQueueState, DownloadStatus, DownloadTask,
-        DriveDownloadResult, DriveItemSummary,
+        BatchDownloadResult, DownloadProgressUpdate, DownloadQueueState, DownloadStatus,
+        DownloadTask, DriveDownloadResult, DriveItemSummary,
     },
     GRAPH_BASE,
 };
@@ -189,6 +189,91 @@ impl DownloadManager {
         self.spawn_download(task, None);
 
         Ok(self.snapshot())
+    }
+
+    /// 批量入队下载任务，跳过已在队列中的任务或文件夹。
+    pub fn enqueue_batch(
+        &self,
+        items: Vec<DriveItemSummary>,
+        target_dir: String,
+        overwrite: bool,
+    ) -> Result<BatchDownloadResult, String> {
+        if target_dir.trim().is_empty() {
+            return Err("target directory is required".to_string());
+        }
+        if items.is_empty() {
+            return Ok(BatchDownloadResult {
+                queue: self.snapshot(),
+                skipped: vec![],
+                failed: vec![],
+            });
+        }
+
+        let mut skipped = Vec::new();
+        let mut failed = Vec::new();
+        let mut new_tasks = Vec::new();
+
+        let mut state = self.state.lock().unwrap_or_else(|p| p.into_inner());
+        let mut active_ids: HashSet<String> =
+            state.active.iter().map(|task| task.item.id.clone()).collect();
+        let mut seen_ids: HashSet<String> = HashSet::new();
+
+        for item in items {
+            let item_id = item.id.trim().to_string();
+            if item_id.is_empty() {
+                failed.push(item.id.clone());
+                continue;
+            }
+            if !seen_ids.insert(item_id.clone()) {
+                skipped.push(item_id);
+                continue;
+            }
+            if item.is_folder {
+                skipped.push(item_id);
+                continue;
+            }
+            if active_ids.contains(&item_id) {
+                skipped.push(item_id);
+                continue;
+            }
+
+            state.completed.retain(|task| task.item.id != item_id);
+            state.failed.retain(|task| task.item.id != item_id);
+
+            let file_name = sanitize_file_name(&item.name);
+            let task = DownloadTask {
+                item: item.clone(),
+                status: DownloadStatus::InProgress,
+                started_at: current_timestamp(),
+                completed_at: None,
+                target_dir: target_dir.clone(),
+                file_name,
+                overwrite,
+                saved_path: None,
+                size_label: item.size,
+                bytes_downloaded: Some(0),
+                etag: None,
+                can_resume: false,
+                error_message: None,
+            };
+            state.active.push(task.clone());
+            new_tasks.push(task);
+            active_ids.insert(item_id);
+        }
+
+        let snapshot = (*state).clone();
+        drop(state);
+
+        for task in new_tasks {
+            self.store.upsert(&task);
+            self.spawn_download(task, None);
+        }
+
+        Ok(BatchDownloadResult {
+            queue: snapshot.into(),
+            skipped,
+            failed,
+        })
     }
 
     fn spawn_download(&self, task: DownloadTask, resume_from: Option<u64>) {
@@ -928,6 +1013,14 @@ pub fn enqueue_download_task(
     overwrite: bool,
 ) -> Result<DownloadQueueState, String> {
     DownloadManager::shared().enqueue(item, target_dir, overwrite)
+}
+
+pub fn enqueue_download_tasks_batch(
+    items: Vec<DriveItemSummary>,
+    target_dir: String,
+    overwrite: bool,
+) -> Result<BatchDownloadResult, String> {
+    DownloadManager::shared().enqueue_batch(items, target_dir, overwrite)
 }
 
 pub fn remove_download_task(item_id: &str) -> Result<DownloadQueueState, String> {
