@@ -1,6 +1,6 @@
 # Skydrivex
 
-Skydrivex is a Linux-first third-party OneDrive desktop client, with support planned and in progress for macOS and Windows. The goal is to deliver a native desktop experience while staying fully compatible with the official OneDrive service.
+Skydrivex is a Linux-first third-party OneDrive desktop client that also supports macOS and Windows. The goal is to deliver a native desktop experience while staying fully compatible with the official OneDrive service.
 
 Chinese README: [zh_README.md](zh_README.md)
 

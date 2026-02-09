@@ -41,6 +41,6 @@ Skydrivex 是一个以 Linux 为优先的第三方 OneDrive 桌面客户端，�
   ```
 
 ## 贡献指南
-- 保持 Linux 桌面可用性，同时避免破坏 macOS/Windows 的编译。
+- 保持 Linux/macOS/Windows 桌面可用性，同时避免破坏 macOS/Windows 的编译。
 - 新增或修改 Rust API 时，先更新桥接定义并重新生成绑定，再实现 Dart 逻辑。
 - 确保桥接代码已更新。
