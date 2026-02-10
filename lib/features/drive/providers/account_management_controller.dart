@@ -110,7 +110,14 @@ class AccountManagementController extends Notifier<AccountManagementState> {
       return;
     }
     if (state.hydratedAccountId == activeAccount.accountId) return;
-    unawaited(_hydrateActiveAccountProfile(accountId: activeAccount.accountId));
+    final targetAccountId = activeAccount.accountId;
+    // Defer provider writes until after current build/lifecycle turn.
+    Future<void>.microtask(() async {
+      if (!ref.mounted) return;
+      if (state.isHydratingProfile) return;
+      if (state.hydratedAccountId == targetAccountId) return;
+      await _hydrateActiveAccountProfile(accountId: targetAccountId);
+    });
   }
 
   Future<void> _hydrateActiveAccountProfile({String? accountId}) async {

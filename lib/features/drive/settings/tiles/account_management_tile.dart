@@ -16,15 +16,26 @@ class AccountManagementTile extends ConsumerStatefulWidget {
 
 class _AccountManagementTileState extends ConsumerState<AccountManagementTile> {
   late final TextEditingController _addAccountController;
+  late final ProviderSubscription<AuthState> _authStateSubscription;
 
   @override
   void initState() {
     super.initState();
     _addAccountController = TextEditingController();
+    _authStateSubscription = ref.listenManual<AuthState>(
+      authControllerProvider,
+      (_, next) {
+        ref
+            .read(accountManagementControllerProvider.notifier)
+            .ensureActiveProfileHydrated(next);
+      },
+      fireImmediately: true,
+    );
   }
 
   @override
   void dispose() {
+    _authStateSubscription.close();
     _addAccountController.dispose();
     super.dispose();
   }
@@ -188,15 +199,12 @@ class _AccountManagementTileState extends ConsumerState<AccountManagementTile> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     final managementState = ref.watch(accountManagementControllerProvider);
-    final managementController =
-        ref.read(accountManagementControllerProvider.notifier);
     final theme = context.theme;
     final colors = theme.colors;
     final typography = theme.typography;
     final accounts = authState.accounts;
     final isBusy =
         authState.isAuthenticating || authState.isLoadingAccounts;
-    managementController.ensureActiveProfileHydrated(authState);
 
     Widget body;
     if (authState.isLoadingAccounts) {
