@@ -89,7 +89,7 @@ class _DriveHomeLoadingView extends ConsumerWidget {
                   context: context,
                   ref: ref,
                 ),
-                style: FButtonStyle.outline(),
+                style: _driveToolbarActionButtonStyle(context),
                 prefix: const Icon(FIcons.folderPlus, size: 16),
                 child: const Text('New folder'),
               ),
@@ -415,14 +415,14 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
                     context: context,
                     ref: ref,
                   ),
-                  style: FButtonStyle.outline(),
+                  style: _driveToolbarActionButtonStyle(context),
                   prefix: const Icon(FIcons.folderPlus, size: 16),
                   child: const Text('New folder'),
                 ),
                 const SizedBox(width: 12),
                 FButton(
                   onPress: _enterSelectionMode,
-                  style: FButtonStyle.outline(),
+                  style: _driveToolbarActionButtonStyle(context),
                   prefix: const Icon(FIcons.check, size: 16),
                   child: const Text('Select'),
                 ),
@@ -707,4 +707,62 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
 
 void _showSnack(BuildContext context, String message) {
   showToast(context, message);
+}
+
+FBaseButtonStyle Function(FButtonStyle style) _driveToolbarActionButtonStyle(
+  BuildContext context,
+) {
+  final colors = context.theme.colors;
+  final typography = context.theme.typography;
+  return FButtonStyle.outline(
+    (style) => style.copyWith(
+      decoration: FWidgetStateMap({
+        WidgetState.disabled: BoxDecoration(
+          color: colors.disable(colors.background),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: colors.border.withValues(alpha: 0.45)),
+        ),
+        WidgetState.hovered | WidgetState.pressed: BoxDecoration(
+          color: colors.secondary.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: colors.border.withValues(alpha: 0.7)),
+          boxShadow: [
+            BoxShadow(
+              color: colors.barrier.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        WidgetState.any: BoxDecoration(
+          color: colors.background,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: colors.border.withValues(alpha: 0.7)),
+          boxShadow: [
+            BoxShadow(
+              color: colors.barrier.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+      }),
+      contentStyle: (contentStyle) => contentStyle.copyWith(
+        textStyle: FWidgetStateMap.all(
+          typography.sm.copyWith(
+            fontWeight: FontWeight.w600,
+            color: colors.foreground,
+          ),
+        ),
+        iconStyle: FWidgetStateMap.all(
+          IconThemeData(
+            color: colors.mutedForeground,
+            size: 16,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        spacing: 8,
+      ),
+    ),
+  );
 }
