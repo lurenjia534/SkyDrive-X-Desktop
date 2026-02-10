@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,11 +28,13 @@ class DriveWorkspacePage extends ConsumerStatefulWidget {
 
 class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
   static const int _simpleUploadMaxBytes = 250 * 1024 * 1024;
+  static const Duration _searchDebounceDuration = Duration(milliseconds: 320);
 
   int _selectedSectionIndex = 0;
   bool _isClearingCredentials = false;
   bool _isUploading = false;
   final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
   late final List<Widget> _sections;
 
   @override
@@ -46,6 +50,7 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -70,6 +75,20 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
     if (_selectedSectionIndex == index) return;
     setState(() {
       _selectedSectionIndex = index;
+    });
+  }
+
+  void _handleSearchChanged(TextEditingValue value) {
+    final query = value.text.trim();
+    ref.read(driveSearchQueryProvider.notifier).setQuery(query);
+
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(_searchDebounceDuration, () async {
+      if (!mounted || _selectedSectionIndex != 0) return;
+      if (ref.read(driveSearchQueryProvider) != query) return;
+      await ref.read(driveHomeControllerProvider.notifier).applySearchQuery(
+        query,
+      );
     });
   }
 
@@ -142,11 +161,7 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
                   selectedSectionIndex: _selectedSectionIndex,
                   searchEnabled: _selectedSectionIndex == 0,
                   searchController: _searchController,
-                  onSearchChanged: (value) {
-                    ref
-                        .read(driveSearchQueryProvider.notifier)
-                        .setQuery(value.text.trim());
-                  },
+                  onSearchChanged: _handleSearchChanged,
                   onRefresh: _selectedSectionIndex == 0
                       ? () => ref
                             .read(driveHomeControllerProvider.notifier)

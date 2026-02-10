@@ -8,7 +8,7 @@ use serde::Deserialize;
 use std::time::Duration;
 
 /// 统一的 child 查询参数：只获取必须字段并附带缩略图信息，减少网络传输。
-const THUMBNAIL_QUERY: &str =
+pub(super) const THUMBNAIL_QUERY: &str =
     "?$select=id,name,size,lastModifiedDateTime,folder,file&$expand=thumbnails($select=small,medium)";
 
 /// 负责拉取 OneDrive 指定目录下的子项列表。
@@ -28,7 +28,7 @@ pub fn list_drive_children(
         build_children_url(folder_path.as_deref())
     };
 
-    fetch_drive_children(&request_url)
+    fetch_drive_page(&request_url)
 }
 
 /// 根据路径构造 `/root:/path:/children` URL，自动处理空串与多重 `/` 的情况。
@@ -52,7 +52,7 @@ fn build_children_url(path: Option<&str>) -> String {
     }
 }
 
-fn fetch_drive_children(url: &str) -> Result<DrivePage, String> {
+pub(super) fn fetch_drive_page(url: &str) -> Result<DrivePage, String> {
     // 设置较短超时，避免 UI 阻塞；下载等长耗时场景另行处理。
     let client = build_blocking_client(Duration::from_secs(30))?;
 

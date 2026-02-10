@@ -184,18 +184,6 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
     });
   }
 
-  List<drive_api.DriveItemSummary> _searchItems(
-    List<drive_api.DriveItemSummary> items,
-    String searchQuery,
-  ) {
-    final query = searchQuery.trim();
-    if (query.isEmpty) return items;
-    final lowerQuery = query.toLowerCase();
-    return items
-        .where((item) => item.name.toLowerCase().contains(lowerQuery))
-        .toList(growable: false);
-  }
-
   Future<void> _handleBatchDelete(DriveHomeState viewState) async {
     final selectedItems = viewState.items
         .where((item) => _selectedIds.contains(item.id))
@@ -380,14 +368,14 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
     final showLoadingState =
         viewState.items.isEmpty &&
         (widget.isRefreshing || viewState.isRefreshing);
-    final showEmptyState = viewState.items.isEmpty && !showLoadingState;
-    final hasMore = viewState.nextLink != null;
     final searchQuery = ref.watch(driveSearchQueryProvider);
-    final visibleItems = _searchItems(viewState.items, searchQuery);
     final hasSearchQuery = searchQuery.isNotEmpty;
+    final showEmptyState =
+        viewState.items.isEmpty && !showLoadingState && !hasSearchQuery;
+    final hasMore = viewState.nextLink != null;
+    final visibleItems = viewState.items;
     final showSearchEmptyState =
         hasSearchQuery && visibleItems.isEmpty && !showLoadingState;
-    final hasMoreResults = hasMore && !hasSearchQuery;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -486,7 +474,7 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
                         showEmptyState: showEmptyState,
                         showSearchEmptyState: showSearchEmptyState,
                         searchQuery: searchQuery,
-                        hasMore: hasMoreResults,
+                        hasMore: hasMore,
                       );
                     },
                   ),

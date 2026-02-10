@@ -9,6 +9,7 @@ pub mod list;
 pub mod models;
 pub mod move_item;
 pub mod rename;
+pub mod search;
 pub mod share;
 pub mod upload;
 pub mod upload_manager;
@@ -31,6 +32,7 @@ pub use models::{
 };
 pub use move_item::move_drive_item;
 pub use rename::rename_drive_item;
+pub use search::search_drive_items;
 pub use share::{create_share_link, get_share_capabilities};
 pub use upload::upload_small_file;
 pub use upload_manager::{
