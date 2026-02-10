@@ -5,6 +5,7 @@ import 'package:forui/forui.dart';
 import 'package:skydrivex/features/auth/auth_controller.dart';
 import 'package:skydrivex/features/drive/downloads/drive_downloads_page.dart';
 import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
+import 'package:skydrivex/features/drive/providers/drive_search_query_provider.dart';
 import 'package:skydrivex/features/drive/providers/drive_upload_manager.dart';
 import 'package:skydrivex/features/drive/settings/drive_settings_page.dart';
 import 'package:skydrivex/features/drive/widgets/quick_action_side_sheet.dart';
@@ -29,6 +30,7 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
   int _selectedSectionIndex = 0;
   bool _isClearingCredentials = false;
   bool _isUploading = false;
+  final TextEditingController _searchController = TextEditingController();
   late final List<Widget> _sections;
 
   @override
@@ -42,13 +44,18 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
     ];
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   void _handleQuickActionTap() {
     if (!mounted) return;
     showQuickActionSideSheet(
       context,
       onUploadPhoto: _pickAndUploadSmallFile,
-      onCreateFolder: () =>
-          _showPlaceholder('Create folder is not wired yet.'),
+      onCreateFolder: () => _showPlaceholder('Create folder is not wired yet.'),
       onUploadDoc: _pickAndUploadSmallFile,
       onUploadLarge: _pickAndUploadLargeFile,
     );
@@ -96,53 +103,30 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
   Widget build(BuildContext context) {
     final colors = context.theme.colors;
     final typography = context.theme.typography;
-    final baseStyle = context.theme.style;
-    final logoutIcon = _isClearingCredentials
+    final searchQuery = ref.watch(driveSearchQueryProvider);
+    if (_searchController.text != searchQuery) {
+      _searchController.value = TextEditingValue(
+        text: searchQuery,
+        selection: TextSelection.collapsed(offset: searchQuery.length),
+      );
+    }
+    final accountIcon = _isClearingCredentials
         ? SizedBox(
-            width: 18,
-            height: 18,
+            width: 14,
+            height: 14,
             child: FCircularProgress.loader(
               style: (style) => style.copyWith(
                 iconStyle: IconThemeData(
                   color: colors.mutedForeground,
-                  size: 18,
+                  size: 14,
                 ),
               ),
             ),
           )
-        : const Icon(FIcons.logOut);
+        : Icon(FIcons.userRound, size: 14, color: colors.mutedForeground);
 
     return FScaffold(
       childPad: false,
-      header: FHeader(
-        style: (style) => style.copyWith(
-          titleTextStyle: typography.xl2.copyWith(
-            color: colors.foreground,
-            fontWeight: FontWeight.w700,
-            height: 1,
-          ),
-          actionStyle: (_) => FHeaderActionStyle.inherit(
-            colors: colors,
-            style: baseStyle,
-            size: 20,
-          ),
-        ),
-        title: const Text('OneDrive Files'),
-        suffixes: [
-          FHeaderAction(
-            icon: const Icon(FIcons.refreshCcw),
-            onPress: _selectedSectionIndex == 0
-                ? () => ref
-                      .read(driveHomeControllerProvider.notifier)
-                      .refresh(showSkeleton: true)
-                : null,
-          ),
-          FHeaderAction(
-            icon: logoutIcon,
-            onPress: _isClearingCredentials ? null : _clearCredentials,
-          ),
-        ],
-      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final body = _DriveSectionStack(
@@ -153,11 +137,35 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                child: _DriveWorkspaceHeader(
+                  selectedSectionIndex: _selectedSectionIndex,
+                  searchEnabled: _selectedSectionIndex == 0,
+                  searchController: _searchController,
+                  onSearchChanged: (value) {
+                    ref
+                        .read(driveSearchQueryProvider.notifier)
+                        .setQuery(value.text.trim());
+                  },
+                  onRefresh: _selectedSectionIndex == 0
+                      ? () => ref
+                            .read(driveHomeControllerProvider.notifier)
+                            .refresh(showSkeleton: true)
+                      : null,
+                  onQuickAction: _handleQuickActionTap,
+                  onOpenSettings: () => _handleNavigationSelection(3),
+                  onLogout: _isClearingCredentials ? null : _clearCredentials,
+                  accountIcon: accountIcon,
+                  typography: typography,
+                  colors: colors,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
                 child: _DriveTopNavBar(
                   selectedIndex: _selectedSectionIndex,
                   onSelected: _handleNavigationSelection,
-                  onQuickAction: _handleQuickActionTap,
                 ),
               ),
               const SizedBox(height: 16),
@@ -247,16 +255,197 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
   }
 }
 
+class _DriveWorkspaceHeader extends StatelessWidget {
+  const _DriveWorkspaceHeader({
+    required this.selectedSectionIndex,
+    required this.searchEnabled,
+    required this.searchController,
+    required this.onSearchChanged,
+    required this.onRefresh,
+    required this.onQuickAction,
+    required this.onOpenSettings,
+    required this.onLogout,
+    required this.accountIcon,
+    required this.typography,
+    required this.colors,
+  });
+
+  final int selectedSectionIndex;
+  final bool searchEnabled;
+  final TextEditingController searchController;
+  final ValueChanged<TextEditingValue> onSearchChanged;
+  final VoidCallback? onRefresh;
+  final VoidCallback onQuickAction;
+  final VoidCallback onOpenSettings;
+  final VoidCallback? onLogout;
+  final Widget accountIcon;
+  final FTypography typography;
+  final FColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    final iconButtonStyle = FButtonStyle.outline(
+      (style) => style.copyWith(
+        contentStyle: (contentStyle) => contentStyle.copyWith(
+          padding: const EdgeInsets.all(9),
+          iconStyle: FWidgetStateMap.all(
+            IconThemeData(color: colors.mutedForeground, size: 16),
+          ),
+        ),
+      ),
+    );
+
+    final newButtonStyle = FButtonStyle.primary(
+      (style) => style.copyWith(
+        decoration: FWidgetStateMap.all(
+          BoxDecoration(
+            color: colors.foreground,
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+        contentStyle: (contentStyle) => contentStyle.copyWith(
+          textStyle: FWidgetStateMap.all(
+            typography.sm.copyWith(
+              fontWeight: FontWeight.w700,
+              color: colors.background,
+            ),
+          ),
+          iconStyle: FWidgetStateMap.all(
+            IconThemeData(color: colors.background, size: 16),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+          spacing: 8,
+        ),
+      ),
+    );
+
+    Widget searchField() => FTextField(
+      control: FTextFieldControl.managed(
+        controller: searchController,
+        onChange: onSearchChanged,
+      ),
+      enabled: searchEnabled,
+      hint: 'Search in current folder...',
+      textInputAction: TextInputAction.search,
+      clearable: (value) => searchEnabled && value.text.isNotEmpty,
+      prefixBuilder: (context, style, states) => const Padding(
+        padding: EdgeInsets.only(left: 14, right: 10),
+        child: Icon(FIcons.search, size: 16),
+      ),
+    );
+
+    final title = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(FIcons.cloud, size: 18, color: colors.primary),
+        const SizedBox(width: 8),
+        Text(
+          'OneDrive Files',
+          style: typography.lg.copyWith(
+            fontWeight: FontWeight.w700,
+            color: colors.foreground,
+          ),
+        ),
+      ],
+    );
+
+    final actions = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FButton.icon(
+          onPress: onRefresh,
+          style: iconButtonStyle,
+          child: const Icon(FIcons.refreshCcw),
+        ),
+        const SizedBox(width: 8),
+        FButton(
+          onPress: onQuickAction,
+          style: newButtonStyle,
+          prefix: const Icon(FIcons.plus),
+          child: const Text('New'),
+        ),
+        const SizedBox(width: 8),
+        FButton.icon(
+          onPress: onOpenSettings,
+          style: selectedSectionIndex == 3
+              ? FButtonStyle.primary()
+              : iconButtonStyle,
+          child: const Icon(FIcons.settings),
+        ),
+        const SizedBox(width: 8),
+        FButton.icon(
+          onPress: onLogout,
+          style: iconButtonStyle,
+          child: Container(
+            width: 18,
+            height: 18,
+            decoration: BoxDecoration(
+              color: colors.secondary.withValues(alpha: 0.75),
+              shape: BoxShape.circle,
+            ),
+            child: Center(child: accountIcon),
+          ),
+        ),
+      ],
+    );
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: colors.background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colors.border.withValues(alpha: 0.55)),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 1080;
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: title),
+                    const SizedBox(width: 12),
+                    actions,
+                  ],
+                ),
+                const SizedBox(height: 10),
+                searchField(),
+              ],
+            );
+          }
+          return Row(
+            children: [
+              title,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 560),
+                    child: searchField(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              actions,
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _DriveTopNavBar extends StatelessWidget {
   const _DriveTopNavBar({
     required this.selectedIndex,
     required this.onSelected,
-    required this.onQuickAction,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onSelected;
-  final VoidCallback onQuickAction;
 
   @override
   Widget build(BuildContext context) {
@@ -270,75 +459,21 @@ class _DriveTopNavBar extends StatelessWidget {
       _NavDestination(index: 3, label: 'Settings', icon: FIcons.settings),
     ];
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: colors.background,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colors.border.withValues(alpha: 0.6)),
-        boxShadow: [
-          BoxShadow(
-            color: colors.barrier.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: destinations
-                    .map(
-                      (destination) => Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: _NavButton(
-                          destination: destination,
-                          selected: selectedIndex == destination.index,
-                          onTap: () => onSelected(destination.index),
-                          colors: colors,
-                          typography: typography,
-                        ),
-                      ),
-                    )
-                    .toList(growable: false),
+          ...destinations.map(
+            (destination) => Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _NavButton(
+                destination: destination,
+                selected: selectedIndex == destination.index,
+                onTap: () => onSelected(destination.index),
+                colors: colors,
+                typography: typography,
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          FButton(
-            onPress: onQuickAction,
-            style: FButtonStyle.primary(
-              (style) => style.copyWith(
-                decoration: FWidgetStateMap.all(
-                  BoxDecoration(
-                    color: colors.foreground,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                contentStyle: (contentStyle) => contentStyle.copyWith(
-                  textStyle: FWidgetStateMap.all(
-                    typography.sm.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: colors.background,
-                    ),
-                  ),
-                  iconStyle: FWidgetStateMap.all(
-                    IconThemeData(
-                      color: colors.background,
-                      size: 18,
-                    ),
-                  ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  spacing: 8,
-                ),
-              ),
-            ),
-            prefix: const Icon(FIcons.plus),
-            child: const Text('New'),
           ),
         ],
       ),

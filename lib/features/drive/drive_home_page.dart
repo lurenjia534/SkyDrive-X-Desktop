@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:skydrivex/features/drive/providers/drive_download_manager.dart';
 import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
+import 'package:skydrivex/features/drive/providers/drive_search_query_provider.dart';
 import 'package:skydrivex/features/drive/providers/drive_view_mode_provider.dart';
 import 'package:skydrivex/features/drive/services/drive_item_action_service.dart';
 import 'package:skydrivex/features/drive/utils/drive_item_formatters.dart';
@@ -68,79 +69,35 @@ class _DriveHomeLoadingView extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final inlineSearch = constraints.maxWidth >= 1180;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DriveBreadcrumbBar(
-                          segments: const [],
-                          onRootTap: () => controller.tapBreadcrumb(null),
-                          onSegmentTap: (_) {},
-                        ),
-                      ),
-                      if (inlineSearch) ...[
-                        const SizedBox(width: 12),
-                        const SizedBox(
-                          width: 320,
-                          child: _DisabledDriveSearchField(),
-                        ),
-                      ],
-                      const SizedBox(width: 12),
-                      DriveViewModeToggle(
-                        mode: viewMode,
-                        onChanged: viewModeController.setMode,
-                      ),
-                      const SizedBox(width: 12),
-                      FButton(
-                        onPress: () => DriveItemActionService.promptCreateFolder(
-                          context: context,
-                          ref: ref,
-                        ),
-                        style: FButtonStyle.outline(),
-                        prefix: const Icon(FIcons.folderPlus, size: 16),
-                        child: const Text('New folder'),
-                      ),
-                    ],
-                  ),
-                  if (!inlineSearch) ...[
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 420),
-                        child: const _DisabledDriveSearchField(),
-                      ),
-                    ),
-                  ],
-                ],
-              );
-            },
+          child: Row(
+            children: [
+              Expanded(
+                child: DriveBreadcrumbBar(
+                  segments: const [],
+                  onRootTap: () => controller.tapBreadcrumb(null),
+                  onSegmentTap: (_) {},
+                ),
+              ),
+              const SizedBox(width: 12),
+              DriveViewModeToggle(
+                mode: viewMode,
+                onChanged: viewModeController.setMode,
+              ),
+              const SizedBox(width: 12),
+              FButton(
+                onPress: () => DriveItemActionService.promptCreateFolder(
+                  context: context,
+                  ref: ref,
+                ),
+                style: FButtonStyle.outline(),
+                prefix: const Icon(FIcons.folderPlus, size: 16),
+                child: const Text('New folder'),
+              ),
+            ],
           ),
         ),
         const Expanded(child: DriveLoadingList(key: ValueKey('drive-loading'))),
       ],
-    );
-  }
-}
-
-class _DisabledDriveSearchField extends StatelessWidget {
-  const _DisabledDriveSearchField();
-
-  @override
-  Widget build(BuildContext context) {
-    return FTextField(
-      enabled: false,
-      hint: 'Search in current folder',
-      textInputAction: TextInputAction.search,
-      prefixBuilder: (context, style, states) => const Padding(
-        padding: EdgeInsets.only(left: 14, right: 10),
-        child: Icon(FIcons.search, size: 16),
-      ),
     );
   }
 }
@@ -159,8 +116,6 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
   DateTime? _suppressBackgroundMenuUntil;
   bool _selectionMode = false;
   final Set<String> _selectedIds = <String>{};
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
 
   bool get _isBackgroundMenuSuppressed {
     final until = _suppressBackgroundMenuUntil;
@@ -175,20 +130,13 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
   }
 
   @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
   void didUpdateWidget(covariant _DriveHomeView oldWidget) {
     super.didUpdateWidget(oldWidget);
     final previousFolderId = _folderIdFor(oldWidget.state);
     final nextFolderId = _folderIdFor(widget.state);
     if (previousFolderId != nextFolderId) {
       _exitSelectionMode();
-      _searchController.clear();
-      _searchQuery = '';
+      ref.read(driveSearchQueryProvider.notifier).clear();
       return;
     }
     if (_selectedIds.isEmpty) return;
@@ -236,22 +184,11 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
     });
   }
 
-  void _updateSearchQuery(TextEditingValue value) {
-    final query = value.text.trim();
-    if (query == _searchQuery) return;
-    setState(() {
-      _searchQuery = query;
-      if (_selectionMode || _selectedIds.isNotEmpty) {
-        _selectionMode = false;
-        _selectedIds.clear();
-      }
-    });
-  }
-
   List<drive_api.DriveItemSummary> _searchItems(
     List<drive_api.DriveItemSummary> items,
+    String searchQuery,
   ) {
-    final query = _searchQuery;
+    final query = searchQuery.trim();
     if (query.isEmpty) return items;
     final lowerQuery = query.toLowerCase();
     return items
@@ -445,8 +382,9 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
         (widget.isRefreshing || viewState.isRefreshing);
     final showEmptyState = viewState.items.isEmpty && !showLoadingState;
     final hasMore = viewState.nextLink != null;
-    final visibleItems = _searchItems(viewState.items);
-    final hasSearchQuery = _searchQuery.isNotEmpty;
+    final searchQuery = ref.watch(driveSearchQueryProvider);
+    final visibleItems = _searchItems(viewState.items, searchQuery);
+    final hasSearchQuery = searchQuery.isNotEmpty;
     final showSearchEmptyState =
         hasSearchQuery && visibleItems.isEmpty && !showLoadingState;
     final hasMoreResults = hasMore && !hasSearchQuery;
@@ -456,100 +394,73 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final inlineSearch = constraints.maxWidth >= 1180 && !_selectionMode;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DriveBreadcrumbBar(
-                          segments: viewState.breadcrumbs,
-                          onRootTap: () => controller.tapBreadcrumb(null),
-                          onSegmentTap: controller.tapBreadcrumb,
-                        ),
-                      ),
-                      if (inlineSearch) ...[
-                        const SizedBox(width: 12),
-                        SizedBox(
-                          width: 320,
-                          child: _buildSearchField(enabled: !_selectionMode),
-                        ),
-                      ],
-                      const SizedBox(width: 12),
-                      DriveViewModeToggle(
-                        mode: viewMode,
-                        onChanged: viewModeController.setMode,
-                      ),
-                      const SizedBox(width: 12),
-                      if (!_selectionMode) ...[
-                        FButton(
-                          onPress: () => DriveItemActionService.promptCreateFolder(
-                            context: context,
-                            ref: ref,
-                          ),
-                          style: FButtonStyle.outline(),
-                          prefix: const Icon(FIcons.folderPlus, size: 16),
-                          child: const Text('New folder'),
-                        ),
-                        const SizedBox(width: 12),
-                        FButton(
-                          onPress: _enterSelectionMode,
-                          style: FButtonStyle.outline(),
-                          prefix: const Icon(FIcons.check, size: 16),
-                          child: const Text('Select'),
-                        ),
-                      ] else ...[
-                        Text(
-                          '$selectedCount selected',
-                          style: typography.sm.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: colors.mutedForeground,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        FButton(
-                          onPress: canDownload
-                              ? () => _handleBatchDownload(viewState)
-                              : null,
-                          style: FButtonStyle.outline(),
-                          prefix: const Icon(FIcons.cloudDownload, size: 16),
-                          child: const Text('Download'),
-                        ),
-                        const SizedBox(width: 8),
-                        FButton(
-                          onPress: canDelete
-                              ? () => _handleBatchDelete(viewState)
-                              : null,
-                          style: FButtonStyle.destructive(),
-                          prefix: const Icon(FIcons.trash2, size: 16),
-                          child: const Text('Delete'),
-                        ),
-                        const SizedBox(width: 8),
-                        FButton(
-                          onPress: _exitSelectionMode,
-                          style: FButtonStyle.outline(),
-                          prefix: const Icon(FIcons.x, size: 16),
-                          child: const Text('Cancel'),
-                        ),
-                      ],
-                    ],
+          child: Row(
+            children: [
+              Expanded(
+                child: DriveBreadcrumbBar(
+                  segments: viewState.breadcrumbs,
+                  onRootTap: () => controller.tapBreadcrumb(null),
+                  onSegmentTap: controller.tapBreadcrumb,
+                ),
+              ),
+              const SizedBox(width: 12),
+              DriveViewModeToggle(
+                mode: viewMode,
+                onChanged: viewModeController.setMode,
+              ),
+              const SizedBox(width: 12),
+              if (!_selectionMode) ...[
+                FButton(
+                  onPress: () => DriveItemActionService.promptCreateFolder(
+                    context: context,
+                    ref: ref,
                   ),
-                  if (!inlineSearch) ...[
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 420),
-                        child: _buildSearchField(enabled: !_selectionMode),
-                      ),
-                    ),
-                  ],
-                ],
-              );
-            },
+                  style: FButtonStyle.outline(),
+                  prefix: const Icon(FIcons.folderPlus, size: 16),
+                  child: const Text('New folder'),
+                ),
+                const SizedBox(width: 12),
+                FButton(
+                  onPress: _enterSelectionMode,
+                  style: FButtonStyle.outline(),
+                  prefix: const Icon(FIcons.check, size: 16),
+                  child: const Text('Select'),
+                ),
+              ] else ...[
+                Text(
+                  '$selectedCount selected',
+                  style: typography.sm.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colors.mutedForeground,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                FButton(
+                  onPress: canDownload
+                      ? () => _handleBatchDownload(viewState)
+                      : null,
+                  style: FButtonStyle.outline(),
+                  prefix: const Icon(FIcons.cloudDownload, size: 16),
+                  child: const Text('Download'),
+                ),
+                const SizedBox(width: 8),
+                FButton(
+                  onPress: canDelete
+                      ? () => _handleBatchDelete(viewState)
+                      : null,
+                  style: FButtonStyle.destructive(),
+                  prefix: const Icon(FIcons.trash2, size: 16),
+                  child: const Text('Delete'),
+                ),
+                const SizedBox(width: 8),
+                FButton(
+                  onPress: _exitSelectionMode,
+                  style: FButtonStyle.outline(),
+                  prefix: const Icon(FIcons.x, size: 16),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ],
           ),
         ),
         Expanded(
@@ -574,6 +485,7 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
                         showLoadingState: showLoadingState,
                         showEmptyState: showEmptyState,
                         showSearchEmptyState: showSearchEmptyState,
+                        searchQuery: searchQuery,
                         hasMore: hasMoreResults,
                       );
                     },
@@ -605,6 +517,7 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
     required bool showLoadingState,
     required bool showEmptyState,
     required bool showSearchEmptyState,
+    required String searchQuery,
     required bool hasMore,
   }) {
     if (showLoadingState) {
@@ -640,7 +553,7 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 48),
-            child: _buildSearchEmptyResult(context),
+            child: _buildSearchEmptyResult(context, searchQuery),
           ),
         ],
       );
@@ -749,7 +662,7 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
     );
   }
 
-  Widget _buildSearchEmptyResult(BuildContext context) {
+  Widget _buildSearchEmptyResult(BuildContext context, String searchQuery) {
     final colors = context.theme.colors;
     final typography = context.theme.typography;
     return Center(
@@ -771,27 +684,10 @@ class _DriveHomeViewState extends ConsumerState<_DriveHomeView> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Try another keyword for "$_searchQuery".',
+            'Try another keyword for "$searchQuery".',
             style: typography.sm.copyWith(color: colors.mutedForeground),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSearchField({required bool enabled}) {
-    return FTextField(
-      control: FTextFieldControl.managed(
-        controller: _searchController,
-        onChange: _updateSearchQuery,
-      ),
-      enabled: enabled,
-      hint: 'Search in current folder',
-      textInputAction: TextInputAction.search,
-      clearable: (value) => value.text.isNotEmpty,
-      prefixBuilder: (context, style, states) => const Padding(
-        padding: EdgeInsets.only(left: 14, right: 10),
-        child: Icon(FIcons.search, size: 16),
       ),
     );
   }
