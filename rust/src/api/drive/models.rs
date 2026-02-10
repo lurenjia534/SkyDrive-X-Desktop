@@ -25,7 +25,9 @@ pub struct DrivePage {
 #[flutter_rust_bridge::frb]
 #[derive(Clone, Debug)]
 pub struct OfflineIndexStatus {
+    /// 当前主索引表中的条目总数。
     pub indexed_items: u32,
+    /// 最近一次成功同步完成时间（Unix 毫秒时间戳）。
     pub last_indexed_at_millis: Option<i64>,
 }
 

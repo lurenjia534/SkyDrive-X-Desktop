@@ -7,7 +7,9 @@ import '../../frb_generated.dart';
 import 'models.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `collect_records`, `map_to_summary`, `normalize_page_size`, `parse_offset`, `to_record`
+// These functions are ignored because they are not marked as `pub`: `apply_delta_items`, `apply_delta_sync`, `build_initial_delta_url`, `delta_item_to_record`, `fetch_delta_page`, `finalize_folder_deletes`, `handle_deleted_item`, `is_delta_reset`, `map_to_summary`, `normalize_page_size`, `parse_offset`, `run_full_delta_sync`, `sync_error_message`, `sync_offline_index`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DeletedFacet`, `DeltaItemDto`, `DeltaPage`, `GraphErrorEnvelope`, `GraphErrorPayload`, `SyncError`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Future<OfflineIndexStatus> rebuildOfflineIndex() =>
     RustLib.instance.api.crateApiDriveOfflineIndexRebuildOfflineIndex();

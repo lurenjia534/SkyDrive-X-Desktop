@@ -1,4 +1,6 @@
 mod client;
+/// Drive API 聚合模块：
+/// 对外组织 OneDrive 文件列表、搜索、下载/上传、分享、离线索引等能力。
 pub mod create_folder;
 pub mod delete;
 pub mod details;
@@ -15,6 +17,7 @@ pub mod share;
 pub mod upload;
 pub mod upload_manager;
 
+// FRB 通过 re-export 导出统一的 crate::api::drive 命名空间接口。
 pub use create_folder::create_drive_folder;
 pub use delete::{delete_drive_item, delete_drive_items_batch};
 pub use details::get_drive_item_details;

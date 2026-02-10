@@ -28,6 +28,11 @@ use std::{
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
+/// 下载核心调度模块：
+/// - 统一管理队列状态（活跃/完成/失败）
+/// - 负责并发控制、断点续传、暂停/取消与进度广播
+/// - 通过存储层持久化关键状态，支持应用重启后恢复
+
 /// 全局下载管理器实例：避免多次初始化，同时方便在 FRB 桥接层与其他模块之间共享。
 static DOWNLOAD_MANAGER: Lazy<DownloadManager> = Lazy::new(DownloadManager::new);
 /// 进度广播的有界缓冲大小（每个订阅者），避免无界内存增长。

@@ -20,8 +20,10 @@ pub use download_tasks::{
     DownloadTaskRecord,
 };
 pub use offline_index::{
-    count_offline_index_items, latest_offline_indexed_at_millis, replace_offline_index,
-    search_offline_index_items, OfflineIndexRecord,
+    clear_offline_index_table, count_offline_index_items, delete_offline_index_item,
+    get_offline_index_item, has_offline_index_children, latest_offline_indexed_at_millis,
+    replace_main_with_staging, replace_offline_index, search_offline_index_items,
+    upsert_offline_index_item, OfflineIndexRecord, OfflineIndexTable,
 };
 pub use settings::{get_setting, set_setting};
 pub use upload_tasks::{
@@ -29,8 +31,10 @@ pub use upload_tasks::{
     UploadTaskRecord,
 };
 
-/// DB 模块：提供统一的 sqlite 连接管理，同时 re-export 领域级 API。
-/// 目前支持 auth_accounts 与 download_tasks，两者共用同一数据库文件，便于部署。
+/// DB 模块：
+/// 1. 负责 SQLite 连接与 schema 迁移；
+/// 2. 对外 re-export 各子域数据访问函数；
+/// 3. 所有业务表共享同一数据库文件，降低部署复杂度。
 
 const QUALIFIER: &str = "com";
 const ORGANIZATION: &str = "Skydrivex";
@@ -39,6 +43,7 @@ const DB_FILE_NAME: &str = "skydrivex.db";
 
 pub type StorageResult<T> = Result<T, String>;
 
+/// 初始化存储（确保数据库可打开并完成迁移）。
 pub fn init_storage() -> StorageResult<()> {
     with_connection(|_| Ok(()))
 }
@@ -73,6 +78,7 @@ fn open_connection() -> StorageResult<Connection> {
     Ok(conn)
 }
 
+/// 应用所有表结构与兼容性迁移。
 fn apply_migrations(conn: &Connection) -> StorageResult<()> {
     conn.execute_batch(auth::AUTH_ACCOUNTS_TABLE_SCHEMA)
         .map_err(|e| format!("failed to initialize auth_accounts schema: {e}"))?;
@@ -93,6 +99,7 @@ fn apply_migrations(conn: &Connection) -> StorageResult<()> {
     Ok(())
 }
 
+/// 兼容旧版本数据库：若列不存在则新增，若已存在则忽略。
 fn ensure_column(
     conn: &Connection,
     table: &str,
@@ -111,6 +118,7 @@ fn ensure_column(
     }
 }
 
+/// 计算数据库文件路径（跨平台应用数据目录）。
 fn database_path() -> StorageResult<PathBuf> {
     let dirs = ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION)
         .ok_or_else(|| "failed to resolve application data directory".to_string())?;
