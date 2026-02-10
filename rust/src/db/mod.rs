@@ -1,5 +1,6 @@
 mod auth;
 mod download_tasks;
+mod offline_index;
 mod settings;
 mod upload_tasks;
 
@@ -17,6 +18,10 @@ pub use auth::{
 pub use download_tasks::{
     clear_finished_download_tasks, delete_download_task, load_download_tasks, upsert_download_task,
     DownloadTaskRecord,
+};
+pub use offline_index::{
+    count_offline_index_items, latest_offline_indexed_at_millis, replace_offline_index,
+    search_offline_index_items, OfflineIndexRecord,
 };
 pub use settings::{get_setting, set_setting};
 pub use upload_tasks::{
@@ -75,6 +80,8 @@ fn apply_migrations(conn: &Connection) -> StorageResult<()> {
         .map_err(|e| format!("failed to initialize download_tasks schema: {e}"))?;
     conn.execute_batch(upload_tasks::UPLOAD_TABLE_SCHEMA)
         .map_err(|e| format!("failed to initialize upload_tasks schema: {e}"))?;
+    conn.execute_batch(offline_index::OFFLINE_INDEX_TABLE_SCHEMA)
+        .map_err(|e| format!("failed to initialize offline_index schema: {e}"))?;
     conn.execute_batch(settings::SETTINGS_TABLE_SCHEMA)
         .map_err(|e| format!("failed to initialize settings schema: {e}"))?;
     ensure_column(conn, "download_tasks", "bytes_downloaded", "INTEGER")?;

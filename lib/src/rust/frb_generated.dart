@@ -14,6 +14,7 @@ import 'api/drive/info.dart';
 import 'api/drive/list.dart';
 import 'api/drive/models.dart';
 import 'api/drive/move_item.dart';
+import 'api/drive/offline_index.dart';
 import 'api/drive/rename.dart';
 import 'api/drive/search.dart';
 import 'api/drive/share.dart';
@@ -21,6 +22,7 @@ import 'api/drive/upload.dart';
 import 'api/drive/upload_manager.dart';
 import 'api/settings/download_concurrency.dart';
 import 'api/settings/download_directory.dart';
+import 'api/settings/offline_index.dart';
 import 'api/settings/theme.dart';
 import 'api/simple.dart';
 import 'dart:async';
@@ -85,7 +87,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -2052443287;
+  int get rustContentHash => -774691561;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -199,6 +201,10 @@ abstract class RustLibApi extends BaseApi {
 
   Future<DriveInfo> crateApiDriveInfoGetDriveOverview();
 
+  Future<bool> crateApiSettingsOfflineIndexGetOfflineIndexEnabled();
+
+  Future<OfflineIndexStatus> crateApiDriveOfflineIndexGetOfflineIndexStatus();
+
   Future<ShareCapabilities> crateApiDriveShareGetShareCapabilities();
 
   Future<bool> crateApiSettingsThemeGetThemeFollowSystem();
@@ -235,6 +241,8 @@ abstract class RustLibApi extends BaseApi {
     required AuthTokens tokens,
   });
 
+  Future<OfflineIndexStatus> crateApiDriveOfflineIndexRebuildOfflineIndex();
+
   Future<StoredAuthState> crateApiAuthRefreshRefreshTokens();
 
   Future<StoredAuthState?> crateApiAuthAuthRemoveAuthAccount({
@@ -267,6 +275,13 @@ abstract class RustLibApi extends BaseApi {
     int? top,
   });
 
+  Future<DrivePage> crateApiDriveOfflineIndexSearchOfflineIndex({
+    required String query,
+    String? folderId,
+    String? nextLink,
+    int? top,
+  });
+
   Future<StoredAuthState> crateApiAuthAuthSetActiveAuthAccount({
     required String accountId,
   });
@@ -277,6 +292,10 @@ abstract class RustLibApi extends BaseApi {
 
   Future<String> crateApiSettingsDownloadDirectorySetDownloadDirectory({
     required String path,
+  });
+
+  Future<bool> crateApiSettingsOfflineIndexSetOfflineIndexEnabled({
+    required bool value,
   });
 
   Future<bool> crateApiSettingsThemeSetThemeFollowSystem({required bool value});
@@ -1148,7 +1167,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "get_drive_overview", argNames: []);
 
   @override
-  Future<ShareCapabilities> crateApiDriveShareGetShareCapabilities() {
+  Future<bool> crateApiSettingsOfflineIndexGetOfflineIndexEnabled() {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -1157,6 +1176,61 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             generalizedFrbRustBinding,
             serializer,
             funcId: 26,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSettingsOfflineIndexGetOfflineIndexEnabledConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiSettingsOfflineIndexGetOfflineIndexEnabledConstMeta =>
+      const TaskConstMeta(debugName: "get_offline_index_enabled", argNames: []);
+
+  @override
+  Future<OfflineIndexStatus> crateApiDriveOfflineIndexGetOfflineIndexStatus() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 27,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_offline_index_status,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiDriveOfflineIndexGetOfflineIndexStatusConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDriveOfflineIndexGetOfflineIndexStatusConstMeta =>
+      const TaskConstMeta(debugName: "get_offline_index_status", argNames: []);
+
+  @override
+  Future<ShareCapabilities> crateApiDriveShareGetShareCapabilities() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 28,
             port: port_,
           );
         },
@@ -1183,7 +1257,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 27,
+            funcId: 29,
             port: port_,
           );
         },
@@ -1210,7 +1284,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 28,
+            funcId: 30,
             port: port_,
           );
         },
@@ -1235,7 +1309,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(name, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 31)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1260,7 +1334,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 30,
+            funcId: 32,
             port: port_,
           );
         },
@@ -1287,7 +1361,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 31,
+            funcId: 33,
             port: port_,
           );
         },
@@ -1321,7 +1395,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 32,
+            funcId: 34,
             port: port_,
           );
         },
@@ -1351,7 +1425,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 33,
+            funcId: 35,
             port: port_,
           );
         },
@@ -1387,7 +1461,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 34,
+            funcId: 36,
             port: port_,
           );
         },
@@ -1420,7 +1494,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 35,
+            funcId: 37,
             port: port_,
           );
         },
@@ -1455,7 +1529,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 36,
+            funcId: 38,
             port: port_,
           );
         },
@@ -1477,6 +1551,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<OfflineIndexStatus> crateApiDriveOfflineIndexRebuildOfflineIndex() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 39,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_offline_index_status,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiDriveOfflineIndexRebuildOfflineIndexConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDriveOfflineIndexRebuildOfflineIndexConstMeta =>
+      const TaskConstMeta(debugName: "rebuild_offline_index", argNames: []);
+
+  @override
   Future<StoredAuthState> crateApiAuthRefreshRefreshTokens() {
     return handler.executeNormal(
       NormalTask(
@@ -1485,7 +1586,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 37,
+            funcId: 40,
             port: port_,
           );
         },
@@ -1515,7 +1616,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 38,
+            funcId: 41,
             port: port_,
           );
         },
@@ -1548,7 +1649,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 39,
+            funcId: 42,
             port: port_,
           );
         },
@@ -1581,7 +1682,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 40,
+            funcId: 43,
             port: port_,
           );
         },
@@ -1618,7 +1719,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 41,
+            funcId: 44,
             port: port_,
           );
         },
@@ -1653,7 +1754,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 42,
+            funcId: 45,
             port: port_,
           );
         },
@@ -1692,7 +1793,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 43,
+            funcId: 46,
             port: port_,
           );
         },
@@ -1714,6 +1815,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<DrivePage> crateApiDriveOfflineIndexSearchOfflineIndex({
+    required String query,
+    String? folderId,
+    String? nextLink,
+    int? top,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(query, serializer);
+          sse_encode_opt_String(folderId, serializer);
+          sse_encode_opt_String(nextLink, serializer);
+          sse_encode_opt_box_autoadd_u_32(top, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 47,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_drive_page,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiDriveOfflineIndexSearchOfflineIndexConstMeta,
+        argValues: [query, folderId, nextLink, top],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiDriveOfflineIndexSearchOfflineIndexConstMeta =>
+      const TaskConstMeta(
+        debugName: "search_offline_index",
+        argNames: ["query", "folderId", "nextLink", "top"],
+      );
+
+  @override
   Future<StoredAuthState> crateApiAuthAuthSetActiveAuthAccount({
     required String accountId,
   }) {
@@ -1725,7 +1865,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 44,
+            funcId: 48,
             port: port_,
           );
         },
@@ -1758,7 +1898,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 45,
+            funcId: 49,
             port: port_,
           );
         },
@@ -1793,7 +1933,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 46,
+            funcId: 50,
             port: port_,
           );
         },
@@ -1817,6 +1957,40 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<bool> crateApiSettingsOfflineIndexSetOfflineIndexEnabled({
+    required bool value,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_bool(value, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 51,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSettingsOfflineIndexSetOfflineIndexEnabledConstMeta,
+        argValues: [value],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiSettingsOfflineIndexSetOfflineIndexEnabledConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_offline_index_enabled",
+        argNames: ["value"],
+      );
+
+  @override
   Future<bool> crateApiSettingsThemeSetThemeFollowSystem({
     required bool value,
   }) {
@@ -1828,7 +2002,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 47,
+            funcId: 52,
             port: port_,
           );
         },
@@ -1861,7 +2035,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 48,
+            funcId: 53,
             port: port_,
           );
         },
@@ -1898,7 +2072,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 49,
+            funcId: 54,
             port: port_,
           );
         },
@@ -1935,7 +2109,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 50,
+              funcId: 55,
               port: port_,
             );
           },
@@ -1967,7 +2141,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 51,
+            funcId: 56,
             port: port_,
           );
         },
@@ -1994,7 +2168,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 52,
+            funcId: 57,
             port: port_,
           );
         },
@@ -2033,7 +2207,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 53,
+            funcId: 58,
             port: port_,
           );
         },
@@ -2435,6 +2609,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<UploadTask> dco_decode_list_upload_task(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_upload_task).toList();
+  }
+
+  @protected
+  OfflineIndexStatus dco_decode_offline_index_status(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return OfflineIndexStatus(
+      indexedItems: dco_decode_u_32(arr[0]),
+      lastIndexedAtMillis: dco_decode_opt_box_autoadd_i_64(arr[1]),
+    );
   }
 
   @protected
@@ -3091,6 +3277,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       ans_.add(sse_decode_upload_task(deserializer));
     }
     return ans_;
+  }
+
+  @protected
+  OfflineIndexStatus sse_decode_offline_index_status(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_indexedItems = sse_decode_u_32(deserializer);
+    var var_lastIndexedAtMillis = sse_decode_opt_box_autoadd_i_64(deserializer);
+    return OfflineIndexStatus(
+      indexedItems: var_indexedItems,
+      lastIndexedAtMillis: var_lastIndexedAtMillis,
+    );
   }
 
   @protected
@@ -3768,6 +3967,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     for (final item in self) {
       sse_encode_upload_task(item, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_offline_index_status(
+    OfflineIndexStatus self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.indexedItems, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.lastIndexedAtMillis, serializer);
   }
 
   @protected

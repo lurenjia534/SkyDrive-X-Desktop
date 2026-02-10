@@ -17,6 +17,7 @@ import 'api/drive/info.dart';
 import 'api/drive/list.dart';
 import 'api/drive/models.dart';
 import 'api/drive/move_item.dart';
+import 'api/drive/offline_index.dart';
 import 'api/drive/rename.dart';
 import 'api/drive/search.dart';
 import 'api/drive/share.dart';
@@ -24,6 +25,7 @@ import 'api/drive/upload.dart';
 import 'api/drive/upload_manager.dart';
 import 'api/settings/download_concurrency.dart';
 import 'api/settings/download_directory.dart';
+import 'api/settings/offline_index.dart';
 import 'api/settings/theme.dart';
 import 'api/simple.dart';
 import 'dart:async';
@@ -166,6 +168,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<UploadTask> dco_decode_list_upload_task(dynamic raw);
+
+  @protected
+  OfflineIndexStatus dco_decode_offline_index_status(dynamic raw);
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
@@ -374,6 +379,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<UploadTask> sse_decode_list_upload_task(SseDeserializer deserializer);
+
+  @protected
+  OfflineIndexStatus sse_decode_offline_index_status(
+    SseDeserializer deserializer,
+  );
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
@@ -629,6 +639,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_upload_task(
     List<UploadTask> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_offline_index_status(
+    OfflineIndexStatus self,
     SseSerializer serializer,
   );
 

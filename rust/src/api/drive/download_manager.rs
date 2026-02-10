@@ -6,10 +6,9 @@ use crate::{
     download_manager::{
         cancel_download_task as core_cancel, clear_download_history as core_clear_history,
         clear_failed_download_tasks as core_clear_failed, download_queue_state as core_queue_state,
-        enqueue_download_task as core_enqueue,
-        enqueue_download_tasks_batch as core_enqueue_batch, pause_download_task as core_pause,
-        remove_download_task as core_remove, resume_download_task as core_resume,
-        subscribe_progress as core_subscribe_progress,
+        enqueue_download_task as core_enqueue, enqueue_download_tasks_batch as core_enqueue_batch,
+        pause_download_task as core_pause, remove_download_task as core_remove,
+        resume_download_task as core_resume, subscribe_progress as core_subscribe_progress,
     },
 };
 use std::thread;

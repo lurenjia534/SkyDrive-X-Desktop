@@ -6,7 +6,7 @@
 import '../../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_receiver_is_total_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_receiver_is_total_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 /// 批量下载入队结果，包含更新后的队列与跳过/失败列表。
 class BatchDownloadResult {
@@ -435,6 +435,28 @@ enum LinkScope { anonymous, organization, users }
 
 /// 分享链接类型（与 Graph 对齐）。
 enum LinkType { view, edit, embed }
+
+/// 离线索引状态信息，供设置页与搜索策略判断。
+class OfflineIndexStatus {
+  final int indexedItems;
+  final PlatformInt64? lastIndexedAtMillis;
+
+  const OfflineIndexStatus({
+    required this.indexedItems,
+    this.lastIndexedAtMillis,
+  });
+
+  @override
+  int get hashCode => indexedItems.hashCode ^ lastIndexedAtMillis.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is OfflineIndexStatus &&
+          runtimeType == other.runtimeType &&
+          indexedItems == other.indexedItems &&
+          lastIndexedAtMillis == other.lastIndexedAtMillis;
+}
 
 /// 当前账户可用的分享能力（基于 driveType 推断）。
 class ShareCapabilities {

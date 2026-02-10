@@ -15,12 +15,15 @@ class OfflineIndexTile extends ConsumerWidget {
     final theme = context.theme;
     final colors = theme.colors;
     final typography = theme.typography;
-    final state = ref.watch(offlineIndexProvider);
-    final controller = ref.read(offlineIndexProvider.notifier);
-    final status = _buildStatus(state);
+    final stateAsync = ref.watch(offlineIndexProvider);
+    final state = stateAsync.value ?? OfflineIndexState.initial;
+    final isInitialLoading = stateAsync.isLoading && !stateAsync.hasValue;
+    final errorMessage = state.lastError ?? stateAsync.error?.toString();
+    final status = _buildStatus(state, isInitialLoading: isInitialLoading);
     final lastIndexedLabel = state.lastIndexedAt == null
         ? 'Never'
         : _formatDateTime(state.lastIndexedAt!);
+    final switchEnabled = !isInitialLoading && !state.isIndexing;
 
     return SettingsCard(
       padding: const EdgeInsets.all(24),
@@ -28,7 +31,7 @@ class OfflineIndexTile extends ConsumerWidget {
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 520;
           final actionButton = FButton(
-            onPress: state.enabled && !state.isIndexing
+            onPress: state.enabled && !state.isIndexing && !isInitialLoading
                 ? () => unawaited(_startIndexing(context, ref))
                 : null,
             style: FButtonStyle.primary(
@@ -134,7 +137,13 @@ class OfflineIndexTile extends ConsumerWidget {
                     ],
                   ),
                 ),
-                FSwitch(value: state.enabled, onChange: controller.setEnabled),
+                FSwitch(
+                  value: state.enabled,
+                  enabled: switchEnabled,
+                  onChange: switchEnabled
+                      ? (value) => unawaited(_setEnabled(context, ref, value))
+                      : null,
+                ),
               ],
             ),
           );
@@ -166,10 +175,10 @@ class OfflineIndexTile extends ConsumerWidget {
                   'Last indexed: $lastIndexedLabel',
                   style: typography.sm.copyWith(color: colors.mutedForeground),
                 ),
-                if (state.lastError != null) ...[
+                if (errorMessage != null) ...[
                   const SizedBox(height: 8),
                   Text(
-                    state.lastError!,
+                    errorMessage,
                     style: typography.xs.copyWith(color: colors.destructive),
                   ),
                 ],
@@ -210,7 +219,13 @@ class OfflineIndexTile extends ConsumerWidget {
     );
   }
 
-  String _buildStatus(OfflineIndexState state) {
+  String _buildStatus(
+    OfflineIndexState state, {
+    required bool isInitialLoading,
+  }) {
+    if (isInitialLoading) {
+      return 'Loading index settings...';
+    }
     if (state.isIndexing) {
       return 'Indexing in progress...';
     }
@@ -223,12 +238,26 @@ class OfflineIndexTile extends ConsumerWidget {
     return 'Offline index ready';
   }
 
+  Future<void> _setEnabled(
+    BuildContext context,
+    WidgetRef ref,
+    bool value,
+  ) async {
+    final controller = ref.read(offlineIndexProvider.notifier);
+    try {
+      await controller.setEnabled(value);
+    } catch (err) {
+      if (!context.mounted) return;
+      showToast(context, 'Failed to update offline index setting: $err');
+    }
+  }
+
   Future<void> _startIndexing(BuildContext context, WidgetRef ref) async {
     final controller = ref.read(offlineIndexProvider.notifier);
     try {
       await controller.rebuildIndex();
       if (!context.mounted) return;
-      final count = ref.read(offlineIndexProvider).indexedItems;
+      final count = ref.read(offlineIndexProvider).value?.indexedItems ?? 0;
       showToast(context, 'Offline index updated: $count items');
     } catch (err) {
       if (!context.mounted) return;

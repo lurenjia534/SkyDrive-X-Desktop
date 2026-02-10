@@ -8,6 +8,7 @@ pub mod info;
 pub mod list;
 pub mod models;
 pub mod move_item;
+pub mod offline_index;
 pub mod rename;
 pub mod search;
 pub mod share;
@@ -27,10 +28,11 @@ pub use list::list_drive_children;
 pub use models::{
     BatchDownloadResult, DownloadQueueState, DownloadStatus, DownloadTask, DriveDownloadResult,
     DriveInfo, DriveItemDetails, DriveItemSummary, DriveOwner, DrivePage, DriveQuota, LinkScope,
-    LinkType, ShareCapabilities, ShareLinkResult, UploadProgressUpdate, UploadQueueState,
-    UploadStatus, UploadTask,
+    LinkType, OfflineIndexStatus, ShareCapabilities, ShareLinkResult, UploadProgressUpdate,
+    UploadQueueState, UploadStatus, UploadTask,
 };
 pub use move_item::move_drive_item;
+pub use offline_index::{get_offline_index_status, rebuild_offline_index, search_offline_index};
 pub use rename::rename_drive_item;
 pub use search::search_drive_items;
 pub use share::{create_share_link, get_share_capabilities};

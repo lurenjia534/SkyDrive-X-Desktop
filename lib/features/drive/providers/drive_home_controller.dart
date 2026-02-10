@@ -143,20 +143,14 @@ class DriveHomeController extends AsyncNotifier<DriveHomeState> {
               nextLink: nextLink,
             )
           : current.isOfflineSearch
-          ? (() {
-              final localPage = ref
-                  .read(offlineIndexProvider.notifier)
-                  .searchPage(
-                    query: current.searchQuery,
-                    folderId: folderId,
-                    pageToken: nextLink,
-                    limit: _offlineSearchPageSize,
-                  );
-              return drive_api.DrivePage(
-                items: localPage.items,
-                nextLink: localPage.nextPageToken,
-              );
-            })()
+          ? await ref
+                .read(offlineIndexProvider.notifier)
+                .searchPage(
+                  query: current.searchQuery,
+                  folderId: folderId,
+                  nextLink: nextLink,
+                  limit: _offlineSearchPageSize,
+                )
           : await drive_search_api.searchDriveItems(
               query: current.searchQuery,
               folderId: folderId,
@@ -221,7 +215,8 @@ class DriveHomeController extends AsyncNotifier<DriveHomeState> {
     required String searchQuery,
   }) async {
     final normalizedQuery = searchQuery.trim();
-    final offlineState = ref.read(offlineIndexProvider);
+    final offlineState =
+        ref.read(offlineIndexProvider).value ?? OfflineIndexState.initial;
     final useOfflineSearch =
         normalizedQuery.isNotEmpty &&
         offlineState.enabled &&
@@ -233,20 +228,14 @@ class DriveHomeController extends AsyncNotifier<DriveHomeState> {
             nextLink: null,
           )
         : useOfflineSearch
-        ? (() {
-            final localPage = ref
-                .read(offlineIndexProvider.notifier)
-                .searchPage(
-                  query: normalizedQuery,
-                  folderId: folderId,
-                  pageToken: null,
-                  limit: _offlineSearchPageSize,
-                );
-            return drive_api.DrivePage(
-              items: localPage.items,
-              nextLink: localPage.nextPageToken,
-            );
-          })()
+        ? await ref
+              .read(offlineIndexProvider.notifier)
+              .searchPage(
+                query: normalizedQuery,
+                folderId: folderId,
+                nextLink: null,
+                limit: _offlineSearchPageSize,
+              )
         : await drive_search_api.searchDriveItems(
             query: normalizedQuery,
             folderId: folderId,

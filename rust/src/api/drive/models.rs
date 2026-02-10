@@ -21,6 +21,14 @@ pub struct DrivePage {
     pub next_link: Option<String>,
 }
 
+/// 离线索引状态信息，供设置页与搜索策略判断。
+#[flutter_rust_bridge::frb]
+#[derive(Clone, Debug)]
+pub struct OfflineIndexStatus {
+    pub indexed_items: u32,
+    pub last_indexed_at_millis: Option<i64>,
+}
+
 /// 下载完成后的结果描述，便于前端提示保存路径与大小。
 #[flutter_rust_bridge::frb]
 #[derive(Clone, Debug)]

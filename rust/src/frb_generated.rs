@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -2052443287;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -774691561;
 
 // Section: executor
 
@@ -920,6 +920,71 @@ fn wire__crate__api__drive__info__get_drive_overview_impl(
         },
     )
 }
+fn wire__crate__api__settings__offline_index__get_offline_index_enabled_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_offline_index_enabled",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::settings::offline_index::get_offline_index_enabled()?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__drive__offline_index__get_offline_index_status_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_offline_index_status",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::drive::offline_index::get_offline_index_status()?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__drive__share__get_share_capabilities_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1293,6 +1358,38 @@ fn wire__crate__api__auth__auth__persist_auth_state_impl(
         },
     )
 }
+fn wire__crate__api__drive__offline_index__rebuild_offline_index_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "rebuild_offline_index",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::drive::offline_index::rebuild_offline_index()?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__auth__refresh__refresh_tokens_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1543,6 +1640,47 @@ fn wire__crate__api__drive__search__search_drive_items_impl(
         },
     )
 }
+fn wire__crate__api__drive__offline_index__search_offline_index_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "search_offline_index",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_query = <String>::sse_decode(&mut deserializer);
+            let api_folder_id = <Option<String>>::sse_decode(&mut deserializer);
+            let api_next_link = <Option<String>>::sse_decode(&mut deserializer);
+            let api_top = <Option<u32>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::drive::offline_index::search_offline_index(
+                        api_query,
+                        api_folder_id,
+                        api_next_link,
+                        api_top,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__auth__auth__set_active_auth_account_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1641,6 +1779,40 @@ fn wire__crate__api__settings__download_directory__set_download_directory_impl(
                 transform_result_sse::<_, String>((move || {
                     let output_ok =
                         crate::api::settings::download_directory::set_download_directory(api_path)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__settings__offline_index__set_offline_index_enabled_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_offline_index_enabled",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_value = <bool>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::settings::offline_index::set_offline_index_enabled(api_value)?;
                     Ok(output_ok)
                 })())
             }
@@ -2358,6 +2530,18 @@ impl SseDecode for Vec<crate::api::drive::models::UploadTask> {
     }
 }
 
+impl SseDecode for crate::api::drive::models::OfflineIndexStatus {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_indexedItems = <u32>::sse_decode(deserializer);
+        let mut var_lastIndexedAtMillis = <Option<i64>>::sse_decode(deserializer);
+        return crate::api::drive::models::OfflineIndexStatus {
+            indexed_items: var_indexedItems,
+            last_indexed_at_millis: var_lastIndexedAtMillis,
+        };
+    }
+}
+
 impl SseDecode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2790,149 +2974,179 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        26 => wire__crate__api__drive__share__get_share_capabilities_impl(
+        26 => wire__crate__api__settings__offline_index__get_offline_index_enabled_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        27 => wire__crate__api__settings__theme__get_theme_follow_system_impl(
+        27 => wire__crate__api__drive__offline_index__get_offline_index_status_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        28 => wire__crate__api__settings__theme__get_theme_manual_mode_impl(
+        28 => wire__crate__api__drive__share__get_share_capabilities_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        30 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        31 => {
+        29 => wire__crate__api__settings__theme__get_theme_follow_system_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        30 => wire__crate__api__settings__theme__get_theme_manual_mode_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        32 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+        33 => {
             wire__crate__api__auth__auth__list_auth_accounts_impl(port, ptr, rust_vec_len, data_len)
         }
-        32 => wire__crate__api__drive__list__list_drive_children_impl(
+        34 => wire__crate__api__drive__list__list_drive_children_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        33 => wire__crate__api__auth__auth__load_persisted_auth_state_impl(
+        35 => wire__crate__api__auth__auth__load_persisted_auth_state_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        34 => wire__crate__api__drive__move_item__move_drive_item_impl(
+        36 => wire__crate__api__drive__move_item__move_drive_item_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        35 => wire__crate__api__drive__download_manager__pause_download_task_impl(
+        37 => wire__crate__api__drive__download_manager__pause_download_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        36 => {
+        38 => {
             wire__crate__api__auth__auth__persist_auth_state_impl(port, ptr, rust_vec_len, data_len)
         }
-        37 => {
+        39 => wire__crate__api__drive__offline_index__rebuild_offline_index_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        40 => {
             wire__crate__api__auth__refresh__refresh_tokens_impl(port, ptr, rust_vec_len, data_len)
         }
-        38 => wire__crate__api__auth__auth__remove_auth_account_impl(
+        41 => wire__crate__api__auth__auth__remove_auth_account_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        39 => wire__crate__api__drive__download_manager__remove_download_task_impl(
+        42 => wire__crate__api__drive__download_manager__remove_download_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        40 => wire__crate__api__drive__upload_manager__remove_upload_task_impl(
+        43 => wire__crate__api__drive__upload_manager__remove_upload_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        41 => wire__crate__api__drive__rename__rename_drive_item_impl(
+        44 => wire__crate__api__drive__rename__rename_drive_item_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        42 => wire__crate__api__drive__download_manager__resume_download_task_impl(
+        45 => wire__crate__api__drive__download_manager__resume_download_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        43 => wire__crate__api__drive__search__search_drive_items_impl(
+        46 => wire__crate__api__drive__search__search_drive_items_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        44 => wire__crate__api__auth__auth__set_active_auth_account_impl(
+        47 => wire__crate__api__drive__offline_index__search_offline_index_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        45 => wire__crate__api__settings__download_concurrency__set_download_concurrency_impl(
+        48 => wire__crate__api__auth__auth__set_active_auth_account_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        46 => wire__crate__api__settings__download_directory__set_download_directory_impl(
+        49 => wire__crate__api__settings__download_concurrency__set_download_concurrency_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        47 => wire__crate__api__settings__theme__set_theme_follow_system_impl(
+        50 => wire__crate__api__settings__download_directory__set_download_directory_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        48 => wire__crate__api__settings__theme__set_theme_manual_mode_impl(
+        51 => wire__crate__api__settings__offline_index__set_offline_index_enabled_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        49 => wire__crate__api__auth__auth__update_auth_account_profile_impl(
+        52 => wire__crate__api__settings__theme__set_theme_follow_system_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        50 => wire__crate__api__drive__upload_manager__upload_progress_stream_impl(
+        53 => wire__crate__api__settings__theme__set_theme_manual_mode_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        51 => wire__crate__api__drive__upload_manager__upload_queue_state_impl(
+        54 => wire__crate__api__auth__auth__update_auth_account_profile_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        52 => wire__crate__api__drive__models__upload_queue_state_default_impl(
+        55 => wire__crate__api__drive__upload_manager__upload_progress_stream_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        53 => wire__crate__api__drive__upload__upload_small_file_impl(
+        56 => wire__crate__api__drive__upload_manager__upload_queue_state_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        57 => wire__crate__api__drive__models__upload_queue_state_default_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        58 => wire__crate__api__drive__upload__upload_small_file_impl(
             port,
             ptr,
             rust_vec_len,
@@ -2950,7 +3164,7 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        29 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
+        31 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -3345,6 +3559,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::drive::models::LinkType>
     for crate::api::drive::models::LinkType
 {
     fn into_into_dart(self) -> crate::api::drive::models::LinkType {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::drive::models::OfflineIndexStatus {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.indexed_items.into_into_dart().into_dart(),
+            self.last_indexed_at_millis.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::drive::models::OfflineIndexStatus
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::drive::models::OfflineIndexStatus>
+    for crate::api::drive::models::OfflineIndexStatus
+{
+    fn into_into_dart(self) -> crate::api::drive::models::OfflineIndexStatus {
         self
     }
 }
@@ -3853,6 +4088,14 @@ impl SseEncode for Vec<crate::api::drive::models::UploadTask> {
         for item in self {
             <crate::api::drive::models::UploadTask>::sse_encode(item, serializer);
         }
+    }
+}
+
+impl SseEncode for crate::api::drive::models::OfflineIndexStatus {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.indexed_items, serializer);
+        <Option<i64>>::sse_encode(self.last_indexed_at_millis, serializer);
     }
 }
 

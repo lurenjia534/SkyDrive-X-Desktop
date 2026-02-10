@@ -214,8 +214,11 @@ impl DownloadManager {
         let mut new_tasks = Vec::new();
 
         let mut state = self.state.lock().unwrap_or_else(|p| p.into_inner());
-        let mut active_ids: HashSet<String> =
-            state.active.iter().map(|task| task.item.id.clone()).collect();
+        let mut active_ids: HashSet<String> = state
+            .active
+            .iter()
+            .map(|task| task.item.id.clone())
+            .collect();
         let mut seen_ids: HashSet<String> = HashSet::new();
 
         for item in items {
