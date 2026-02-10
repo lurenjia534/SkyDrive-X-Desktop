@@ -39,6 +39,7 @@ class ExperienceSection extends StatelessWidget {
               onFollowSystemChanged: onFollowSystemChanged,
               onManualModeChanged: onManualModeChanged,
             ),
+            const OfflineIndexTile(),
             const SettingsSyncTile(),
           ],
         ),

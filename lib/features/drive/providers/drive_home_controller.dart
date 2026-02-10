@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skydrivex/features/drive/models/drive_breadcrumb.dart';
+import 'package:skydrivex/features/drive/providers/offline_index_provider.dart';
 import 'package:skydrivex/src/rust/api/drive.dart' as drive_api;
 import 'package:skydrivex/src/rust/api/drive/create_folder.dart'
     as drive_create_api;
-import 'package:skydrivex/src/rust/api/drive/search.dart'
-    as drive_search_api;
+import 'package:skydrivex/src/rust/api/drive/search.dart' as drive_search_api;
 
 final driveHomeControllerProvider =
     AsyncNotifierProvider<DriveHomeController, DriveHomeState>(
@@ -14,6 +14,8 @@ final driveHomeControllerProvider =
     );
 
 class DriveHomeController extends AsyncNotifier<DriveHomeState> {
+  static const int _offlineSearchPageSize = 120;
+
   DriveHomeState get _current =>
       state.asData?.value ?? const DriveHomeState.initial();
 
@@ -30,11 +32,7 @@ class DriveHomeController extends AsyncNotifier<DriveHomeState> {
 
   @override
   Future<DriveHomeState> build() async {
-    return _fetchFolder(
-      folderId: null,
-      breadcrumbs: const [],
-      searchQuery: '',
-    );
+    return _fetchFolder(folderId: null, breadcrumbs: const [], searchQuery: '');
   }
 
   Future<void> refresh({bool showSkeleton = false}) async {
@@ -114,11 +112,7 @@ class DriveHomeController extends AsyncNotifier<DriveHomeState> {
 
   Future<void> tapBreadcrumb(int? index) async {
     if (index == null) {
-      await _loadFolder(
-        folderId: null,
-        breadcrumbs: const [],
-        searchQuery: '',
-      );
+      await _loadFolder(folderId: null, breadcrumbs: const [], searchQuery: '');
       return;
     }
     final breadcrumbs = _current.breadcrumbs;
@@ -148,6 +142,21 @@ class DriveHomeController extends AsyncNotifier<DriveHomeState> {
               folderPath: null,
               nextLink: nextLink,
             )
+          : current.isOfflineSearch
+          ? (() {
+              final localPage = ref
+                  .read(offlineIndexProvider.notifier)
+                  .searchPage(
+                    query: current.searchQuery,
+                    folderId: folderId,
+                    pageToken: nextLink,
+                    limit: _offlineSearchPageSize,
+                  );
+              return drive_api.DrivePage(
+                items: localPage.items,
+                nextLink: localPage.nextPageToken,
+              );
+            })()
           : await drive_search_api.searchDriveItems(
               query: current.searchQuery,
               folderId: folderId,
@@ -160,6 +169,7 @@ class DriveHomeController extends AsyncNotifier<DriveHomeState> {
         items: [...current.items, ...page.items],
         nextLink: page.nextLink,
         isLoadingMore: false,
+        isOfflineSearch: current.isOfflineSearch,
       );
       state = AsyncData(updated);
     } catch (err) {
@@ -171,8 +181,9 @@ class DriveHomeController extends AsyncNotifier<DriveHomeState> {
 
   Future<drive_api.DriveItemSummary> createFolder(String name) async {
     final current = _current;
-    final parentId =
-        current.breadcrumbs.isEmpty ? null : current.breadcrumbs.last.id;
+    final parentId = current.breadcrumbs.isEmpty
+        ? null
+        : current.breadcrumbs.last.id;
     final created = await drive_create_api.createDriveFolder(
       name: name,
       parentId: parentId,
@@ -210,12 +221,32 @@ class DriveHomeController extends AsyncNotifier<DriveHomeState> {
     required String searchQuery,
   }) async {
     final normalizedQuery = searchQuery.trim();
+    final offlineState = ref.read(offlineIndexProvider);
+    final useOfflineSearch =
+        normalizedQuery.isNotEmpty &&
+        offlineState.enabled &&
+        offlineState.hasIndex;
     final page = normalizedQuery.isEmpty
         ? await drive_api.listDriveChildren(
             folderId: folderId,
             folderPath: null,
             nextLink: null,
           )
+        : useOfflineSearch
+        ? (() {
+            final localPage = ref
+                .read(offlineIndexProvider.notifier)
+                .searchPage(
+                  query: normalizedQuery,
+                  folderId: folderId,
+                  pageToken: null,
+                  limit: _offlineSearchPageSize,
+                );
+            return drive_api.DrivePage(
+              items: localPage.items,
+              nextLink: localPage.nextPageToken,
+            );
+          })()
         : await drive_search_api.searchDriveItems(
             query: normalizedQuery,
             folderId: folderId,
@@ -229,6 +260,7 @@ class DriveHomeController extends AsyncNotifier<DriveHomeState> {
       searchQuery: normalizedQuery,
       isLoadingMore: false,
       isRefreshing: false,
+      isOfflineSearch: useOfflineSearch,
     );
   }
 
@@ -243,6 +275,7 @@ class DriveHomeController extends AsyncNotifier<DriveHomeState> {
       searchQuery: searchQuery.trim(),
       isLoadingMore: false,
       isRefreshing: true,
+      isOfflineSearch: false,
     );
   }
 }
@@ -255,6 +288,7 @@ class DriveHomeState {
     required this.searchQuery,
     required this.isLoadingMore,
     required this.isRefreshing,
+    required this.isOfflineSearch,
   });
 
   const DriveHomeState.initial()
@@ -263,7 +297,8 @@ class DriveHomeState {
       breadcrumbs = const [],
       searchQuery = '',
       isLoadingMore = false,
-      isRefreshing = false;
+      isRefreshing = false,
+      isOfflineSearch = false;
 
   static const Object _keepNextLink = Object();
 
@@ -273,6 +308,7 @@ class DriveHomeState {
   final String searchQuery;
   final bool isLoadingMore;
   final bool isRefreshing;
+  final bool isOfflineSearch;
 
   DriveHomeState copyWith({
     List<drive_api.DriveItemSummary>? items,
@@ -281,6 +317,7 @@ class DriveHomeState {
     String? searchQuery,
     bool? isLoadingMore,
     bool? isRefreshing,
+    bool? isOfflineSearch,
   }) {
     return DriveHomeState(
       items: items ?? this.items,
@@ -291,6 +328,7 @@ class DriveHomeState {
       searchQuery: searchQuery ?? this.searchQuery,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       isRefreshing: isRefreshing ?? this.isRefreshing,
+      isOfflineSearch: isOfflineSearch ?? this.isOfflineSearch,
     );
   }
 }
