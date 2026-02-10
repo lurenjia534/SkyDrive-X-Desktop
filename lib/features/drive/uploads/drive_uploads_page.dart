@@ -19,7 +19,9 @@ class DriveUploadsPage extends ConsumerWidget {
     final typography = theme.typography;
 
     // 空状态：没有任何上传记录时的提示。
-    if (queue.active.isEmpty && queue.completed.isEmpty && queue.failed.isEmpty) {
+    if (queue.active.isEmpty &&
+        queue.completed.isEmpty &&
+        queue.failed.isEmpty) {
       return Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 460),
@@ -28,9 +30,7 @@ class DriveUploadsPage extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: colors.background,
                 borderRadius: BorderRadius.circular(26),
-                border: Border.all(
-                  color: colors.border.withValues(alpha: 0.7),
-                ),
+                border: Border.all(color: colors.border.withValues(alpha: 0.7)),
                 boxShadow: [
                   BoxShadow(
                     color: colors.barrier.withValues(alpha: 0.12),
@@ -102,7 +102,9 @@ class DriveUploadsPage extends ConsumerWidget {
             showError: true,
             colors: colors,
             typography: typography,
-            onClear: ref.read(driveUploadManagerProvider.notifier).clearFailedTasks,
+            onClear: ref
+                .read(driveUploadManagerProvider.notifier)
+                .clearFailedTasks,
           ),
         if (queue.completed.isNotEmpty)
           _UploadSection(
@@ -129,7 +131,6 @@ class _UploadSection extends StatelessWidget {
     this.showError = false,
     this.onClear,
     this.clearLabel = 'Clear failed',
-    this.clearIcon = FIcons.trash2,
   });
 
   final String title;
@@ -243,7 +244,9 @@ class _UploadTile extends StatelessWidget {
     final uploadedLabel = task.bytesUploaded != null
         ? _formatFileSize(task.bytesUploaded!)
         : '0 B';
-    final totalLabel = task.size != null ? _formatFileSize(task.size!) : 'Unknown';
+    final totalLabel = task.size != null
+        ? _formatFileSize(task.size!)
+        : 'Unknown';
     final speed = manager.speedFor(task.taskId);
     final speedLabel = _formatSpeed(speed);
 
@@ -274,7 +277,9 @@ class _UploadTile extends StatelessWidget {
         );
       }
       if (task.status != UploadStatus.inProgress) {
-        final sizeInfo = task.size != null ? 'Size $totalLabel' : 'Size unknown';
+        final sizeInfo = task.size != null
+            ? 'Size $totalLabel'
+            : 'Size unknown';
         return Text('$statusLabel · $sizeInfo', style: subtitleStyle);
       }
       final details = [
@@ -425,10 +430,9 @@ class _UploadAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final manager = ref.read(driveUploadManagerProvider.notifier);
     if (isInProgress) {
-      final cancelling =
-          ref.watch(driveUploadManagerProvider.notifier).isCancelling(
-                task.taskId,
-              );
+      final cancelling = ref
+          .watch(driveUploadManagerProvider.notifier)
+          .isCancelling(task.taskId);
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -437,10 +441,7 @@ class _UploadAction extends StatelessWidget {
             height: 18,
             child: FCircularProgress.loader(
               style: (style) => style.copyWith(
-                iconStyle: IconThemeData(
-                  color: colors.primary,
-                  size: 18,
-                ),
+                iconStyle: IconThemeData(color: colors.primary, size: 18),
               ),
             ),
           ),
@@ -448,10 +449,7 @@ class _UploadAction extends StatelessWidget {
           FButton.icon(
             onPress: cancelling ? null : () => manager.cancelTask(task.taskId),
             style: FButtonStyle.outline(),
-            child: Icon(
-              cancelling ? FIcons.hourglass : FIcons.x,
-              size: 16,
-            ),
+            child: Icon(cancelling ? FIcons.hourglass : FIcons.x, size: 16),
           ),
         ],
       );
@@ -541,9 +539,7 @@ Future<bool> _confirmClearHistory({
         ),
         body: Text(
           description,
-          style: typography.sm.copyWith(
-            color: colors.mutedForeground,
-          ),
+          style: typography.sm.copyWith(color: colors.mutedForeground),
         ),
         direction: Axis.horizontal,
         actions: [

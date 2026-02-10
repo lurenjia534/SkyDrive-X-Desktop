@@ -40,9 +40,7 @@ class DriveDownloadsPage extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: colors.background,
                 borderRadius: BorderRadius.circular(26),
-                border: Border.all(
-                  color: colors.border.withValues(alpha: 0.7),
-                ),
+                border: Border.all(color: colors.border.withValues(alpha: 0.7)),
                 boxShadow: [
                   BoxShadow(
                     color: colors.barrier.withValues(alpha: 0.12),
@@ -153,7 +151,6 @@ class _DownloadSection extends StatelessWidget {
     this.showPath = false,
     this.onClear,
     this.clearLabel = 'Clear failed',
-    this.clearIcon = FIcons.trash2,
   });
 
   final String title;
@@ -314,7 +311,9 @@ class _DownloadTile extends StatelessWidget {
           task.status == DownloadStatus.inProgress ||
           task.status == DownloadStatus.paused;
       if (!isActive) {
-        final sizeInfo = task.sizeLabel != null ? 'Size $totalLabel' : 'Size unknown';
+        final sizeInfo = task.sizeLabel != null
+            ? 'Size $totalLabel'
+            : 'Size unknown';
         return Text('$statusLabel · $sizeInfo', style: subtitleStyle);
       }
       final details = [
@@ -372,8 +371,8 @@ class _DownloadTile extends StatelessWidget {
     final leadingIcon = isFailed
         ? FIcons.circleAlert
         : (isInProgress
-            ? FIcons.cloudDownload
-            : (isPaused ? Icons.pause_rounded : FIcons.download));
+              ? FIcons.cloudDownload
+              : (isPaused ? Icons.pause_rounded : FIcons.download));
 
     final savedPath = task.savedPath;
     final canShowMenu =
@@ -391,7 +390,8 @@ class _DownloadTile extends StatelessWidget {
       if (!context.mounted || selected == null) return;
       switch (selected) {
         case DriveDownloadContextAction.revealInFolder:
-          final path = task.status == DownloadStatus.completed &&
+          final path =
+              task.status == DownloadStatus.completed &&
                   savedPath != null &&
                   savedPath.trim().isNotEmpty
               ? savedPath
@@ -529,18 +529,12 @@ class _DownloadAction extends StatelessWidget {
               (style) => style.copyWith(
                 contentStyle: (contentStyle) => contentStyle.copyWith(
                   iconStyle: FWidgetStateMap.all(
-                    IconThemeData(
-                      color: colors.foreground,
-                      size: 16,
-                    ),
+                    IconThemeData(color: colors.foreground, size: 16),
                   ),
                 ),
               ),
             ),
-            child: Icon(
-              cancelling ? FIcons.hourglass : FIcons.x,
-              size: 16,
-            ),
+            child: Icon(cancelling ? FIcons.hourglass : FIcons.x, size: 16),
           ),
           const SizedBox(width: 8),
           FButton.icon(
@@ -580,17 +574,11 @@ class _DownloadAction extends StatelessWidget {
         onPress: resuming
             ? null
             : () => unawaited(
-                  manager.resumeTask(
-                    task.item.id,
-                    restart: !canResume,
-                  ),
-                ),
+                manager.resumeTask(task.item.id, restart: !canResume),
+              ),
         style: FButtonStyle.outline(),
         mainAxisSize: MainAxisSize.min,
-        prefix: Icon(
-          resuming ? Icons.hourglass_top_rounded : icon,
-          size: 16,
-        ),
+        prefix: Icon(resuming ? Icons.hourglass_top_rounded : icon, size: 16),
         child: Text(
           resuming ? 'Processing' : label,
           style: typography.sm.copyWith(fontWeight: FontWeight.w600),
@@ -600,7 +588,9 @@ class _DownloadAction extends StatelessWidget {
 
     return FButton.icon(
       onPress: () => unawaited(
-        ref.read(driveDownloadManagerProvider.notifier).removeTask(task.item.id),
+        ref
+            .read(driveDownloadManagerProvider.notifier)
+            .removeTask(task.item.id),
       ),
       style: FButtonStyle.outline(),
       child: const Icon(FIcons.trash2, size: 16),
@@ -683,9 +673,7 @@ Future<bool> _confirmClearHistory({
         ),
         body: Text(
           description,
-          style: typography.sm.copyWith(
-            color: colors.mutedForeground,
-          ),
+          style: typography.sm.copyWith(color: colors.mutedForeground),
         ),
         direction: Axis.horizontal,
         actions: [
