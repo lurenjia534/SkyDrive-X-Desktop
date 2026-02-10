@@ -13,6 +13,7 @@ import 'package:skydrivex/features/drive/settings/drive_settings_page.dart';
 import 'package:skydrivex/features/drive/widgets/quick_action_side_sheet.dart';
 import 'package:skydrivex/features/drive/uploads/drive_uploads_page.dart';
 import 'package:skydrivex/src/rust/api/auth/auth.dart' as auth_api;
+import 'package:skydrivex/theme/app_theme_provider.dart';
 import 'package:skydrivex/utils/toast.dart';
 
 import 'drive_home_page.dart';
@@ -76,6 +77,19 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
     setState(() {
       _selectedSectionIndex = index;
     });
+  }
+
+  Future<void> _toggleThemeMode() async {
+    final brightness = Theme.of(context).brightness;
+    final nextMode = brightness == Brightness.dark
+        ? ThemeMode.light
+        : ThemeMode.dark;
+    try {
+      await ref.read(appThemeProvider.notifier).setManualMode(nextMode);
+    } catch (err) {
+      if (!mounted) return;
+      showToast(context, 'Failed to update theme: $err');
+    }
   }
 
   void _handleSearchChanged(TextEditingValue value) {
@@ -169,6 +183,8 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
                       : null,
                   onQuickAction: _handleQuickActionTap,
                   onOpenSettings: () => _handleNavigationSelection(3),
+                  onToggleTheme: () => unawaited(_toggleThemeMode()),
+                  isDarkMode: Theme.of(context).brightness == Brightness.dark,
                   onLogout: _isClearingCredentials ? null : _clearCredentials,
                   accountIcon: accountIcon,
                   typography: typography,
@@ -279,6 +295,8 @@ class _DriveWorkspaceHeader extends StatelessWidget {
     required this.onRefresh,
     required this.onQuickAction,
     required this.onOpenSettings,
+    required this.onToggleTheme,
+    required this.isDarkMode,
     required this.onLogout,
     required this.accountIcon,
     required this.typography,
@@ -292,6 +310,8 @@ class _DriveWorkspaceHeader extends StatelessWidget {
   final VoidCallback? onRefresh;
   final VoidCallback onQuickAction;
   final VoidCallback onOpenSettings;
+  final VoidCallback onToggleTheme;
+  final bool isDarkMode;
   final VoidCallback? onLogout;
   final Widget accountIcon;
   final FTypography typography;
@@ -386,6 +406,17 @@ class _DriveWorkspaceHeader extends StatelessWidget {
               ? FButtonStyle.primary()
               : iconButtonStyle,
           child: const Icon(FIcons.settings),
+        ),
+        const SizedBox(width: 8),
+        Tooltip(
+          message: isDarkMode ? 'Switch to light mode' : 'Switch to dark mode',
+          child: FButton.icon(
+            onPress: onToggleTheme,
+            style: iconButtonStyle,
+            child: Icon(
+              isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+            ),
+          ),
         ),
         const SizedBox(width: 8),
         FButton.icon(
