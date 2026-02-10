@@ -162,7 +162,7 @@ class _DownloadSection extends StatelessWidget {
   final bool showPath;
   final AsyncCallback? onClear;
   final String clearLabel;
-  final IconData clearIcon;
+  final IconData clearIcon = FIcons.trash2;
 
   @override
   Widget build(BuildContext context) {
