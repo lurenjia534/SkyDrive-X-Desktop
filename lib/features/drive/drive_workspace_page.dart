@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:skydrivex/features/auth/auth_controller.dart';
 import 'package:skydrivex/features/drive/downloads/drive_downloads_page.dart';
+import 'package:skydrivex/features/drive/gallery/drive_gallery_page.dart';
 import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
 import 'package:skydrivex/features/drive/providers/drive_search_query_provider.dart';
 import 'package:skydrivex/features/drive/providers/drive_upload_manager.dart';
@@ -45,6 +46,7 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
       const DriveHomePage(),
       const DriveDownloadsPage(),
       const DriveUploadsPage(),
+      const DriveGalleryPage(),
       const DriveSettingsPage(),
     ];
   }
@@ -182,7 +184,7 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
                             .refresh(showSkeleton: true)
                       : null,
                   onQuickAction: _handleQuickActionTap,
-                  onOpenSettings: () => _handleNavigationSelection(3),
+                  onOpenSettings: () => _handleNavigationSelection(4),
                   onToggleTheme: () => unawaited(_toggleThemeMode()),
                   isDarkMode: Theme.of(context).brightness == Brightness.dark,
                   onLogout: _isClearingCredentials ? null : _clearCredentials,
@@ -402,7 +404,7 @@ class _DriveWorkspaceHeader extends StatelessWidget {
         const SizedBox(width: 8),
         FButton.icon(
           onPress: onOpenSettings,
-          style: selectedSectionIndex == 3
+          style: selectedSectionIndex == 4
               ? FButtonStyle.primary()
               : iconButtonStyle,
           child: const Icon(FIcons.settings),
@@ -502,7 +504,12 @@ class _DriveTopNavBar extends StatelessWidget {
       _NavDestination(index: 0, label: 'Files', icon: FIcons.folder),
       _NavDestination(index: 1, label: 'Downloads', icon: FIcons.cloudDownload),
       _NavDestination(index: 2, label: 'Uploads', icon: FIcons.cloudUpload),
-      _NavDestination(index: 3, label: 'Settings', icon: FIcons.settings),
+      _NavDestination(
+        index: 3,
+        label: 'Gallery',
+        icon: FIcons.images,
+      ),
+      _NavDestination(index: 4, label: 'Settings', icon: FIcons.settings),
     ];
 
     return SingleChildScrollView(
