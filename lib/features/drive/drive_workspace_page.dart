@@ -7,6 +7,7 @@ import 'package:forui/forui.dart';
 import 'package:skydrivex/features/auth/auth_controller.dart';
 import 'package:skydrivex/features/drive/downloads/drive_downloads_page.dart';
 import 'package:skydrivex/features/drive/gallery/drive_gallery_page.dart';
+import 'package:skydrivex/features/drive/providers/drive_gallery_controller.dart';
 import 'package:skydrivex/features/drive/providers/drive_home_controller.dart';
 import 'package:skydrivex/features/drive/providers/drive_search_query_provider.dart';
 import 'package:skydrivex/features/drive/providers/drive_upload_manager.dart';
@@ -102,9 +103,9 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
     _searchDebounce = Timer(_searchDebounceDuration, () async {
       if (!mounted || _selectedSectionIndex != 0) return;
       if (ref.read(driveSearchQueryProvider) != query) return;
-      await ref.read(driveHomeControllerProvider.notifier).applySearchQuery(
-        query,
-      );
+      await ref
+          .read(driveHomeControllerProvider.notifier)
+          .applySearchQuery(query);
     });
   }
 
@@ -178,11 +179,17 @@ class _DriveWorkspacePageState extends ConsumerState<DriveWorkspacePage> {
                   searchEnabled: _selectedSectionIndex == 0,
                   searchController: _searchController,
                   onSearchChanged: _handleSearchChanged,
-                  onRefresh: _selectedSectionIndex == 0
-                      ? () => ref
-                            .read(driveHomeControllerProvider.notifier)
-                            .refresh(showSkeleton: true)
-                      : null,
+                  onRefresh: switch (_selectedSectionIndex) {
+                    0 =>
+                      () => ref
+                          .read(driveHomeControllerProvider.notifier)
+                          .refresh(showSkeleton: true),
+                    3 =>
+                      () => ref
+                          .read(driveGalleryControllerProvider.notifier)
+                          .refresh(showSkeleton: true),
+                    _ => null,
+                  },
                   onQuickAction: _handleQuickActionTap,
                   onOpenSettings: () => _handleNavigationSelection(4),
                   onToggleTheme: () => unawaited(_toggleThemeMode()),
@@ -504,11 +511,7 @@ class _DriveTopNavBar extends StatelessWidget {
       _NavDestination(index: 0, label: 'Files', icon: FIcons.folder),
       _NavDestination(index: 1, label: 'Downloads', icon: FIcons.cloudDownload),
       _NavDestination(index: 2, label: 'Uploads', icon: FIcons.cloudUpload),
-      _NavDestination(
-        index: 3,
-        label: 'Gallery',
-        icon: FIcons.images,
-      ),
+      _NavDestination(index: 3, label: 'Gallery', icon: FIcons.images),
       _NavDestination(index: 4, label: 'Settings', icon: FIcons.settings),
     ];
 
