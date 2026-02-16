@@ -6,6 +6,7 @@ pub mod delete;
 pub mod details;
 pub mod download;
 pub mod download_manager;
+pub mod gallery;
 pub mod info;
 pub mod list;
 pub mod models;
@@ -26,6 +27,7 @@ pub use download_manager::{
     clear_download_history, download_progress_stream, download_queue_state, enqueue_download_task,
     enqueue_download_tasks_batch, pause_download_task, remove_download_task, resume_download_task,
 };
+pub use gallery::list_drive_gallery_items;
 pub use info::get_drive_overview;
 pub use list::list_drive_children;
 pub use models::{
