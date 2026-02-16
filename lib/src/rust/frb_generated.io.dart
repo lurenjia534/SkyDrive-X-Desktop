@@ -10,6 +10,7 @@ import 'api/drive/delete.dart';
 import 'api/drive/details.dart';
 import 'api/drive/download.dart';
 import 'api/drive/download_manager.dart';
+import 'api/drive/gallery.dart';
 import 'api/drive/info.dart';
 import 'api/drive/list.dart';
 import 'api/drive/models.dart';

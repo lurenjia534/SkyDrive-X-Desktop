@@ -6,9 +6,11 @@
 import '../../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+/// FRB 对外接口：读取“是否启用离线索引”开关。
 Future<bool> getOfflineIndexEnabled() =>
     RustLib.instance.api.crateApiSettingsOfflineIndexGetOfflineIndexEnabled();
 
+/// FRB 对外接口：更新“是否启用离线索引”开关。
 Future<bool> setOfflineIndexEnabled({required bool value}) => RustLib
     .instance
     .api

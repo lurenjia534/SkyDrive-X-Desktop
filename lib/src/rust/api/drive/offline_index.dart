@@ -11,12 +11,16 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DeletedFacet`, `DeltaItemDto`, `DeltaPage`, `GraphErrorEnvelope`, `GraphErrorPayload`, `SyncError`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
+/// 对外入口：同步（增量优先）并返回最新离线索引状态。
 Future<OfflineIndexStatus> rebuildOfflineIndex() =>
     RustLib.instance.api.crateApiDriveOfflineIndexRebuildOfflineIndex();
 
+/// 查询离线索引状态（条数 + 最近同步时间）。
 Future<OfflineIndexStatus> getOfflineIndexStatus() =>
     RustLib.instance.api.crateApiDriveOfflineIndexGetOfflineIndexStatus();
 
+/// 对离线索引执行分页搜索。
+/// `next_link` 使用离线 token，不是 Graph URL。
 Future<DrivePage> searchOfflineIndex({
   required String query,
   String? folderId,

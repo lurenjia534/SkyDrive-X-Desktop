@@ -438,7 +438,10 @@ enum LinkType { view, edit, embed }
 
 /// 离线索引状态信息，供设置页与搜索策略判断。
 class OfflineIndexStatus {
+  /// 当前主索引表中的条目总数。
   final int indexedItems;
+
+  /// 最近一次成功同步完成时间（Unix 毫秒时间戳）。
   final PlatformInt64? lastIndexedAtMillis;
 
   const OfflineIndexStatus({

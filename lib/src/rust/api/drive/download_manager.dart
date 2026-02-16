@@ -7,9 +7,12 @@ import '../../frb_generated.dart';
 import 'models.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+/// 获取当前下载队列快照（进行中/已完成/失败）。
 Future<DownloadQueueState> downloadQueueState() =>
     RustLib.instance.api.crateApiDriveDownloadManagerDownloadQueueState();
 
+/// 入队单个下载任务并立即启动。
+/// 若任务已存在于活动队列，返回错误。
 Future<DownloadQueueState> enqueueDownloadTask({
   required DriveItemSummary item,
   required String targetDir,
@@ -20,6 +23,8 @@ Future<DownloadQueueState> enqueueDownloadTask({
   overwrite: overwrite,
 );
 
+/// 批量入队下载任务。
+/// 返回包含“跳过项/失败项”的批量结果，便于前端做部分成功提示。
 Future<BatchDownloadResult> enqueueDownloadTasksBatch({
   required List<DriveItemSummary> items,
   required String targetDir,
@@ -31,21 +36,26 @@ Future<BatchDownloadResult> enqueueDownloadTasksBatch({
       overwrite: overwrite,
     );
 
+/// 从队列中移除指定任务。
 Future<DownloadQueueState> removeDownloadTask({required String itemId}) =>
     RustLib.instance.api.crateApiDriveDownloadManagerRemoveDownloadTask(
       itemId: itemId,
     );
 
+/// 取消下载任务（语义上强于暂停）。
 Future<DownloadQueueState> cancelDownloadTask({required String itemId}) =>
     RustLib.instance.api.crateApiDriveDownloadManagerCancelDownloadTask(
       itemId: itemId,
     );
 
+/// 暂停下载任务。
 Future<DownloadQueueState> pauseDownloadTask({required String itemId}) =>
     RustLib.instance.api.crateApiDriveDownloadManagerPauseDownloadTask(
       itemId: itemId,
     );
 
+/// 恢复下载任务。
+/// `restart=true` 时从头开始，否则尽量断点续传。
 Future<DownloadQueueState> resumeDownloadTask({
   required String itemId,
   required bool restart,
@@ -54,11 +64,15 @@ Future<DownloadQueueState> resumeDownloadTask({
   restart: restart,
 );
 
+/// 清理失败任务列表。
 Future<DownloadQueueState> clearFailedDownloadTasks() =>
     RustLib.instance.api.crateApiDriveDownloadManagerClearFailedDownloadTasks();
 
+/// 清理下载历史（保留当前活动任务）。
 Future<DownloadQueueState> clearDownloadHistory() =>
     RustLib.instance.api.crateApiDriveDownloadManagerClearDownloadHistory();
 
+/// 订阅下载进度流。
+/// 内部通过线程桥接 Rust 事件到 FRB `StreamSink`。
 Stream<DownloadProgressUpdate> downloadProgressStream() =>
     RustLib.instance.api.crateApiDriveDownloadManagerDownloadProgressStream();
