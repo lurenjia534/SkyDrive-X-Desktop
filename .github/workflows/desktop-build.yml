@@ -170,7 +170,7 @@ jobs:
       # Linux 上执行集成冒烟测试（验证应用可启动与 FRB 可调用）
       - name: Run integration smoke test
         if: matrix.os == 'ubuntu-latest'
-        run: flutter test integration_test/simple_test.dart
+        run: flutter test integration_test/simple_test.dart -d linux
 
       # 安装 cargo-expand，避免 FRB 生成时自动安装带来的重试
       - name: Install cargo-expand
