@@ -40,6 +40,12 @@ Skydrivex 是一个以 Linux 为优先的第三方 OneDrive 桌面客户端，�
   cargo build --manifest-path rust/Cargo.toml
   ```
 
+## 发布
+- 发布前先提升 `pubspec.yaml` 中的应用版本号。
+- Git tag 必须与完整 Flutter 版本字符串完全一致，并带上 `v` 前缀。
+- 例如 `pubspec.yaml` 为 `1.1.0+8` 时，发布 tag 必须是 `v1.1.0+8`。
+- 桌面 release workflow 只会在这种 tag 上发布 GitHub Release，并且任一 Linux、macOS、Windows 工件缺失都会直接失败。
+
 ## 贡献指南
 - 保持 Linux/macOS/Windows 桌面可用性，同时避免破坏 macOS/Windows 的编译。
 - 新增或修改 Rust API 时，先更新桥接定义并重新生成绑定，再实现 Dart 逻辑。

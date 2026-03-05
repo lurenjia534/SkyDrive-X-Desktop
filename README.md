@@ -42,6 +42,12 @@ Chinese README: [zh_README.md](zh_README.md)
   cargo build --manifest-path rust/Cargo.toml
   ```
 
+## Release
+- Bump `pubspec.yaml` to the next app version before tagging.
+- Create a Git tag that exactly matches the full Flutter version string, prefixed with `v`.
+- Example: if `pubspec.yaml` is `1.1.0+8`, publish the release with tag `v1.1.0+8`.
+- The desktop release workflow only publishes a GitHub Release from such a tag and fails if any Linux, macOS, or Windows asset is missing.
+
 ## Contribution Guidelines
 - Keep Linux desktop usable and avoid breaking macOS/Windows builds.
 - When adding or changing Rust APIs, update the bridge definitions, regenerate bindings, then implement Dart-side logic.

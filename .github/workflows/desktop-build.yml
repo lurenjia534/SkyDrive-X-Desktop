@@ -6,6 +6,7 @@ on:
     tags: [v*]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   desktop:
@@ -23,6 +24,8 @@ jobs:
       # 拉取代码
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       # 缓存 Rust 构建产物与依赖
       - name: Cache Cargo
@@ -76,19 +79,29 @@ jobs:
             fh.write(f"build_number={build_number}\n")
           PY
 
-      # 校验 tag 与 pubspec 版本一致（允许 vX.Y.Z 或 vX.Y.Z+N）
+      # 校验 tag 与 pubspec 版本完全一致，避免发布标签与应用内版本脱节
       - name: Validate tag matches pubspec version
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
           tag="${GITHUB_REF#refs/tags/}"
-          tag="${tag#v}"
           version="${{ steps.app_version.outputs.version }}"
-          base="${{ steps.app_version.outputs.name }}"
-          if [[ "$tag" != "$version" && "$tag" != "$base" ]]; then
+          if [[ "$tag" != "v$version" ]]; then
             echo "::error ::Tag '$tag' does not match pubspec.yaml version '$version'."
-            echo "::error ::Expected tag 'v$version' (full) or 'v$base' (without +build)."
-            echo "::error ::Update pubspec.yaml or retag to match the version."
+            echo "::error ::Expected tag 'v$version' to exactly match the app version."
+            echo "::error ::Update pubspec.yaml or retag before publishing a release."
+            exit 1
+          fi
+
+      # 正式发布的 tag 必须落在主线历史上，避免从旁支误发 stable release
+      - name: Validate tagged commit is on main
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          git fetch origin main --depth=1
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error ::Tag commit $GITHUB_SHA is not reachable from origin/main."
+            echo "::error ::Only commits on main can be published as a stable release."
             exit 1
           fi
 
@@ -139,10 +152,12 @@ jobs:
 
       # Rust 侧测试，避免核心逻辑回归
       - name: Run Rust tests
+        if: matrix.os == 'ubuntu-latest'
         run: cargo test --manifest-path rust/Cargo.toml
 
       # Flutter 侧静态检查
       - name: Run Flutter analyze
+        if: matrix.os == 'ubuntu-latest'
         run: flutter analyze
 
       # Linux 上执行集成冒烟测试（验证应用可启动与 FRB 可调用）
@@ -152,18 +167,28 @@ jobs:
 
       # 安装 cargo-expand，避免 FRB 生成时自动安装带来的重试
       - name: Install cargo-expand
+        if: matrix.os == 'ubuntu-latest'
         run: cargo install cargo-expand --locked
 
       # 安装 FRB 代码生成工具（与仓库当前版本保持一致）
       - name: Install flutter_rust_bridge_codegen
+        if: matrix.os == 'ubuntu-latest'
         run: cargo install flutter_rust_bridge_codegen --locked --version 2.11.1
 
       # 根据最新 Rust 代码重新生成 FRB 绑定
       - name: Regenerate FRB bindings
+        if: matrix.os == 'ubuntu-latest'
         run: flutter_rust_bridge_codegen generate
+
+      # 发布构建必须基于已提交的桥接代码，避免 CI 里生成出未入库的绑定
+      - name: Verify FRB bindings are up to date
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: git diff --exit-code -- lib/src/rust rust/src/frb_generated.rs
 
       # 编译 Rust 库（release）
       - name: Build Rust crate (release)
+        if: matrix.os == 'ubuntu-latest'
         run: cargo build --manifest-path rust/Cargo.toml --release
 
       # 构建 Flutter 桌面可执行（release）
@@ -202,28 +227,30 @@ jobs:
 
       # 上传 Linux 构建工件
       - name: Upload artifact
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' && startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v6
         with:
-          name: skydrivex-linux
+          name: skydrivex-linux-${{ steps.app_version.outputs.version }}
           path: dist/skydrivex-linux-${{ steps.app_version.outputs.version }}.tar.gz
+          if-no-files-found: error
 
       # 上传 Windows 构建工件
       - name: Upload artifact
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v6
         with:
-          name: skydrivex-windows
+          name: skydrivex-windows-${{ steps.app_version.outputs.version }}
           path: dist/skydrivex-windows-${{ steps.app_version.outputs.version }}.zip
-          if-no-files-found: warn
+          if-no-files-found: error
 
       # 上传 macOS 构建工件
       - name: Upload artifact
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-latest' && startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v6
         with:
-          name: skydrivex-macos
+          name: skydrivex-macos-${{ steps.app_version.outputs.version }}
           path: dist/skydrivex-macos-${{ steps.app_version.outputs.version }}.zip
+          if-no-files-found: error
 
   release:
     name: Publish GitHub Release
@@ -245,6 +272,8 @@ jobs:
           name: ${{ github.ref_name }}
           prerelease: false
           draft: false
+          generate_release_notes: true
+          fail_on_unmatched_files: true
           files: |
             dist/**/*.zip
             dist/**/*.tar.gz
