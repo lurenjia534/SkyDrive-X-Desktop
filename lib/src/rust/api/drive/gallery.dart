@@ -11,8 +11,19 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 /// 拉取图库（photos special folder）中的图片项，支持分页。
 ///
-/// Graph 的 photos 目录可能包含视频等非图片条目，这里会在 Rust 侧过滤后再返回给 UI。
-/// 当某一页全部被过滤掉时，会自动继续向后读取最多若干页，避免前端出现“空白分页”。
+/// 参数说明：
+/// - `next_link`：上一页返回的 `next_link`；为 `None` 表示拉取首屏（从 `special/photos` 开始）。
+/// - `top`：Graph 分页大小（`$top`）。为 `None` 或 `<= 0` 时使用默认值。
+///
+/// 返回值：
+/// - `Ok(DrivePage)`：`items` 仅包含被识别为“图片”的条目；`next_link` 用于继续分页。
+/// - `Err(String)`：网络/解析等错误统一用字符串向上抛给 Flutter 层（符合当前仓库的错误模型）。
+///
+/// 行为说明：
+/// - Graph 的 photos 目录可能混入视频等非图片条目，这里会在 Rust 侧过滤后再返回给 UI。
+/// - 当某一页全部被过滤掉时，会自动向后预读最多若干页，尽量避免前端出现“空白分页”。
+/// - 某些租户/账户下 `special/photos` 可能为空：仅在“首屏请求 + 确认为空”时回退到 root 扫描兜底。
+///   兜底扫描不提供可继续分页的 `next_link`，仅用于尽快返回一批图片供 UI 展示。
 Future<DrivePage> listDriveGalleryItems({String? nextLink, int? top}) => RustLib
     .instance
     .api
