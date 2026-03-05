@@ -43,7 +43,7 @@ Skydrivex 是一个以 Linux 为优先的第三方 OneDrive 桌面客户端，�
 ## 发布
 - 发布前先提升 `pubspec.yaml` 中的应用版本号。
 - Git tag 必须与完整 Flutter 版本字符串完全一致，并带上 `v` 前缀。
-- 例如 `pubspec.yaml` 为 `1.1.0+8` 时，发布 tag 必须是 `v1.1.0+8`。
+- 例如 `pubspec.yaml` 为 `1.1.0+9` 时，发布 tag 必须是 `v1.1.0+9`。
 - 桌面 release workflow 只会在这种 tag 上发布 GitHub Release，并且任一 Linux、macOS、Windows 工件缺失都会直接失败。
 
 ## 贡献指南

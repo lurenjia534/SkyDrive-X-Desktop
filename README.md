@@ -45,7 +45,7 @@ Chinese README: [zh_README.md](zh_README.md)
 ## Release
 - Bump `pubspec.yaml` to the next app version before tagging.
 - Create a Git tag that exactly matches the full Flutter version string, prefixed with `v`.
-- Example: if `pubspec.yaml` is `1.1.0+8`, publish the release with tag `v1.1.0+8`.
+- Example: if `pubspec.yaml` is `1.1.0+9`, publish the release with tag `v1.1.0+9`.
 - The desktop release workflow only publishes a GitHub Release from such a tag and fails if any Linux, macOS, or Windows asset is missing.
 
 ## Contribution Guidelines

@@ -114,6 +114,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: 3.38.7
           cache: true
 
       # Linux 桌面构建依赖
@@ -158,7 +159,13 @@ jobs:
       # Flutter 侧静态检查
       - name: Run Flutter analyze
         if: matrix.os == 'ubuntu-latest'
-        run: flutter analyze
+        shell: bash
+        run: |
+          analyze_paths=(lib integration_test)
+          if [[ -d test ]]; then
+            analyze_paths+=(test)
+          fi
+          flutter analyze "${analyze_paths[@]}"
 
       # Linux 上执行集成冒烟测试（验证应用可启动与 FRB 可调用）
       - name: Run integration smoke test
